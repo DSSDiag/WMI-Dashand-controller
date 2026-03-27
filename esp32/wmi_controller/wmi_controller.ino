@@ -33,26 +33,18 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "config.h"
+#include "logic.h"
 
-// ── Settings (updated from Pi) ────────────────────────────────────────────────
-struct Settings {
-  uint8_t  triggerMode  = DEFAULT_TRIGGER_MODE;
-  float    startKpa     = DEFAULT_START_KPA;
-  float    fullKpa      = DEFAULT_FULL_KPA;
-  uint8_t  manualDuty   = DEFAULT_MANUAL_DUTY;
-  uint8_t  curve        = DEFAULT_CURVE;
-  bool     armed        = DEFAULT_ARMED;
-};
-
+// ── Variables defined in logic.h ─────────────────────────────────────────────
 Settings settings;
 unsigned long lastSettingsMs = 0;
+bool isPriming = false;
+unsigned long primeEndMs = 0;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 float    pressureKpa    = ATM_KPA + 0.0f; // Current MAP reading
 uint8_t  pumpDuty       = 0;              // 0–100 %
 bool     tankLow        = false;
-bool     isPriming      = false;
-unsigned long primeEndMs = 0;
 
 // ── Telemetry timer ───────────────────────────────────────────────────────────
 unsigned long lastTxMs  = 0;
@@ -111,31 +103,9 @@ void applyPwm(uint8_t duty0to100) {
   ledcWrite(LEDC_CHANNEL, raw);
 }
 
-// ── Parse incoming serial JSON from Pi ───────────────────────────────────────
-void parseIncoming(const String& line) {
-  StaticJsonDocument<256> doc;
-  if (deserializeJson(doc, line) != DeserializationError::Ok) return;
-
-  const char* t = doc["t"];
-  if (!t) return;
-
-  if (strcmp(t, "s") == 0) {
-    settings.triggerMode = doc["tm"]  | settings.triggerMode;
-    settings.startKpa    = doc["sp"]  | settings.startKpa;
-    settings.fullKpa     = doc["fp"]  | settings.fullKpa;
-    settings.manualDuty  = doc["md"]  | settings.manualDuty;
-    settings.curve       = doc["c"]   | settings.curve;
-    settings.armed       = (doc["a"]  | (settings.armed ? 1 : 0)) != 0;
-    lastSettingsMs       = millis();
-  } else if (strcmp(t, "prime") == 0) {
-    isPriming   = true;
-    primeEndMs  = millis() + 2000;
-  }
-}
-
 // ── Send telemetry JSON to Pi ─────────────────────────────────────────────────
 void sendTelemetry() {
-  StaticJsonDocument<128> doc;
+  JsonDocument doc;
   doc["t"] = "d";
   doc["p"] = serialized(String(pressureKpa, 1));
   doc["d"] = pumpDuty;
