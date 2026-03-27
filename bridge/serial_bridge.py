@@ -164,9 +164,46 @@ async def broadcast(payload: dict):
 
 
 # ── Serial loop ────────────────────────────────────────────────────────────────
-async def serial_loop():
+async def handle_serial_connection(ser: serial.Serial):
     global pending_settings, pending_prime, latest_telemetry
 
+    last_data = time.monotonic()
+    ser.reset_input_buffer()
+    while True:
+        # ── Flush outgoing messages ──
+        if pending_prime:
+            pending_prime = False
+            ser.write(b'{"t":"prime"}\n')
+            log.info("Prime pulse sent to ESP32")
+
+        if pending_settings:
+            frame = build_settings_frame(pending_settings)
+            ser.write(frame)
+            log.debug("Settings sent: %s", frame)
+            pending_settings = None
+
+        # ── Read incoming ──
+        line = await asyncio.get_event_loop().run_in_executor(
+            None, ser.readline
+        )
+        line = line.decode("utf-8", errors="replace").strip()
+        if not line:
+            # Check watchdog
+            if time.monotonic() - last_data > WATCHDOG_TIMEOUT:
+                log.warning("No data from ESP32 for %.0fs — reconnecting", WATCHDOG_TIMEOUT)
+                break
+            continue
+
+        telemetry = parse_esp32_frame(line)
+        if telemetry:
+            latest_telemetry = telemetry
+            last_data = time.monotonic()
+            await broadcast(telemetry)
+        else:
+            log.debug("Unhandled ESP32 frame: %s", line)
+
+
+async def serial_loop():
     while True:
         port = find_esp32_port()
         if not port:
@@ -182,42 +219,8 @@ async def serial_loop():
             await asyncio.sleep(RECONNECT_DELAY)
             continue
 
-        last_data = time.monotonic()
         try:
-            ser.reset_input_buffer()
-            while True:
-                # ── Flush outgoing messages ──
-                if pending_prime:
-                    pending_prime = False
-                    ser.write(b'{"t":"prime"}\n')
-                    log.info("Prime pulse sent to ESP32")
-
-                if pending_settings:
-                    frame = build_settings_frame(pending_settings)
-                    ser.write(frame)
-                    log.debug("Settings sent: %s", frame)
-                    pending_settings = None
-
-                # ── Read incoming ──
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, ser.readline
-                )
-                line = line.decode("utf-8", errors="replace").strip()
-                if not line:
-                    # Check watchdog
-                    if time.monotonic() - last_data > WATCHDOG_TIMEOUT:
-                        log.warning("No data from ESP32 for %.0fs — reconnecting", WATCHDOG_TIMEOUT)
-                        break
-                    continue
-
-                telemetry = parse_esp32_frame(line)
-                if telemetry:
-                    latest_telemetry = telemetry
-                    last_data = time.monotonic()
-                    await broadcast(telemetry)
-                else:
-                    log.debug("Unhandled ESP32 frame: %s", line)
-
+            await handle_serial_connection(ser)
         except serial.SerialException as exc:
             log.error("Serial error: %s — reconnecting", exc)
         finally:
