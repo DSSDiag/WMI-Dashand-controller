@@ -98,6 +98,85 @@ function useSerialBridge({ onTelemetry }) {
 }
 
 // ---------------------------------------------------------------------------
+// Simulation logic — only runs when the hardware bridge is NOT connected
+// ---------------------------------------------------------------------------
+function useSimulation({
+  hwConnected,
+  systemActive,
+  rawBoost,
+  minBoost,
+  maxBoost,
+  triggerMode,
+  manualDuty,
+  startInjectionAt,
+  fullInjectionAt,
+  curve,
+  setRawBoost,
+  setPeakBoost,
+  setBoostHistory,
+  setDutyCycle,
+  setStatus,
+}) {
+  useEffect(() => {
+    if (hwConnected) return; // yield to real hardware data
+
+    const interval = setInterval(() => {
+      if (systemActive) {
+        const noise = Math.random() * 4 - 2;
+        const targetBoost = rawBoost < 15 ? rawBoost + 1.5 : maxBoost * 0.8;
+        const nextBoost = Math.max(minBoost, Math.min(maxBoost + 5, targetBoost + noise));
+        setRawBoost(nextBoost);
+        setPeakBoost((prev) => Math.max(prev, nextBoost));
+        setBoostHistory((prev) => [...prev.slice(1), nextBoost]);
+
+        let calculatedDuty = 0;
+        if (triggerMode === 'manual') {
+          calculatedDuty = manualDuty;
+          setStatus('Manual Mode');
+        } else {
+          const start = triggerMode === 'full_scale' ? minBoost : startInjectionAt;
+          const end = triggerMode === 'full_scale' ? maxBoost : fullInjectionAt;
+          if (nextBoost > start) {
+            const range = end - start;
+            let progress = Math.max(0, Math.min(1, (nextBoost - start) / range));
+            if (curve === 'exponential') progress = Math.pow(progress, 2);
+            calculatedDuty = progress * 100;
+            setStatus(calculatedDuty > 95 ? 'Full Flow' : 'Injecting');
+          } else {
+            calculatedDuty = 0;
+            setStatus('Monitoring');
+          }
+        }
+        setDutyCycle(calculatedDuty);
+      } else {
+        const decayed = Math.max(minBoost, rawBoost - 2);
+        setRawBoost(decayed);
+        setBoostHistory((prev) => [...prev.slice(1), decayed]);
+        setDutyCycle(0);
+        setStatus('System Off');
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [
+    hwConnected,
+    systemActive,
+    rawBoost,
+    startInjectionAt,
+    fullInjectionAt,
+    maxBoost,
+    triggerMode,
+    manualDuty,
+    minBoost,
+    curve,
+    setRawBoost,
+    setPeakBoost,
+    setBoostHistory,
+    setDutyCycle,
+    setStatus,
+  ]);
+}
+
+// ---------------------------------------------------------------------------
 // Main Application
 // ---------------------------------------------------------------------------
 const App = () => {
@@ -256,47 +335,23 @@ const App = () => {
   // ---------------------------------------------------------------------------
   // Simulation loop — only runs when the hardware bridge is NOT connected
   // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (hwConnected) return; // yield to real hardware data
-
-    const interval = setInterval(() => {
-      if (systemActive) {
-        const noise = Math.random() * 4 - 2;
-        const targetBoost = rawBoost < 15 ? rawBoost + 1.5 : maxBoost * 0.8;
-        const nextBoost = Math.max(minBoost, Math.min(maxBoost + 5, targetBoost + noise));
-        setRawBoost(nextBoost);
-        setPeakBoost((prev) => Math.max(prev, nextBoost));
-        setBoostHistory((prev) => [...prev.slice(1), nextBoost]);
-
-        let calculatedDuty = 0;
-        if (triggerMode === 'manual') {
-          calculatedDuty = manualDuty;
-          setStatus('Manual Mode');
-        } else {
-          const start = triggerMode === 'full_scale' ? minBoost : startInjectionAt;
-          const end = triggerMode === 'full_scale' ? maxBoost : fullInjectionAt;
-          if (nextBoost > start) {
-            const range = end - start;
-            let progress = Math.max(0, Math.min(1, (nextBoost - start) / range));
-            if (curve === 'exponential') progress = Math.pow(progress, 2);
-            calculatedDuty = progress * 100;
-            setStatus(calculatedDuty > 95 ? 'Full Flow' : 'Injecting');
-          } else {
-            calculatedDuty = 0;
-            setStatus('Monitoring');
-          }
-        }
-        setDutyCycle(calculatedDuty);
-      } else {
-        const decayed = Math.max(minBoost, rawBoost - 2);
-        setRawBoost(decayed);
-        setBoostHistory((prev) => [...prev.slice(1), decayed]);
-        setDutyCycle(0);
-        setStatus('System Off');
-      }
-    }, 100);
-    return () => clearInterval(interval);
-  }, [hwConnected, systemActive, rawBoost, startInjectionAt, fullInjectionAt, maxBoost, triggerMode, manualDuty, minBoost, curve]);
+  useSimulation({
+    hwConnected,
+    systemActive,
+    rawBoost,
+    minBoost,
+    maxBoost,
+    triggerMode,
+    manualDuty,
+    startInjectionAt,
+    fullInjectionAt,
+    curve,
+    setRawBoost,
+    setPeakBoost,
+    setBoostHistory,
+    setDutyCycle,
+    setStatus,
+  });
 
   const handlePrime = () => {
     setIsPriming(true);
