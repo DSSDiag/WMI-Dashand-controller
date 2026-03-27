@@ -1,6 +1,6 @@
 import json
 import pytest
-from bridge.logic import parse_esp32_frame, ATM_KPA, KPA_ABS_TO_PSI_GAUGE
+from bridge.logic import parse_esp32_frame, ATM_KPA, KPA_ABS_TO_PSI_GAUGE, build_settings_frame
 
 def test_parse_esp32_frame_happy_path():
     """Test with valid telemetry data."""
@@ -74,3 +74,54 @@ def test_parse_esp32_frame_pump_active():
     line = '{"t":"d", "p":100.0, "d":0, "l":0}'
     result = parse_esp32_frame(line)
     assert result["pump_active"] is False
+
+def test_build_settings_frame_defaults():
+    """Test build_settings_frame with an empty dictionary (default values)."""
+    settings = {}
+    result = build_settings_frame(settings)
+    decoded = json.loads(result.decode().strip())
+
+    assert decoded["t"] == "s"
+    assert decoded["tm"] == 0
+    # default start_psi=5 -> 5*6.89476 + 101.325 = 135.7988 -> round(..., 1) -> 135.8
+    assert decoded["sp"] == 135.8
+    # default full_psi=20 -> 20*6.89476 + 101.325 = 239.2202 -> round(..., 1) -> 239.2
+    assert decoded["fp"] == 239.2
+    assert decoded["md"] == 0
+    assert decoded["c"] == 0
+    assert decoded["a"] == 0
+
+    # Ensure it ends with a newline
+    assert result.endswith(b"\n")
+
+def test_build_settings_frame_custom_values():
+    """Test build_settings_frame with custom dictionary values."""
+    settings = {
+        "trigger_mode": "full_scale",
+        "start_psi": 10,
+        "full_psi": 30,
+        "manual_duty": 50,
+        "curve": "exponential",
+        "system_active": True
+    }
+    result = build_settings_frame(settings)
+    decoded = json.loads(result.decode().strip())
+
+    assert decoded["t"] == "s"
+    assert decoded["tm"] == 1
+    # start_psi=10 -> 10*6.89476 + 101.325 = 170.2726 -> round(..., 1) -> 170.3
+    assert decoded["sp"] == 170.3
+    # full_psi=30 -> 30*6.89476 + 101.325 = 308.1678 -> round(..., 1) -> 308.2
+    assert decoded["fp"] == 308.2
+    assert decoded["md"] == 50
+    assert decoded["c"] == 1
+    assert decoded["a"] == 1
+
+    # Ensure it ends with a newline
+    assert result.endswith(b"\n")
+
+def test_build_settings_frame_invalid_types():
+    """Test build_settings_frame raises ValueError on invalid types."""
+    settings = {"start_psi": "invalid"}
+    with pytest.raises(ValueError):
+        build_settings_frame(settings)
