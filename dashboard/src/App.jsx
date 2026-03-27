@@ -1,7 +1,7 @@
 // Water Meth PERFECTION
 // Dashboard + Controller UI for Raspberry Pi Zero 2 W / 5" touch screen.
 // Connects to Python serial bridge (bridge/serial_bridge.py) via WebSocket when
-// running on hardware. Falls back to built-in simulation when no bridge is present.
+// running on hardware.
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { formatBoost as formatBoostUtil, ATM_PSI, PSI_TO_BAR, PSI_TO_KPA, PSI_TO_INHG } from './utils';
@@ -96,85 +96,6 @@ function useSerialBridge({ onTelemetry }) {
   }, []);
 
   return { connected, send };
-}
-
-// ---------------------------------------------------------------------------
-// Simulation logic — only runs when the hardware bridge is NOT connected
-// ---------------------------------------------------------------------------
-function useSimulation({
-  hwConnected,
-  systemActive,
-  rawBoost,
-  minBoost,
-  maxBoost,
-  triggerMode,
-  manualDuty,
-  startInjectionAt,
-  fullInjectionAt,
-  curve,
-  setRawBoost,
-  setPeakBoost,
-  setBoostHistory,
-  setDutyCycle,
-  setStatus,
-}) {
-  useEffect(() => {
-    if (hwConnected) return; // yield to real hardware data
-
-    const interval = setInterval(() => {
-      if (systemActive) {
-        const noise = Math.random() * 4 - 2;
-        const targetBoost = rawBoost < 15 ? rawBoost + 1.5 : maxBoost * 0.8;
-        const nextBoost = Math.max(minBoost, Math.min(maxBoost + 5, targetBoost + noise));
-        setRawBoost(nextBoost);
-        setPeakBoost((prev) => Math.max(prev, nextBoost));
-        setBoostHistory((prev) => [...prev.slice(1), nextBoost]);
-
-        let calculatedDuty = 0;
-        if (triggerMode === 'manual') {
-          calculatedDuty = manualDuty;
-          setStatus('Manual Mode');
-        } else {
-          const start = triggerMode === 'full_scale' ? minBoost : startInjectionAt;
-          const end = triggerMode === 'full_scale' ? maxBoost : fullInjectionAt;
-          if (nextBoost > start) {
-            const range = end - start;
-            let progress = Math.max(0, Math.min(1, (nextBoost - start) / range));
-            if (curve === 'exponential') progress = Math.pow(progress, 2);
-            calculatedDuty = progress * 100;
-            setStatus(calculatedDuty > 95 ? 'Full Flow' : 'Injecting');
-          } else {
-            calculatedDuty = 0;
-            setStatus('Monitoring');
-          }
-        }
-        setDutyCycle(calculatedDuty);
-      } else {
-        const decayed = Math.max(minBoost, rawBoost - 2);
-        setRawBoost(decayed);
-        setBoostHistory((prev) => [...prev.slice(1), decayed]);
-        setDutyCycle(0);
-        setStatus('System Off');
-      }
-    }, 100);
-    return () => clearInterval(interval);
-  }, [
-    hwConnected,
-    systemActive,
-    rawBoost,
-    startInjectionAt,
-    fullInjectionAt,
-    maxBoost,
-    triggerMode,
-    manualDuty,
-    minBoost,
-    curve,
-    setRawBoost,
-    setPeakBoost,
-    setBoostHistory,
-    setDutyCycle,
-    setStatus,
-  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -317,27 +238,6 @@ const App = () => {
     });
   }, [hwConnected, wsSend, systemActive, triggerMode, startInjectionAt, fullInjectionAt, manualDuty, curve]);
 
-  // ---------------------------------------------------------------------------
-  // Simulation loop — only runs when the hardware bridge is NOT connected
-  // ---------------------------------------------------------------------------
-  useSimulation({
-    hwConnected,
-    systemActive,
-    rawBoost,
-    minBoost,
-    maxBoost,
-    triggerMode,
-    manualDuty,
-    startInjectionAt,
-    fullInjectionAt,
-    curve,
-    setRawBoost,
-    setPeakBoost,
-    setBoostHistory,
-    setDutyCycle,
-    setStatus,
-  });
-
   const handlePrime = () => {
     setIsPriming(true);
     if (hwConnected) wsSend({ type: 'prime' });
@@ -403,11 +303,11 @@ const App = () => {
             <div className="flex gap-3 items-center">
               {/* Hardware connection indicator */}
               <div
-                title={hwConnected ? 'ESP32 connected via USB' : 'Simulation mode — no ESP32 detected'}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-slate-800/50 border-slate-700 text-slate-600'}`}
+                title={hwConnected ? 'Hardware connected' : 'Disconnected'}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
               >
                 {hwConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
-                <span className="hidden md:inline">{hwConnected ? 'HW' : 'SIM'}</span>
+                <span className="hidden md:inline">{hwConnected ? 'ON' : 'OFF'}</span>
               </div>
 
               <button
@@ -602,14 +502,6 @@ const App = () => {
                   <span className={`text-2xl font-black ${tankIsLow ? 'text-red-500' : 'text-emerald-400'}`}>
                     {tankIsLow ? 'LOW FLUID' : 'LEVEL OK'}
                   </span>
-                  {!hwConnected && (
-                    <button
-                      onClick={() => setTankIsLow(!tankIsLow)}
-                      className="text-[8px] text-slate-600 uppercase mt-1 underline hover:text-slate-400"
-                    >
-                      Toggle Sensor (sim)
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
