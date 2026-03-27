@@ -45,7 +45,7 @@ function useSerialBridge({ onTelemetry }) {
   const wsRef = useRef(null);
   const reconnectTimer = useRef(null);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(function _connect() {
     if (wsRef.current) return;
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
@@ -70,7 +70,7 @@ function useSerialBridge({ onTelemetry }) {
     ws.onclose = () => {
       setConnected(false);
       wsRef.current = null;
-      reconnectTimer.current = setTimeout(connect, WS_RECONNECT_MS);
+      reconnectTimer.current = setTimeout(_connect, WS_RECONNECT_MS);
     };
 
     ws.onerror = () => ws.close();
@@ -234,7 +234,7 @@ const App = () => {
     return units.toUpperCase();
   };
 
-  const toInputVal = (psiGauge, isMinField) => {
+  const toInputVal = (psiGauge) => {
     const isAbs = pressureRef === 'abs' && units !== 'psi_inhg';
     const displayValue = isAbs ? psiGauge + ATM_PSI : psiGauge;
     if (units === 'bar') return (displayValue * PSI_TO_BAR).toFixed(2);
@@ -247,7 +247,7 @@ const App = () => {
   };
 
   const fromInputVal = (val, isMinField) => {
-    const v = parseFloat(val);
+    const v = typeof val === 'number' ? val : parseFloat(val);
     if (isNaN(v)) return 0;
     const isAbs = pressureRef === 'abs' && units !== 'psi_inhg';
     if (units === 'bar') return (v / PSI_TO_BAR) - (isAbs ? ATM_PSI : 0);
@@ -266,17 +266,17 @@ const App = () => {
   };
 
   const getStepValue = () => {
-    if (units === 'bar') return '0.07';
-    if (units === 'kpa') return '6.9';
-    return '1';
+    if (units === 'bar') return 0.07;
+    if (units === 'kpa') return 6.9;
+    return 1;
   };
 
   const handleAdjust = (isMin, direction) => {
-    const step = parseFloat(getStepValue());
-    let currentUIVal = parseFloat(toInputVal(isMin ? minBoost : maxBoost, isMin));
+    const step = getStepValue();
+    let currentUIVal = parseFloat(toInputVal(isMin ? minBoost : maxBoost));
     let newUIVal = currentUIVal + (direction === 'up' ? step : -step);
-    newUIVal = parseFloat(newUIVal.toFixed(2));
-    let newInternalVal = fromInputVal(newUIVal.toString(), isMin);
+    newUIVal = Math.round(newUIVal * 100) / 100;
+    let newInternalVal = fromInputVal(newUIVal, isMin);
     if (isMin) {
       if (newInternalVal < -ATM_PSI) newInternalVal = -ATM_PSI;
       setMinBoost(newInternalVal);
@@ -708,7 +708,7 @@ const App = () => {
                       </button>
                       <input
                         type="number"
-                        value={toInputVal(minBoost, true)}
+                        value={toInputVal(minBoost)}
                         onChange={(e) => {
                           let val = fromInputVal(e.target.value, true);
                           if (val < -ATM_PSI) val = -ATM_PSI;
@@ -739,7 +739,7 @@ const App = () => {
                       </button>
                       <input
                         type="number"
-                        value={toInputVal(maxBoost, false)}
+                        value={toInputVal(maxBoost)}
                         onChange={(e) => {
                           let val = fromInputVal(e.target.value, false);
                           if (val > 200) val = 200;
