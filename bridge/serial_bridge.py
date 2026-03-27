@@ -69,15 +69,15 @@ pending_prime: bool = False
 def find_esp32_port() -> Optional[str]:
     """Scan serial ports and return the most likely ESP32 port."""
     preferred_keywords = [
-        "CP210", "CH340", "CH9102", "FTDI", "USB Serial",
-        "USB-SERIAL", "ttyUSB", "ttyACM",
+        "cp210", "ch340", "ch9102", "ftdi", "usb serial",
+        "usb-serial", "ttyusb", "ttyacm",
     ]
     ports = list(serial.tools.list_ports.comports())
     for port in ports:
-        desc = f"{port.description or ''} {port.hwid or ''}"
-        for kw in preferred_keywords:
-            if kw.lower() in desc.lower() or kw.lower() in port.device.lower():
-                return port.device
+        desc_lower = f"{port.description or ''} {port.hwid or ''}".lower()
+        dev_lower = port.device.lower()
+        if any(kw in desc_lower or kw in dev_lower for kw in preferred_keywords):
+            return port.device
     # Fallback: first available port
     return ports[0].device if ports else None
 
