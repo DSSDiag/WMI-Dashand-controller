@@ -33,16 +33,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "config.h"
-
-// ── Settings (updated from Pi) ────────────────────────────────────────────────
-struct Settings {
-  uint8_t  triggerMode  = DEFAULT_TRIGGER_MODE;
-  float    startKpa     = DEFAULT_START_KPA;
-  float    fullKpa      = DEFAULT_FULL_KPA;
-  uint8_t  manualDuty   = DEFAULT_MANUAL_DUTY;
-  uint8_t  curve        = DEFAULT_CURVE;
-  bool     armed        = DEFAULT_ARMED;
-};
+#include "logic.h"
 
 Settings settings;
 unsigned long lastSettingsMs = 0;
@@ -75,34 +66,6 @@ float readMapKpa() {
               * (MAP_KPA_MAX - MAP_KPA_MIN);
 
   return constrain(kpa, 0.0f, MAP_KPA_MAX * 1.1f);
-}
-
-// ── Duty cycle calculation ────────────────────────────────────────────────────
-uint8_t calcDuty(float kpa) {
-  if (!settings.armed || tankLow) return 0;
-
-  switch (settings.triggerMode) {
-    case 2: // Manual
-      return settings.manualDuty;
-
-    case 1: // Full scale — ramp across entire sensor range
-      {
-        float range = MAP_KPA_MAX - MAP_KPA_MIN;
-        float progress = constrain((kpa - MAP_KPA_MIN) / range, 0.0f, 1.0f);
-        if (settings.curve == 1) progress = progress * progress;
-        return (uint8_t)(progress * 100.0f);
-      }
-
-    default: // Thresholds
-      {
-        if (kpa <= settings.startKpa) return 0;
-        float range = settings.fullKpa - settings.startKpa;
-        if (range <= 0.0f) return (kpa > settings.startKpa) ? 100 : 0;
-        float progress = constrain((kpa - settings.startKpa) / range, 0.0f, 1.0f);
-        if (settings.curve == 1) progress = progress * progress;
-        return (uint8_t)(progress * 100.0f);
-      }
-  }
 }
 
 // ── Apply duty to LEDC PWM ────────────────────────────────────────────────────
@@ -192,7 +155,7 @@ void loop() {
     }
   } else {
     // ── 5. Normal duty calculation ──
-    pumpDuty = calcDuty(pressureKpa);
+    pumpDuty = calcDuty(pressureKpa, tankLow, settings);
     applyPwm(pumpDuty);
   }
 
