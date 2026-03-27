@@ -71,7 +71,7 @@ float readMapKpa() {
 // ── Apply duty to LEDC PWM ────────────────────────────────────────────────────
 void applyPwm(uint8_t duty0to100) {
   uint32_t raw = (uint32_t)duty0to100 * 255 / 100;
-  ledcWrite(LEDC_CHANNEL, raw);
+  ledcWrite(PIN_PUMP_PWM, raw);
 }
 
 // ── Parse incoming serial JSON from Pi ───────────────────────────────────────
@@ -118,9 +118,8 @@ void setup() {
   digitalWrite(PIN_LED_ARMED, LOW);
 
   // Configure LEDC PWM
-  ledcSetup(LEDC_CHANNEL, PWM_FREQ_HZ, PWM_RESOLUTION_BITS);
-  ledcAttachPin(PIN_PUMP_PWM, LEDC_CHANNEL);
-  ledcWrite(LEDC_CHANNEL, 0);
+  ledcAttach(PIN_PUMP_PWM, PWM_FREQ_HZ, PWM_RESOLUTION_BITS);
+  ledcWrite(PIN_PUMP_PWM, 0);
 
   delay(200); // let ADC settle
 }
