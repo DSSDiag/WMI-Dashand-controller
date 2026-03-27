@@ -2,7 +2,8 @@ import json
 from typing import Optional
 
 # Conversion constants
-KPA_ABS_TO_PSI_GAUGE = 1 / 6.89476    # Conversion factor: kPa to PSI (atmospheric offset applied separately)
+PSI_TO_KPA           = 6.89476        # Conversion factor: PSI to kPa
+KPA_ABS_TO_PSI_GAUGE = 1 / PSI_TO_KPA # Conversion factor: kPa to PSI (atmospheric offset applied separately)
 ATM_KPA              = 101.325
 
 def parse_esp32_frame(line: str) -> Optional[dict]:
@@ -28,7 +29,7 @@ def build_settings_frame(settings: dict) -> bytes:
     """Convert browser settings dict into compact JSON for the ESP32."""
     # Convert PSI gauge thresholds → kPa absolute for the ESP32
     def psi_to_kpa_abs(psi_gauge: float) -> float:
-        return psi_gauge * 6.89476 + ATM_KPA
+        return psi_gauge * PSI_TO_KPA + ATM_KPA
 
     mode_map = {"thresholds": 0, "full_scale": 1, "manual": 2}
     frame = {
