@@ -19,6 +19,9 @@ struct Settings {
   bool     armed        = DEFAULT_ARMED;
 };
 
+// ── Duty cycle calculation ────────────────────────────────────────────────────
+uint8_t calcDuty(float kpa, bool tankLow, const Settings& settings);
+
 // ── External variables referenced by parseIncoming ────────────────────────────
 extern Settings settings;
 extern unsigned long lastSettingsMs;
@@ -27,7 +30,7 @@ extern unsigned long primeEndMs;
 
 // ── Parse incoming serial JSON from Pi ───────────────────────────────────────
 inline void parseIncoming(const String& line) {
-  JsonDocument doc;
+  StaticJsonDocument<256> doc;
   if (deserializeJson(doc, line.c_str()) != DeserializationError::Ok) return;
 
   const char* t = doc["t"];
