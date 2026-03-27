@@ -348,13 +348,15 @@ const App = () => {
               </div>
               <div className="flex flex-col justify-center">
                 <h1 className="text-xl font-black tracking-tighter leading-none italic">
-                  <span className="text-white">H<sub className="text-sm">2</sub>O</span>
-                  <span className="mx-1"> </span>
-                  <span className="text-lime-400">CH<sub className="text-sm">3</sub>OH</span>
+                  <span className="text-white">MILD</span>
                   <span className="mx-1.5"> </span>
-                  <span className="text-white text-sm font-bold">INJECTION CONTROL SYSTEM</span>
+                  <span className="text-lime-400">MODZ</span>
                 </h1>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">{status}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">
+                  <span className="text-lime-700 mr-1.5">NOTHING MILD</span>
+                  <span>·</span>
+                  <span className="ml-1.5">{status}</span>
+                </p>
               </div>
             </div>
 
