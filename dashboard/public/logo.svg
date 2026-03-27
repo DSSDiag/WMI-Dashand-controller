@@ -1,9 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="12" fill="#0d0d0d"/>
-  <!-- Water drop -->
-  <path d="M50 18 C50 18 32 42 32 57 a18 18 0 0 0 36 0 C68 42 50 18 50 18z" fill="#06b6d4" opacity="0.9"/>
-  <!-- Flame / meth overlay -->
-  <path d="M50 78 C44 68 38 60 42 52 C44 58 47 60 50 58 C53 60 56 58 58 52 C62 60 56 68 50 78z" fill="#a3e635" opacity="0.85"/>
-  <!-- MM initials -->
-  <text x="50" y="96" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="#64748b">WMI</text>
+  <!-- Black background -->
+  <rect width="100" height="100" rx="12" fill="#0a0a0a"/>
+
+  <!-- Turbo housing ring — 300° lime arc, 60° gap centred at 9 o'clock (left).
+       r=21, cx=59, cy=31. Circumference=131.95; 300° arc dash=109.96.
+       rotate(210) places the arc start at 210° so the gap falls at 150°–210°
+       (symmetric about 180° = pure left = 8–9 o'clock on screen). -->
+  <circle cx="59" cy="31" r="21"
+    fill="none" stroke="#84cc16" stroke-width="7"
+    stroke-dasharray="109.96 131.95"
+    stroke-linecap="round"
+    transform="rotate(210 59 31)"/>
+
+  <!-- Inlet pipe / hose connector (fills the gap at the left of the ring) -->
+  <rect x="14" y="21" width="27" height="20" rx="2.5" fill="#84cc16"/>
+  <!-- Grip ridges on the connector -->
+  <line x1="20" y1="22.5" x2="20" y2="39.5" stroke="#0a0a0a" stroke-width="1.5"/>
+  <line x1="26" y1="22.5" x2="26" y2="39.5" stroke="#0a0a0a" stroke-width="1.5"/>
+  <line x1="32" y1="22.5" x2="32" y2="39.5" stroke="#0a0a0a" stroke-width="1.5"/>
+
+  <!-- Centre disc (lime) -->
+  <circle cx="59" cy="31" r="12" fill="#84cc16"/>
+
+  <!-- Lightning bolt (white), centred at (59, 31) -->
+  <polygon points="63,20 53,32 59,32 55,42 65,30 61,30" fill="white"/>
+
+  <!-- Brand name -->
+  <text x="50" y="68"
+    text-anchor="middle"
+    font-family="'Arial Black', Impact, sans-serif"
+    font-size="14" font-weight="900" fill="white" font-style="italic">MILD MODZ</text>
+  <!-- Tagline -->
+  <text x="50" y="80"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="7.5" font-weight="700" fill="#84cc16"
+    letter-spacing="1.5">NOTHING MILD</text>
 </svg>
