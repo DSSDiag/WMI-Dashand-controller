@@ -1,6 +1,6 @@
 # H₂O CH₃OH Injection Control System
 
-A touch-screen Water/Methanol Injection (WMI) controller for boosted engines, built around a **Raspberry Pi Zero 2 W** dashboard and an **ESP32-S3** sensor/relay controller.
+A touch-screen Water/Methanol Injection (WMI) controller for Performance engines, built around a **Raspberry Pi Zero 2 W** dashboard and an **ESP32-S3** sensor/relay controller.
 
 ---
 
