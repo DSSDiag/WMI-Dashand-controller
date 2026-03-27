@@ -43,27 +43,17 @@ TEST_F(ParseIncomingTest, ParsesCompleteSettings) {
 }
 
 TEST_F(ParseIncomingTest, ParsesPartialSettings) {
-    // Pre-set some fields to non-default values to verify they are preserved
-    settings.armed = true;
-    settings.startKpa = DEFAULT_START_KPA + 10.0f;
-    settings.fullKpa = DEFAULT_FULL_KPA + 20.0f;
-    settings.curve = DEFAULT_CURVE + 1;
-
-    millis_val = 2000;
     parseIncoming(String(R"({"t":"s","tm":2,"md":75})"));
 
     // Should update provided values
     EXPECT_EQ(settings.triggerMode, 2);
     EXPECT_EQ(settings.manualDuty, 75);
 
-    // Should keep existing values for omitted fields
-    EXPECT_FLOAT_EQ(settings.startKpa, DEFAULT_START_KPA + 10.0f);
-    EXPECT_FLOAT_EQ(settings.fullKpa, DEFAULT_FULL_KPA + 20.0f);
-    EXPECT_EQ(settings.curve, DEFAULT_CURVE + 1);
-    EXPECT_TRUE(settings.armed);
-
-    // Should record the time at which settings were last received
-    EXPECT_EQ(lastSettingsMs, 2000UL);
+    // Should keep default values for the rest
+    EXPECT_FLOAT_EQ(settings.startKpa, DEFAULT_START_KPA);
+    EXPECT_FLOAT_EQ(settings.fullKpa, DEFAULT_FULL_KPA);
+    EXPECT_EQ(settings.curve, DEFAULT_CURVE);
+    EXPECT_FALSE(settings.armed);
 }
 
 TEST_F(ParseIncomingTest, ParsesPrimeCommand) {

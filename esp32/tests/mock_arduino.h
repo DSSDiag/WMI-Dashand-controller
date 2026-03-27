@@ -9,10 +9,11 @@ public:
     String(const char* str) : data(str) {}
     String(const std::string& str) : data(str) {}
     const char* c_str() const { return data.c_str(); }
+    int length() const { return data.length(); }
     bool operator==(const char* str) const { return data == str; }
 
     // Add methods that ArduinoJson expects from a String-like object
-    size_t length() const { return data.length(); }
+    size_t length() { return data.length(); }
     const char* begin() const { return data.c_str(); }
     const char* end() const { return data.c_str() + data.length(); }
 private:
@@ -25,3 +26,9 @@ private:
 typedef uint8_t byte;
 
 unsigned long millis();
+
+// Stubs for Arduino includes
+#define Arduino_h "mock_arduino.h"
+#define config_h "mock_arduino.h"
+
+// However we need config.h from wmi_controller, so let's let that be included directly.

@@ -35,7 +35,7 @@
 #include "config.h"
 #include "logic.h"
 
-// ── Variables declared extern in logic.h (defined here) ──────────────────────
+// ── Variables defined in logic.h ─────────────────────────────────────────────
 Settings settings;
 unsigned long lastSettingsMs = 0;
 bool isPriming = false;
