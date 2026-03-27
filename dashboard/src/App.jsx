@@ -41,6 +41,33 @@ const HW_REVISION = 'MMWMI02B+';
 // Default minimum boost (atmospheric vacuum ~30 inHg = -14.73 PSIg)
 const DEFAULT_MIN_BOOST_PSI = -14.73;
 
+// ---------------------------------------------------------------------------
+// Settings Persistence — localStorage key and helpers
+// systemActive is intentionally excluded: the system always starts disarmed
+// after a reboot for safety.
+// ---------------------------------------------------------------------------
+const SETTINGS_KEY = 'wmi_settings';
+
+const DEFAULT_SETTINGS = {
+  units: 'psi_inhg',
+  pressureRef: 'gauge',
+  minBoost: DEFAULT_MIN_BOOST_PSI,
+  maxBoost: 20,
+  triggerMode: 'thresholds',
+  curve: 'linear',
+  startInjectionAt: 5,
+  fullInjectionAt: 25,
+  manualDuty: 0,
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch { /* ignore parse errors */ }
+  return DEFAULT_SETTINGS;
+}
+
 function useSerialBridge({ onTelemetry }) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
@@ -185,18 +212,19 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dash');
 
   // Settings State (Internal state is ALWAYS PSI Gauge: 0 = Atmosphere)
-  const [units, setUnits] = useState('psi_inhg'); // 'psi', 'psi_inhg', 'bar', 'kpa'
-  const [pressureRef, setPressureRef] = useState('gauge'); // 'gauge', 'abs'
+  // Initial values are loaded from localStorage so they survive reboots.
+  const [units, setUnits] = useState(() => loadSettings().units); // 'psi', 'psi_inhg', 'bar', 'kpa'
+  const [pressureRef, setPressureRef] = useState(() => loadSettings().pressureRef); // 'gauge', 'abs'
 
   // Default to ~30inHg vacuum (-14.7 PSIg) and 20 PSI max
-  const [minBoost, setMinBoost] = useState(DEFAULT_MIN_BOOST_PSI);
-  const [maxBoost, setMaxBoost] = useState(20);
+  const [minBoost, setMinBoost] = useState(() => loadSettings().minBoost);
+  const [maxBoost, setMaxBoost] = useState(() => loadSettings().maxBoost);
 
-  const [triggerMode, setTriggerMode] = useState('thresholds');
-  const [curve, setCurve] = useState('linear'); // 'linear' or 'exponential'
-  const [startInjectionAt, setStartInjectionAt] = useState(5);
-  const [fullInjectionAt, setFullInjectionAt] = useState(25);
-  const [manualDuty, setManualDuty] = useState(0);
+  const [triggerMode, setTriggerMode] = useState(() => loadSettings().triggerMode);
+  const [curve, setCurve] = useState(() => loadSettings().curve); // 'linear' or 'exponential'
+  const [startInjectionAt, setStartInjectionAt] = useState(() => loadSettings().startInjectionAt);
+  const [fullInjectionAt, setFullInjectionAt] = useState(() => loadSettings().fullInjectionAt);
+  const [manualDuty, setManualDuty] = useState(() => loadSettings().manualDuty);
 
   // Sensor & System State
   const [rawBoost, setRawBoost] = useState(0); // Internal PSI Gauge
@@ -316,6 +344,17 @@ const App = () => {
       curve,
     });
   }, [hwConnected, wsSend, systemActive, triggerMode, startInjectionAt, fullInjectionAt, manualDuty, curve]);
+
+  // Persist user settings to localStorage so they survive reboots.
+  // systemActive is intentionally excluded — system always starts disarmed.
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        units, pressureRef, minBoost, maxBoost,
+        triggerMode, curve, startInjectionAt, fullInjectionAt, manualDuty,
+      }));
+    } catch { /* ignore quota / security errors */ }
+  }, [units, pressureRef, minBoost, maxBoost, triggerMode, curve, startInjectionAt, fullInjectionAt, manualDuty]);
 
   // ---------------------------------------------------------------------------
   // Simulation loop — only runs when the hardware bridge is NOT connected
