@@ -27,7 +27,7 @@ extern unsigned long primeEndMs;
 
 // ── Parse incoming serial JSON from Pi ───────────────────────────────────────
 inline void parseIncoming(const String& line) {
-  JsonDocument doc;
+  StaticJsonDocument<256> doc;
   if (deserializeJson(doc, line.c_str()) != DeserializationError::Ok) return;
 
   const char* t = doc["t"];
