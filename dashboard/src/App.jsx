@@ -4,6 +4,7 @@
 // running on hardware. Falls back to built-in simulation when no bridge is present.
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { formatBoost as formatBoostUtil, ATM_PSI, PSI_TO_BAR, PSI_TO_KPA, PSI_TO_INHG } from './utils';
 import {
   Droplet,
   Activity,
@@ -211,23 +212,7 @@ const App = () => {
   const [hwConnected, setHwConnected] = useState(false);
 
   // --- UNIT CONVERSION LOGIC ---
-  const PSI_TO_BAR = 0.0689476;
-  const PSI_TO_KPA = 6.89476;
-  const PSI_TO_INHG = 2.03602;
-  const ATM_PSI = 14.7;
-
-  const formatBoost = (psiGauge) => {
-    const isAbs = pressureRef === 'abs' && units !== 'psi_inhg';
-    const displayValue = isAbs ? psiGauge + ATM_PSI : psiGauge;
-    switch (units) {
-      case 'bar': return (displayValue * PSI_TO_BAR).toFixed(2);
-      case 'kpa': return (displayValue * PSI_TO_KPA).toFixed(1);
-      case 'psi_inhg':
-        if (psiGauge <= -0.1) return `${(psiGauge * -PSI_TO_INHG).toFixed(0)} inHg`;
-        return `${psiGauge.toFixed(1)} PSI`;
-      default: return displayValue.toFixed(1);
-    }
-  };
+  const formatBoost = (psiGauge) => formatBoostUtil(psiGauge, units, pressureRef);
 
   const getUnitLabel = () => {
     if (units === 'psi_inhg') return 'PSI/inHg';
