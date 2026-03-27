@@ -30,7 +30,7 @@ A touch-screen Water/Methanol Injection (WMI) controller for Performance engines
 ```
 
 ### Data flow
-1. **ESP32** samples the MAP sensor every 100 ms, computes pump duty, drives the relay via PWM, and sends a compact JSON telemetry frame over USB serial to the Pi.
+1. **ESP32** samples the MAP sensor every 100 ms, computes pump duty, drives the MOSFET via PWM, and sends a compact JSON telemetry frame over USB serial to the Pi.
 2. **`serial_bridge.py`** (Python asyncio) receives those frames, converts pressure to PSI, and broadcasts them to any connected WebSocket clients.
 3. **Dashboard** (React, built with Vite + Tailwind, served by nginx) connects to the bridge WebSocket at `ws://localhost:8765`, displays live pressure, and sends settings changes back through the bridge to the ESP32.
 
