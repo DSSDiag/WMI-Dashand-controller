@@ -40,7 +40,9 @@
 // ── Pump PWM Parameters ────────────────────────────────────────────────────────
 #define PWM_FREQ_HZ         1000    // 1 kHz PWM for progressive pump control
 #define PWM_RESOLUTION_BITS    8    // 8-bit = 0–255 range
-#define LEDC_CHANNEL           0
+
+// ── Physical Constants ─────────────────────────────────────────────────────────
+#define ATM_KPA             101.325f  // Standard atmospheric pressure (kPa absolute)
 
 // ── Safe Defaults (applied when no settings received) ─────────────────────────
 #define DEFAULT_TRIGGER_MODE   0    // 0=thresholds, 1=full_scale, 2=manual
