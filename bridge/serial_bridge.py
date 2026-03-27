@@ -158,7 +158,7 @@ async def broadcast(payload: dict):
         return
     msg = json.dumps(payload)
     await asyncio.gather(
-        *[ws.send(msg) for ws in list(clients)],
+        *(ws.send(msg) for ws in list(clients)),
         return_exceptions=True,
     )
 
