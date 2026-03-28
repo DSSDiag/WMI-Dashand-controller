@@ -35,7 +35,7 @@
 #include "config.h"
 #include "logic.h"
 
-// ── Variables declared extern in logic.h (defined here) ──────────────────────
+// ── Variables defined in logic.h ─────────────────────────────────────────────
 Settings settings;
 unsigned long lastSettingsMs = 0;
 bool isPriming = false;
@@ -69,6 +69,34 @@ float readMapKpa() {
   return constrain(kpa, 0.0f, MAP_KPA_MAX * 1.1f);
 }
 
+// ── Duty cycle calculation ────────────────────────────────────────────────────
+uint8_t calcDuty(float kpa) {
+  if (!settings.armed || tankLow) return 0;
+
+  switch (settings.triggerMode) {
+    case 2: // Manual
+      return settings.manualDuty;
+
+    case 1: // Full scale — ramp across entire sensor range
+      {
+        float range = MAP_KPA_MAX - MAP_KPA_MIN;
+        float progress = constrain((kpa - MAP_KPA_MIN) / range, 0.0f, 1.0f);
+        if (settings.curve == 1) progress = progress * progress;
+        return (uint8_t)(progress * 100.0f);
+      }
+
+    default: // Thresholds
+      {
+        if (kpa <= settings.startKpa) return 0;
+        float range = settings.fullKpa - settings.startKpa;
+        if (range <= 0.0f) return (kpa > settings.startKpa) ? 100 : 0;
+        float progress = constrain((kpa - settings.startKpa) / range, 0.0f, 1.0f);
+        if (settings.curve == 1) progress = progress * progress;
+        return (uint8_t)(progress * 100.0f);
+      }
+  }
+}
+
 // ── Apply duty to LEDC PWM ────────────────────────────────────────────────────
 void applyPwm(uint8_t duty0to100) {
   uint32_t raw = (uint32_t)duty0to100 * 255 / 100;
@@ -77,7 +105,7 @@ void applyPwm(uint8_t duty0to100) {
 
 // ── Send telemetry JSON to Pi ─────────────────────────────────────────────────
 void sendTelemetry() {
-  StaticJsonDocument<128> doc;
+  JsonDocument doc;
   doc["t"] = "d";
   doc["p"] = serialized(String(pressureKpa, 1));
   doc["d"] = pumpDuty;
@@ -134,7 +162,7 @@ void loop() {
     }
   } else {
     // ── 5. Normal duty calculation ──
-    pumpDuty = calcDuty(pressureKpa, tankLow, settings);
+    pumpDuty = calcDuty(pressureKpa);
     applyPwm(pumpDuty);
   }
 
