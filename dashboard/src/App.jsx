@@ -1,9 +1,10 @@
 // Water Meth PERFECTION
 // Dashboard + Controller UI for Raspberry Pi Zero 2 W / 5" touch screen.
 // Connects to Python serial bridge (bridge/serial_bridge.py) via WebSocket when
-// running on hardware. Falls back to built-in simulation when no bridge is present.
+// running on hardware.
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { formatBoost as formatBoostUtil, ATM_PSI, PSI_TO_BAR, PSI_TO_KPA, PSI_TO_INHG } from './utils';
 import {
   Droplet,
   Activity,
@@ -40,12 +41,39 @@ const HW_REVISION = 'MMWMI02B+';
 // Default minimum boost (atmospheric vacuum ~30 inHg = -14.73 PSIg)
 const DEFAULT_MIN_BOOST_PSI = -14.73;
 
+// ---------------------------------------------------------------------------
+// Settings Persistence — localStorage key and helpers
+// systemActive is intentionally excluded: the system always starts disarmed
+// after a reboot for safety.
+// ---------------------------------------------------------------------------
+const SETTINGS_KEY = 'wmi_settings';
+
+const DEFAULT_SETTINGS = {
+  units: 'psi_inhg',
+  pressureRef: 'gauge',
+  minBoost: DEFAULT_MIN_BOOST_PSI,
+  maxBoost: 20,
+  triggerMode: 'thresholds',
+  curve: 'linear',
+  startInjectionAt: 5,
+  fullInjectionAt: 25,
+  manualDuty: 0,
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch { /* ignore parse errors */ }
+  return DEFAULT_SETTINGS;
+}
+
 function useSerialBridge({ onTelemetry }) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
   const reconnectTimer = useRef(null);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(function _connect() {
     if (wsRef.current) return;
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
@@ -70,7 +98,7 @@ function useSerialBridge({ onTelemetry }) {
     ws.onclose = () => {
       setConnected(false);
       wsRef.current = null;
-      reconnectTimer.current = setTimeout(connect, WS_RECONNECT_MS);
+      reconnectTimer.current = setTimeout(_connect, WS_RECONNECT_MS);
     };
 
     ws.onerror = () => ws.close();
@@ -105,18 +133,19 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dash');
 
   // Settings State (Internal state is ALWAYS PSI Gauge: 0 = Atmosphere)
-  const [units, setUnits] = useState('psi_inhg'); // 'psi', 'psi_inhg', 'bar', 'kpa'
-  const [pressureRef, setPressureRef] = useState('gauge'); // 'gauge', 'abs'
+  // Initial values are loaded from localStorage so they survive reboots.
+  const [units, setUnits] = useState(() => loadSettings().units); // 'psi', 'psi_inhg', 'bar', 'kpa'
+  const [pressureRef, setPressureRef] = useState(() => loadSettings().pressureRef); // 'gauge', 'abs'
 
   // Default to ~30inHg vacuum (-14.7 PSIg) and 20 PSI max
-  const [minBoost, setMinBoost] = useState(DEFAULT_MIN_BOOST_PSI);
-  const [maxBoost, setMaxBoost] = useState(20);
+  const [minBoost, setMinBoost] = useState(() => loadSettings().minBoost);
+  const [maxBoost, setMaxBoost] = useState(() => loadSettings().maxBoost);
 
-  const [triggerMode, setTriggerMode] = useState('thresholds');
-  const [curve, setCurve] = useState('linear'); // 'linear' or 'exponential'
-  const [startInjectionAt, setStartInjectionAt] = useState(5);
-  const [fullInjectionAt, setFullInjectionAt] = useState(25);
-  const [manualDuty, setManualDuty] = useState(0);
+  const [triggerMode, setTriggerMode] = useState(() => loadSettings().triggerMode);
+  const [curve, setCurve] = useState(() => loadSettings().curve); // 'linear' or 'exponential'
+  const [startInjectionAt, setStartInjectionAt] = useState(() => loadSettings().startInjectionAt);
+  const [fullInjectionAt, setFullInjectionAt] = useState(() => loadSettings().fullInjectionAt);
+  const [manualDuty, setManualDuty] = useState(() => loadSettings().manualDuty);
 
   // Sensor & System State
   const [rawBoost, setRawBoost] = useState(0); // Internal PSI Gauge
@@ -132,30 +161,14 @@ const App = () => {
   const [hwConnected, setHwConnected] = useState(false);
 
   // --- UNIT CONVERSION LOGIC ---
-  const PSI_TO_BAR = 0.0689476;
-  const PSI_TO_KPA = 6.89476;
-  const PSI_TO_INHG = 2.03602;
-  const ATM_PSI = 14.7;
-
-  const formatBoost = (psiGauge) => {
-    const isAbs = pressureRef === 'abs' && units !== 'psi_inhg';
-    const displayValue = isAbs ? psiGauge + ATM_PSI : psiGauge;
-    switch (units) {
-      case 'bar': return (displayValue * PSI_TO_BAR).toFixed(2);
-      case 'kpa': return (displayValue * PSI_TO_KPA).toFixed(1);
-      case 'psi_inhg':
-        if (psiGauge <= -0.1) return `${(psiGauge * -PSI_TO_INHG).toFixed(0)} inHg`;
-        return `${psiGauge.toFixed(1)} PSI`;
-      default: return displayValue.toFixed(1);
-    }
-  };
+  const formatBoost = (psiGauge) => formatBoostUtil(psiGauge, units, pressureRef);
 
   const getUnitLabel = () => {
     if (units === 'psi_inhg') return 'PSI/inHg';
     return units.toUpperCase();
   };
 
-  const toInputVal = (psiGauge, isMinField) => {
+  const toInputVal = (psiGauge) => {
     const isAbs = pressureRef === 'abs' && units !== 'psi_inhg';
     const displayValue = isAbs ? psiGauge + ATM_PSI : psiGauge;
     if (units === 'bar') return (displayValue * PSI_TO_BAR).toFixed(2);
@@ -168,7 +181,7 @@ const App = () => {
   };
 
   const fromInputVal = (val, isMinField) => {
-    const v = parseFloat(val);
+    const v = typeof val === 'number' ? val : parseFloat(val);
     if (isNaN(v)) return 0;
     const isAbs = pressureRef === 'abs' && units !== 'psi_inhg';
     if (units === 'bar') return (v / PSI_TO_BAR) - (isAbs ? ATM_PSI : 0);
@@ -187,17 +200,17 @@ const App = () => {
   };
 
   const getStepValue = () => {
-    if (units === 'bar') return '0.07';
-    if (units === 'kpa') return '6.9';
-    return '1';
+    if (units === 'bar') return 0.07;
+    if (units === 'kpa') return 6.9;
+    return 1;
   };
 
   const handleAdjust = (isMin, direction) => {
-    const step = parseFloat(getStepValue());
-    let currentUIVal = parseFloat(toInputVal(isMin ? minBoost : maxBoost, isMin));
+    const step = getStepValue();
+    let currentUIVal = parseFloat(toInputVal(isMin ? minBoost : maxBoost));
     let newUIVal = currentUIVal + (direction === 'up' ? step : -step);
-    newUIVal = parseFloat(newUIVal.toFixed(2));
-    let newInternalVal = fromInputVal(newUIVal.toString(), isMin);
+    newUIVal = Math.round(newUIVal * 100) / 100;
+    let newInternalVal = fromInputVal(newUIVal, isMin);
     if (isMin) {
       if (newInternalVal < -ATM_PSI) newInternalVal = -ATM_PSI;
       setMinBoost(newInternalVal);
@@ -253,50 +266,17 @@ const App = () => {
     });
   }, [hwConnected, wsSend, systemActive, triggerMode, startInjectionAt, fullInjectionAt, manualDuty, curve]);
 
-  // ---------------------------------------------------------------------------
-  // Simulation loop — only runs when the hardware bridge is NOT connected
-  // ---------------------------------------------------------------------------
+  // Persist user settings to localStorage so they survive reboots.
+  // systemActive is intentionally excluded — system always starts disarmed.
   useEffect(() => {
-    if (hwConnected) return; // yield to real hardware data
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        units, pressureRef, minBoost, maxBoost,
+        triggerMode, curve, startInjectionAt, fullInjectionAt, manualDuty,
+      }));
+    } catch { /* ignore quota / security errors */ }
+  }, [units, pressureRef, minBoost, maxBoost, triggerMode, curve, startInjectionAt, fullInjectionAt, manualDuty]);
 
-    const interval = setInterval(() => {
-      if (systemActive) {
-        const noise = Math.random() * 4 - 2;
-        const targetBoost = rawBoost < 15 ? rawBoost + 1.5 : maxBoost * 0.8;
-        const nextBoost = Math.max(minBoost, Math.min(maxBoost + 5, targetBoost + noise));
-        setRawBoost(nextBoost);
-        setPeakBoost((prev) => Math.max(prev, nextBoost));
-        setBoostHistory((prev) => [...prev.slice(1), nextBoost]);
-
-        let calculatedDuty = 0;
-        if (triggerMode === 'manual') {
-          calculatedDuty = manualDuty;
-          setStatus('Manual Mode');
-        } else {
-          const start = triggerMode === 'full_scale' ? minBoost : startInjectionAt;
-          const end = triggerMode === 'full_scale' ? maxBoost : fullInjectionAt;
-          if (nextBoost > start) {
-            const range = end - start;
-            let progress = Math.max(0, Math.min(1, (nextBoost - start) / range));
-            if (curve === 'exponential') progress = Math.pow(progress, 2);
-            calculatedDuty = progress * 100;
-            setStatus(calculatedDuty > 95 ? 'Full Flow' : 'Injecting');
-          } else {
-            calculatedDuty = 0;
-            setStatus('Monitoring');
-          }
-        }
-        setDutyCycle(calculatedDuty);
-      } else {
-        const decayed = Math.max(minBoost, rawBoost - 2);
-        setRawBoost(decayed);
-        setBoostHistory((prev) => [...prev.slice(1), decayed]);
-        setDutyCycle(0);
-        setStatus('System Off');
-      }
-    }, 100);
-    return () => clearInterval(interval);
-  }, [hwConnected, systemActive, rawBoost, startInjectionAt, fullInjectionAt, maxBoost, triggerMode, manualDuty, minBoost, curve]);
 
   const handlePrime = () => {
     setIsPriming(true);
@@ -363,11 +343,11 @@ const App = () => {
             <div className="flex gap-3 items-center">
               {/* Hardware connection indicator */}
               <div
-                title={hwConnected ? 'ESP32 connected via USB' : 'Simulation mode — no ESP32 detected'}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-slate-800/50 border-slate-700 text-slate-600'}`}
+                title={hwConnected ? 'Hardware connected' : 'Disconnected'}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
               >
                 {hwConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
-                <span className="hidden md:inline">{hwConnected ? 'HW' : 'SIM'}</span>
+                <span className="hidden md:inline">{hwConnected ? 'ON' : 'OFF'}</span>
               </div>
 
               <button
@@ -562,14 +542,6 @@ const App = () => {
                   <span className={`text-2xl font-black ${tankIsLow ? 'text-red-500' : 'text-emerald-400'}`}>
                     {tankIsLow ? 'LOW FLUID' : 'LEVEL OK'}
                   </span>
-                  {!hwConnected && (
-                    <button
-                      onClick={() => setTankIsLow(!tankIsLow)}
-                      className="text-[8px] text-slate-600 uppercase mt-1 underline hover:text-slate-400"
-                    >
-                      Toggle Sensor (sim)
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -653,7 +625,7 @@ const App = () => {
                       </button>
                       <input
                         type="number"
-                        value={toInputVal(minBoost, true)}
+                        value={toInputVal(minBoost)}
                         onChange={(e) => {
                           let val = fromInputVal(e.target.value, true);
                           if (val < -ATM_PSI) val = -ATM_PSI;
@@ -684,7 +656,7 @@ const App = () => {
                       </button>
                       <input
                         type="number"
-                        value={toInputVal(maxBoost, false)}
+                        value={toInputVal(maxBoost)}
                         onChange={(e) => {
                           let val = fromInputVal(e.target.value, false);
                           if (val > 200) val = 200;

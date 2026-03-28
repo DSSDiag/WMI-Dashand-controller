@@ -75,6 +75,28 @@ void applyPwm(uint8_t duty0to100) {
   ledcWrite(PIN_PUMP_PWM, raw);
 }
 
+// ── Parse incoming serial JSON from Pi ───────────────────────────────────────
+void parseIncoming(const String& line) {
+  StaticJsonDocument<256> doc;
+  if (deserializeJson(doc, line) != DeserializationError::Ok) return;
+
+  const char* t = doc["t"];
+  if (!t) return;
+
+  if (strcmp(t, "s") == 0) {
+    settings.triggerMode = doc["tm"]  | settings.triggerMode;
+    settings.startKpa    = doc["sp"]  | settings.startKpa;
+    settings.fullKpa     = doc["fp"]  | settings.fullKpa;
+    settings.manualDuty  = doc["md"]  | settings.manualDuty;
+    settings.curve       = doc["c"]   | settings.curve;
+    settings.armed       = (doc["a"]  | (settings.armed ? 1 : 0)) != 0;
+    lastSettingsMs       = millis();
+  } else if (strcmp(t, "prime") == 0) {
+    isPriming   = true;
+    primeEndMs  = millis() + 2000;
+  }
+}
+
 // ── Send telemetry JSON to Pi ─────────────────────────────────────────────────
 void sendTelemetry() {
   StaticJsonDocument<128> doc;

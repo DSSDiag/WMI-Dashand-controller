@@ -42,6 +42,8 @@ import serial.tools.list_ports
 import websockets
 from websockets.server import WebSocketServerProtocol
 
+from bridge.logic import parse_esp32_frame, build_settings_frame
+
 # ── Configuration ──────────────────────────────────────────────────────────────
 WS_HOST          = "0.0.0.0"
 WS_PORT          = 8765
@@ -49,10 +51,6 @@ SERIAL_BAUD      = 115200
 SERIAL_TIMEOUT   = 1.0
 RECONNECT_DELAY  = 3.0   # seconds between ESP32 reconnect attempts
 WATCHDOG_TIMEOUT = 5.0   # seconds without data before marking disconnected
-
-# Conversion constants
-KPA_ABS_TO_PSI_GAUGE = 1 / 6.89476    # Conversion factor: kPa to PSI (atmospheric offset applied separately)
-ATM_KPA              = 101.325
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,56 +69,17 @@ pending_prime: bool = False
 def find_esp32_port() -> Optional[str]:
     """Scan serial ports and return the most likely ESP32 port."""
     preferred_keywords = [
-        "CP210", "CH340", "CH9102", "FTDI", "USB Serial",
-        "USB-SERIAL", "ttyUSB", "ttyACM",
+        "cp210", "ch340", "ch9102", "ftdi", "usb serial",
+        "usb-serial", "ttyusb", "ttyacm",
     ]
     ports = list(serial.tools.list_ports.comports())
     for port in ports:
-        desc = f"{port.description or ''} {port.hwid or ''}"
-        for kw in preferred_keywords:
-            if kw.lower() in desc.lower() or kw.lower() in port.device.lower():
-                return port.device
+        desc_lower = f"{port.description or ''} {port.hwid or ''}".lower()
+        dev_lower = port.device.lower()
+        if any(kw in desc_lower or kw in dev_lower for kw in preferred_keywords):
+            return port.device
     # Fallback: first available port
     return ports[0].device if ports else None
-
-
-def parse_esp32_frame(line: str) -> Optional[dict]:
-    """Parse a compact JSON telemetry frame from the ESP32."""
-    try:
-        raw = json.loads(line)
-        if raw.get("t") != "d":
-            return None
-        kpa_abs = float(raw["p"])
-        psi_gauge = (kpa_abs - ATM_KPA) * KPA_ABS_TO_PSI_GAUGE
-        return {
-            "type": "telemetry",
-            "pressure_kpa": round(kpa_abs, 2),
-            "pressure_psi": round(psi_gauge, 2),
-            "pump_duty": int(raw.get("d", 0)),
-            "tank_low": bool(raw.get("l", 0)),
-            "pump_active": int(raw.get("d", 0)) > 0,
-        }
-    except (KeyError, ValueError, TypeError):
-        return None
-
-
-def build_settings_frame(settings: dict) -> bytes:
-    """Convert browser settings dict into compact JSON for the ESP32."""
-    # Convert PSI gauge thresholds → kPa absolute for the ESP32
-    def psi_to_kpa_abs(psi_gauge: float) -> float:
-        return psi_gauge * 6.89476 + ATM_KPA
-
-    mode_map = {"thresholds": 0, "full_scale": 1, "manual": 2}
-    frame = {
-        "t": "s",
-        "tm": mode_map.get(settings.get("trigger_mode", "thresholds"), 0),
-        "sp": round(psi_to_kpa_abs(float(settings.get("start_psi", 5))), 1),
-        "fp": round(psi_to_kpa_abs(float(settings.get("full_psi", 20))), 1),
-        "md": int(settings.get("manual_duty", 0)),
-        "c":  1 if settings.get("curve") == "exponential" else 0,
-        "a":  1 if settings.get("system_active", False) else 0,
-    }
-    return (json.dumps(frame, separators=(",", ":")) + "\n").encode()
 
 
 # ── WebSocket server ───────────────────────────────────────────────────────────
@@ -158,15 +117,52 @@ async def broadcast(payload: dict):
         return
     msg = json.dumps(payload)
     await asyncio.gather(
-        *[ws.send(msg) for ws in list(clients)],
+        *(ws.send(msg) for ws in list(clients)),
         return_exceptions=True,
     )
 
 
 # ── Serial loop ────────────────────────────────────────────────────────────────
-async def serial_loop():
+async def handle_serial_connection(ser: serial.Serial):
     global pending_settings, pending_prime, latest_telemetry
 
+    last_data = time.monotonic()
+    ser.reset_input_buffer()
+    while True:
+        # ── Flush outgoing messages ──
+        if pending_prime:
+            pending_prime = False
+            ser.write(b'{"t":"prime"}\n')
+            log.info("Prime pulse sent to ESP32")
+
+        if pending_settings:
+            frame = build_settings_frame(pending_settings)
+            ser.write(frame)
+            log.debug("Settings sent: %s", frame)
+            pending_settings = None
+
+        # ── Read incoming ──
+        line = await asyncio.get_event_loop().run_in_executor(
+            None, ser.readline
+        )
+        line = line.decode("utf-8", errors="replace").strip()
+        if not line:
+            # Check watchdog
+            if time.monotonic() - last_data > WATCHDOG_TIMEOUT:
+                log.warning("No data from ESP32 for %.0fs — reconnecting", WATCHDOG_TIMEOUT)
+                break
+            continue
+
+        telemetry = parse_esp32_frame(line)
+        if telemetry:
+            latest_telemetry = telemetry
+            last_data = time.monotonic()
+            await broadcast(telemetry)
+        else:
+            log.debug("Unhandled ESP32 frame: %s", line)
+
+
+async def serial_loop():
     while True:
         port = find_esp32_port()
         if not port:
@@ -182,42 +178,8 @@ async def serial_loop():
             await asyncio.sleep(RECONNECT_DELAY)
             continue
 
-        last_data = time.monotonic()
         try:
-            ser.reset_input_buffer()
-            while True:
-                # ── Flush outgoing messages ──
-                if pending_prime:
-                    pending_prime = False
-                    ser.write(b'{"t":"prime"}\n')
-                    log.info("Prime pulse sent to ESP32")
-
-                if pending_settings:
-                    frame = build_settings_frame(pending_settings)
-                    ser.write(frame)
-                    log.debug("Settings sent: %s", frame)
-                    pending_settings = None
-
-                # ── Read incoming ──
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, ser.readline
-                )
-                line = line.decode("utf-8", errors="replace").strip()
-                if not line:
-                    # Check watchdog
-                    if time.monotonic() - last_data > WATCHDOG_TIMEOUT:
-                        log.warning("No data from ESP32 for %.0fs — reconnecting", WATCHDOG_TIMEOUT)
-                        break
-                    continue
-
-                telemetry = parse_esp32_frame(line)
-                if telemetry:
-                    latest_telemetry = telemetry
-                    last_data = time.monotonic()
-                    await broadcast(telemetry)
-                else:
-                    log.debug("Unhandled ESP32 frame: %s", line)
-
+            await handle_serial_connection(ser)
         except serial.SerialException as exc:
             log.error("Serial error: %s — reconnecting", exc)
         finally:

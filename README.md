@@ -57,6 +57,9 @@ WMI-Dashand-controller/
 │   └── wmi_controller/
 │       ├── wmi_controller.ino ← Arduino sketch (ESP32-S3)
 │       └── config.h           ← Pin assignments & sensor calibration
+├── simulation/
+│   ├── simulator.py           ← Interactive Python simulator for local dev
+│   └── README.md
 ├── pi-setup.sh                ← One-shot Pi setup script
 └── README.md
 ```
@@ -92,8 +95,8 @@ WMI-Dashand-controller/
 | **Exponential** | Duty rises slowly at first, then aggressively at high boost (quadratic) |
 
 ### Hardware vs. Simulation
-A small **HW / SIM** badge in the header shows whether the dashboard is receiving live data from the ESP32.  
-If the bridge is not running (e.g. during development on a laptop), the app enters **simulation mode** automatically — boost builds and decays as if you were driving.
+A small connection badge in the header shows whether the dashboard is receiving live data.
+During development, if you do not have an ESP32 connected, you can run the interactive software simulator in the `simulation/` directory. Boost builds and decays as if you were driving, and you can interact with the system using terminal commands. See `simulation/README.md` for details.
 
 ---
 
@@ -220,7 +223,11 @@ npm install
 npm run dev          # Vite dev server at http://localhost:5173
 ```
 
-The app starts in **simulation mode** — no serial hardware required.
+To view a live demo without serial hardware, start the interactive simulator in a separate terminal:
+```bash
+cd simulation
+python3 simulator.py # See simulation/README.md for interactive commands
+```
 
 To test the bridge with a real ESP32:
 ```bash
@@ -253,7 +260,7 @@ sudo systemctl restart wmi-kiosk   # Restart the browser
 
 | Symptom | Check |
 |---|---|
-| Dashboard shows **SIM** badge | Bridge not running or no ESP32 detected — run `sudo systemctl status wmi-bridge` |
+| Dashboard shows **OFF** badge | Bridge not running or no ESP32 detected — run `sudo systemctl status wmi-bridge` |
 | Pressure reads ~−14.7 PSI at idle | Normal! That is atmospheric vacuum. Engine off = ~0 inHg on vacuum gauge |
 | Pressure reads nonsense values | Re-calibrate `MAP_V_MIN_MV` / `MAP_V_MAX_MV` in `config.h` |
 | Pump doesn't run | Check `settings.armed` — you must tap **ARM** on the dashboard first |
