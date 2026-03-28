@@ -22,3 +22,4 @@ esp32/**/.arduino15/
 esp32/**/build/
 esp32/**/*.hex
 esp32/**/*.elf
+esp32/tests/test_logic

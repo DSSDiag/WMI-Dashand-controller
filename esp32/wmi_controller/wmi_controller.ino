@@ -35,15 +35,16 @@
 #include "config.h"
 #include "logic.h"
 
+// ── Variables declared extern in logic.h (defined here) ──────────────────────
 Settings settings;
 unsigned long lastSettingsMs = 0;
+bool isPriming = false;
+unsigned long primeEndMs = 0;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 float    pressureKpa    = ATM_KPA + 0.0f; // Current MAP reading
 uint8_t  pumpDuty       = 0;              // 0–100 %
 bool     tankLow        = false;
-bool     isPriming      = false;
-unsigned long primeEndMs = 0;
 
 // ── Telemetry timer ───────────────────────────────────────────────────────────
 unsigned long lastTxMs  = 0;
