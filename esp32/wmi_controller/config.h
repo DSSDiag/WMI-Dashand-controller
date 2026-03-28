@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 // ── Serial communication (USB to Raspberry Pi) ────────────────────────────────
 #define SERIAL_BAUD         115200
 // Watchdog: if no settings received from Pi in this many ms, use safe defaults
@@ -51,3 +53,13 @@
 #define DEFAULT_MANUAL_DUTY    0
 #define DEFAULT_CURVE          0    // 0=linear, 1=exponential
 #define DEFAULT_ARMED          0    // system starts disarmed
+
+// ── Settings (updated from Pi) ────────────────────────────────────────────────
+struct Settings {
+  uint8_t  triggerMode  = DEFAULT_TRIGGER_MODE;
+  float    startKpa     = DEFAULT_START_KPA;
+  float    fullKpa      = DEFAULT_FULL_KPA;
+  uint8_t  manualDuty   = DEFAULT_MANUAL_DUTY;
+  uint8_t  curve        = DEFAULT_CURVE;
+  bool     armed        = DEFAULT_ARMED;
+};
