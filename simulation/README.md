@@ -31,6 +31,7 @@ pip install websockets
 
 3. **Open the Dashboard:**
    Open `http://localhost:5173` in your browser. The connection badge in the top right should turn green, indicating it successfully connected to the simulated hardware.
+   *Note: Because this branch targets the 3.5" GPIO display in landscape mode, the optimal viewing window size on your desktop is `480x320`.*
 
 ## Interactive Controls
 
