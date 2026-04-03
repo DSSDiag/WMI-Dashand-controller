@@ -33,6 +33,8 @@ The ESP32 reads the MAP sensor, calculates pump duty cycle, controls the pump, a
 
 The Raspberry Pi runs the React-based touch dashboard in a full-screen Chromium kiosk and runs a Python bridge service to communicate with the ESP32.
 
+> **Hardware wiring:** Before powering on, make sure the Waveshare 3.5″ display is attached to the Pi's 40-pin GPIO header. For full GPIO pin assignments (SPI display + I2C capacitive touch), see **[install.md — Pin Connections](install.md#pin-connections-pi-to-waveshare-display)** or the **[README Hardware section](README.md#raspberry-pi-gpio-screen-wiring)**.
+
 ### Prerequisites
 1. You will need a Raspberry Pi Zero 2 W (or any Pi with USB-OTG/USB-A).
 2. Download and install [Raspberry Pi Imager](https://www.raspberrypi.com/software/).

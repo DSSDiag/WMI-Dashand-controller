@@ -114,6 +114,52 @@ During development, if you do not have an ESP32 connected, you can run the inter
 | Float switch (NC) | Tank level sensor, active-low |
 | 10 kΩ + 10 kΩ resistors | Voltage divider if MAP sensor outputs 5 V |
 
+### Raspberry Pi GPIO Screen Wiring
+
+The Waveshare 3.5″ ST7796S display is designed as a GPIO HAT — plug it directly onto the Pi's 40-pin header and all connections are made automatically.  If you need to wire it manually (e.g. via ribbon cable or breadboard), use the table below.
+
+**SPI bus — display (ST7796S driver)**
+
+| Display pin | Raspberry Pi GPIO | 40-pin header | Function |
+|---|---|---|---|
+| VCC | 3.3 V | Pin 1 | Power |
+| GND | GND | Pin 6 | Ground |
+| MOSI | GPIO 10 | Pin 19 | SPI0 MOSI |
+| MISO | GPIO 9 | Pin 21 | SPI0 MISO |
+| CLK | GPIO 11 | Pin 23 | SPI0 SCLK |
+| CS | GPIO 8 | Pin 24 | SPI0 CE0 |
+| DC | GPIO 25 | Pin 22 | Data / Command select |
+| RST | GPIO 27 | Pin 13 | Hardware reset |
+| BL | GPIO 18 | Pin 12 | Backlight (PWM) |
+
+**I2C bus — capacitive touch (FT6336U controller)**
+
+| Touch pin | Raspberry Pi GPIO | 40-pin header | Function |
+|---|---|---|---|
+| SDA | GPIO 2 | Pin 3 | I2C1 SDA |
+| SCL | GPIO 3 | Pin 5 | I2C1 SCL |
+| INT | GPIO 4 | Pin 7 | Touch interrupt (active-low) |
+
+```
+Pi 40-pin header (top view, pin 1 top-left)
+ 1 [3V3 ]─── VCC            2 [ 5V ]
+ 3 [SDA ]─── Touch SDA      4 [ 5V ]
+ 5 [SCL ]─── Touch SCL      6 [GND ]─── GND
+ 7 [GP4 ]─── Touch INT      8 [TX  ]
+ 9 [GND ]                  10 [RX  ]
+11 [GP17]                  12 [GP18]─── BL
+13 [GP27]─── RST           14 [GND ]
+15 [GP22]                  16 [GP23]
+17 [3V3 ]                  18 [GP24]
+19 [GP10]─── MOSI          20 [GND ]
+21 [GP9 ]─── MISO          22 [GP25]─── DC
+23 [GP11]─── CLK           24 [GP8 ]─── CS
+25 [GND ]                  26 [GP7 ]
+...
+```
+
+> **Note:** `pi-setup.sh` automatically enables SPI (`dtparam=spi=on`), I2C (`dtparam=i2c_arm=on`), and adds the `dtoverlay=waveshare35a:rotate=90` device-tree overlay so the kernel drives the display without any extra drivers.
+
 ### ESP32-S3 Wiring
 
 ```
