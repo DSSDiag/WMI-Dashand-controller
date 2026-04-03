@@ -8,7 +8,7 @@ A touch-screen Water/Methanol Injection (WMI) controller for Performance engines
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  Raspberry Pi Zero 2 W  (5" HDMI Touch Screen)                   │
+│  Raspberry Pi Zero 2 W  (3.5" GPIO Touch Screen)                 │
 │                                                                    │
 │  ┌─────────────────┐    WebSocket      ┌──────────────────────┐  │
 │  │  Chromium Kiosk │◄─── localhost ───►│  serial_bridge.py    │  │
@@ -107,7 +107,7 @@ During development, if you do not have an ESP32 connected, you can run the inter
 | Part | Notes |
 |---|---|
 | Raspberry Pi Zero 2 W | Any Pi with USB-OTG or USB-A works |
-| 5″ HDMI touch screen | 800×480 recommended; Waveshare 5" HDMI/DSI variants tested |
+| 3.5″ GPIO touch screen | 320x480 Waveshare ST7796S SPI Display (forced to landscape 480x320) |
 | ESP32-S3 DevKit | Any variant with USB-CDC (native USB) |
 | Automotive MAP sensor | 1-bar (e.g. GM 12569240) or 2-bar (e.g. GM 16040749) |
 | N-channel MOSFET module **or** 5V relay module | For pump/solenoid control |

@@ -64,8 +64,37 @@ sudo ln -sf /etc/nginx/sites-available/wmi-dashboard /etc/nginx/sites-enabled/wm
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl enable --now nginx
 
+# ── Display Configuration (Waveshare 3.5" GPIO) ──────────────────────────────
+echo "[5/8] Configuring GPIO Display (/boot/config.txt)…"
+if [ -f /boot/firmware/config.txt ]; then
+    BOOT_CONFIG="/boot/firmware/config.txt"
+elif [ -f /boot/config.txt ]; then
+    BOOT_CONFIG="/boot/config.txt"
+else
+    echo "Warning: could not find config.txt to configure display"
+    BOOT_CONFIG=""
+fi
+
+if [ -n "$BOOT_CONFIG" ]; then
+    # Enable SPI and I2C if not already enabled
+    sudo sed -i 's/^#dtparam=spi=on/dtparam=spi=on/' "$BOOT_CONFIG"
+    sudo sed -i 's/^#dtparam=i2c_arm=on/dtparam=i2c_arm=on/' "$BOOT_CONFIG"
+    grep -q "^dtparam=spi=on" "$BOOT_CONFIG" || echo "dtparam=spi=on" | sudo tee -a "$BOOT_CONFIG" >/dev/null
+    grep -q "^dtparam=i2c_arm=on" "$BOOT_CONFIG" || echo "dtparam=i2c_arm=on" | sudo tee -a "$BOOT_CONFIG" >/dev/null
+
+    # Waveshare 3.5" SPI display overlay (adjusts to 480x320 landscape)
+    if ! grep -q "dtoverlay=waveshare35a" "$BOOT_CONFIG"; then
+        sudo tee -a "$BOOT_CONFIG" > /dev/null << EOF
+
+# --- Waveshare 3.5" GPIO Display Configuration ---
+dtoverlay=waveshare35a:rotate=90
+# -------------------------------------------------
+EOF
+    fi
+fi
+
 # ── systemd service: serial bridge ────────────────────────────────────────────
-echo "[5/7] Installing wmi-bridge systemd service…"
+echo "[6/8] Installing wmi-bridge systemd service…"
 sudo tee /etc/systemd/system/wmi-bridge.service > /dev/null << EOF
 [Unit]
 Description=WMI Serial Bridge (ESP32 ↔ Dashboard)
@@ -85,7 +114,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now wmi-bridge
 
 # ── systemd service: Chromium kiosk ───────────────────────────────────────────
-echo "[6/7] Installing wmi-kiosk systemd service…"
+echo "[7/8] Installing wmi-kiosk systemd service…"
 sudo tee /etc/systemd/system/wmi-kiosk.service > /dev/null << EOF
 [Unit]
 Description=WMI Dashboard Kiosk (Chromium)
@@ -105,6 +134,8 @@ ExecStart=/usr/bin/chromium-browser \\
     --disable-features=TranslateUI \\
     --overscroll-history-navigation=0 \\
     --touch-events=enabled \\
+    --force-device-scale-factor=1 \\
+    --window-size=480,320 \\
     http://localhost
 Restart=on-failure
 RestartSec=5
@@ -134,7 +165,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable wmi-kiosk wmi-unclutter
 
 # ── User serial port permission ────────────────────────────────────────────────
-echo "[7/7] Adding $(whoami) to dialout group (serial port access)…"
+echo "[8/8] Adding $(whoami) to dialout group (serial port access)…"
 sudo usermod -aG dialout "$(whoami)"
 
 echo ""

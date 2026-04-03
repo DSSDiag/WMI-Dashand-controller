@@ -301,10 +301,10 @@ const App = () => {
       : Math.max(0, Math.min(100, 100 - ((startInjectionAt - minBoost) / range) * 100));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 flex flex-col gap-4 select-none overflow-hidden relative">
+    <div className="h-screen w-screen bg-slate-950 text-slate-100 font-sans p-2 flex flex-col gap-2 select-none overflow-hidden relative">
 
-      <div className="absolute -top-24 -left-24 w-64 h-64 bg-lime-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-500/10 rounded-full blur-[60px] pointer-events-none" />
+      <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-[60px] pointer-events-none" />
 
       <div
         className="flex-1 flex transition-transform duration-500 ease-out h-full"
@@ -314,11 +314,11 @@ const App = () => {
         {/* ================================================================
             DASHBOARD PAGE
             ================================================================ */}
-        <div className="min-w-full flex flex-col gap-4">
+        <div className="min-w-full flex flex-col gap-2">
           {/* Header */}
-          <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-800 shadow-xl">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-black rounded-lg border border-slate-700 flex items-center justify-center p-1 shadow-[0_0_15px_rgba(163,230,53,0.15)] overflow-hidden">
+          <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-md p-2 rounded-xl border border-slate-800 shadow-md">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-black rounded-lg border border-slate-700 flex items-center justify-center p-1 shadow-[0_0_10px_rgba(163,230,53,0.15)] overflow-hidden">
                 <img
                   src="/logo.svg"
                   alt="Logo"
@@ -327,62 +327,62 @@ const App = () => {
                 />
               </div>
               <div className="flex flex-col justify-center">
-                <h1 className="text-xl font-black tracking-tighter leading-none italic">
+                <h1 className="text-sm font-black tracking-tighter leading-none italic">
                   <span className="text-white">MILD</span>
-                  <span className="mx-1.5"> </span>
+                  <span className="mx-1"> </span>
                   <span className="text-lime-400">MODZ</span>
                 </h1>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">
-                  <span className="text-lime-700 mr-1.5">NOTHING MILD</span>
+                <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mt-0.5">
+                  <span className="text-lime-700 mr-1">NOTHING MILD</span>
                   <span>·</span>
-                  <span className="ml-1.5">{status}</span>
+                  <span className="ml-1 truncate w-16 inline-block align-bottom">{status}</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-3 items-center">
+            <div className="flex gap-2 items-center">
               {/* Hardware connection indicator */}
               <div
                 title={hwConnected ? 'Hardware connected' : 'Disconnected'}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border text-[8px] font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
               >
                 {hwConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
-                <span className="hidden md:inline">{hwConnected ? 'ON' : 'OFF'}</span>
+                <span className="inline">{hwConnected ? 'ON' : 'OFF'}</span>
               </div>
 
               <button
                 onClick={handlePrime}
                 disabled={isPriming || !systemActive}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg border transition-all ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
               >
-                <RefreshCw size={14} className={isPriming ? 'animate-spin' : ''} />
-                <span className="text-xs font-bold uppercase hidden md:inline">Purge</span>
+                <RefreshCw size={12} className={isPriming ? 'animate-spin' : ''} />
+                <span className="text-[10px] font-bold uppercase inline">Purge</span>
               </button>
 
               <button
                 onClick={() => setSystemActive(!systemActive)}
-                className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold uppercase tracking-wider transition-all shadow-lg text-sm ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all shadow-md text-xs ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
               >
-                <Power size={16} />
+                <Power size={14} />
                 {systemActive ? 'Kill' : 'Arm'}
               </button>
 
               <button
                 onClick={() => setActiveTab('settings')}
-                className="p-2 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
+                className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
               >
-                <ChevronRight size={24} className="text-slate-400" />
+                <ChevronRight size={20} className="text-slate-400" />
               </button>
             </div>
           </div>
 
           {/* Main Grid */}
-          <div className="grid grid-cols-12 gap-4 flex-1">
+          <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
             {/* Boost Gauge */}
-            <div className="col-span-12 md:col-span-7 bg-slate-900/50 rounded-3xl border border-slate-800 p-6 flex flex-col justify-between relative overflow-hidden group">
+            <div className="col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden group">
 
               {/* Background Radial Gauge */}
-              <div className="absolute -right-8 -top-8 w-72 h-72 pointer-events-none opacity-40">
+              <div className="absolute -right-8 -top-8 w-48 h-48 pointer-events-none opacity-40">
                 <svg viewBox="0 0 240 240" className="w-full h-full" style={{ transform: 'rotate(135deg)' }}>
                   <circle
                     cx="120" cy="120" r="100"
@@ -400,42 +400,44 @@ const App = () => {
               </div>
 
               <div className="relative z-10 flex-1 flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Manifold Pressure</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Manifold Pressure</span>
                   {triggerMode === 'full_scale' && (
-                    <span className="text-[8px] bg-lime-500/20 text-lime-400 px-2 py-0.5 rounded border border-lime-500/30">FULL SCALE</span>
+                    <span className="text-[8px] bg-lime-500/20 text-lime-400 px-1.5 py-0.5 rounded border border-lime-500/30">FULL SCALE</span>
                   )}
                 </div>
-                <div className="flex flex-col mt-2">
-                  <span className={`text-7xl md:text-8xl font-black tracking-tighter tabular-nums drop-shadow-lg leading-none transition-colors duration-300 ${isOutOfBounds ? 'text-red-500' : 'text-white'}`}>
+                <div className="flex flex-col mt-1">
+                  <span className={`text-6xl font-black tracking-tighter tabular-nums drop-shadow-md leading-none transition-colors duration-300 ${isOutOfBounds ? 'text-red-500' : 'text-white'}`}>
                     {formatBoost(rawBoost)}
                   </span>
-                  <span className={`text-xl md:text-2xl font-bold drop-shadow-md mt-1 transition-colors duration-300 ${isOutOfBounds ? 'text-red-500' : 'text-lime-400'}`}>
-                    {getUnitLabel()}
-                  </span>
-                  <span className={`text-xs font-bold uppercase tracking-widest mt-0.5 transition-colors duration-300 ${isOutOfBounds ? 'text-red-500' : 'text-slate-500'}`}>
-                    {pressureRef === 'abs' && units !== 'psi_inhg' ? 'ABSOLUTE' : 'GAUGE'}
-                  </span>
+                  <div className="flex items-end gap-2 mt-1">
+                    <span className={`text-lg font-bold drop-shadow-md transition-colors duration-300 ${isOutOfBounds ? 'text-red-500' : 'text-lime-400'}`}>
+                      {getUnitLabel()}
+                    </span>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-300 mb-0.5 ${isOutOfBounds ? 'text-red-500' : 'text-slate-500'}`}>
+                      {pressureRef === 'abs' && units !== 'psi_inhg' ? 'ABSOLUTE' : 'GAUGE'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Telemetry Sparkline */}
-                <div className="flex-1 w-full mt-6 flex flex-col justify-end relative min-h-[80px]">
+                <div className="flex-1 w-full mt-2 flex flex-col justify-end relative min-h-[50px]">
                   <div className="absolute top-0 right-0 text-right z-20">
-                    <div className="flex items-center justify-end gap-2 mb-1">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Session Peak</span>
+                    <div className="flex items-center justify-end gap-1 mb-0.5">
+                      <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Peak</span>
                       <button
                         onClick={() => setPeakBoost(minBoost)}
-                        className="text-[8px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 hover:bg-slate-300 transition-colors cursor-pointer"
+                        className="text-[8px] bg-slate-800/80 text-slate-400 px-1 py-0.5 rounded border border-slate-700 hover:bg-slate-300 transition-colors cursor-pointer"
                       >
                         RESET
                       </button>
                     </div>
-                    <div className="text-xl md:text-2xl font-black text-slate-300 tabular-nums leading-none">
+                    <div className="text-lg font-black text-slate-300 tabular-nums leading-none">
                       {formatBoost(peakBoost)}
                     </div>
                   </div>
 
-                  <div className="w-full h-20 md:h-24 relative z-10 opacity-70">
+                  <div className="w-full h-12 relative z-10 opacity-70">
                     <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" className="overflow-visible">
                       <defs>
                         <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
@@ -454,7 +456,7 @@ const App = () => {
               </div>
 
               {/* Boost progress bar */}
-              <div className="w-full bg-slate-800 h-6 rounded-full mt-4 overflow-hidden border border-slate-700 p-1 relative z-10 flex-shrink-0">
+              <div className="w-full bg-slate-800 h-4 rounded-full mt-2 overflow-hidden border border-slate-700 p-0.5 relative z-10 flex-shrink-0">
                 <div
                   className="h-full bg-gradient-to-r from-lime-600 to-emerald-400 rounded-full transition-all duration-100"
                   style={{ width: `${Math.max(0, Math.min(100, ((rawBoost - minBoost) / (maxBoost - minBoost)) * 100))}%` }}
@@ -462,21 +464,21 @@ const App = () => {
               </div>
             </div>
 
-            <div className="col-span-12 md:col-span-5 flex flex-col gap-4">
+            <div className="col-span-5 flex flex-col gap-2">
               {/* Pump Flow */}
-              <div className="flex-1 bg-slate-900/50 rounded-3xl border border-slate-800 p-6 flex items-center justify-between">
+              <div className="flex-1 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Pump Flow</span>
-                  <span className={`text-5xl font-black transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-lg' : 'text-white'}`}>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pump Flow</span>
+                  <span className={`text-4xl font-black transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
                     {Math.round(dutyCycle)}%
                   </span>
                   {triggerMode === 'manual' && (
-                    <span className="text-[10px] text-amber-500 font-bold uppercase mt-1">MANUAL OVERRIDE</span>
+                    <span className="text-[8px] text-amber-500 font-bold uppercase mt-1">MANUAL</span>
                   )}
                 </div>
 
                 {/* Injector SVG */}
-                <div className="h-28 w-20 flex flex-col items-center justify-start relative mr-2">
+                <div className="h-20 w-16 flex flex-col items-center justify-start relative mr-1">
                   <svg width="100%" height="100%" viewBox="0 0 60 110" className="overflow-visible">
                     <defs>
                       <linearGradient id="sprayGrad" x1="0" y1="0" x2="0" y2="1">
@@ -515,32 +517,34 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Map Curve Display */}
-              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4 flex items-center justify-between shadow-inner h-16 flex-shrink-0">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Map Curve</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-black text-lime-400 uppercase tracking-widest">{curve}</span>
-                  <div className="w-8 h-6 flex items-center justify-center text-lime-400">
-                    <svg width="32" height="20" viewBox="0 0 32 20" className="overflow-visible">
-                      {curve === 'linear' ? (
-                        <line x1="0" y1="20" x2="32" y2="0" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                      ) : (
-                        <path d="M0,20 Q24,20 32,0" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                      )}
-                    </svg>
+              <div className="flex gap-2 h-14 flex-shrink-0">
+                {/* Map Curve Display */}
+                <div className="flex-1 bg-slate-900/50 rounded-xl border border-slate-800 p-2 flex flex-col justify-center items-center shadow-inner">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Curve</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-black text-lime-400 uppercase tracking-widest">{curve}</span>
+                    <div className="w-5 h-4 flex items-center justify-center text-lime-400">
+                      <svg width="20" height="12" viewBox="0 0 32 20" className="overflow-visible">
+                        {curve === 'linear' ? (
+                          <line x1="0" y1="12" x2="20" y2="0" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                        ) : (
+                          <path d="M0,12 Q15,12 20,0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                        )}
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Tank Status */}
-              <div className={`flex-1 rounded-3xl border p-6 flex items-center gap-4 transition-all ${tankIsLow ? 'bg-red-950/30 border-red-500/50 shadow-lg shadow-red-900/20' : 'bg-slate-900/50 border-slate-800'}`}>
-                <div className={`p-3 rounded-2xl ${tankIsLow ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-800 text-slate-500'}`}>
-                  <Droplet size={32} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tank Status</span>
-                  <span className={`text-2xl font-black ${tankIsLow ? 'text-red-500' : 'text-emerald-400'}`}>
-                    {tankIsLow ? 'LOW FLUID' : 'LEVEL OK'}
+                {/* Tank Status */}
+                <div className={`flex-1 rounded-xl border p-2 flex flex-col justify-center items-center gap-1 transition-all ${tankIsLow ? 'bg-red-950/30 border-red-500/50 shadow-md shadow-red-900/20' : 'bg-slate-900/50 border-slate-800'}`}>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`${tankIsLow ? 'text-red-500 animate-pulse' : 'text-slate-500'}`}>
+                      {tankIsLow ? <AlertTriangle size={14} /> : <Droplet size={14} />}
+                    </div>
+                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Tank</span>
+                  </div>
+                  <span className={`text-xs font-black ${tankIsLow ? 'text-red-500' : 'text-emerald-400'}`}>
+                    {tankIsLow ? 'LOW' : 'OK'}
                   </span>
                 </div>
               </div>
@@ -551,33 +555,33 @@ const App = () => {
         {/* ================================================================
             SETTINGS PAGE
             ================================================================ */}
-        <div className="min-w-full flex flex-col gap-4">
-          <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-2xl border border-slate-800 shadow-lg">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setActiveTab('dash')} className="p-2 bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors">
-                <ChevronLeft size={24} />
+        <div className="min-w-full flex flex-col gap-2">
+          <div className="flex justify-between items-center bg-slate-900/80 p-2 rounded-xl border border-slate-800 shadow-md">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setActiveTab('dash')} className="p-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
+                <ChevronLeft size={20} />
               </button>
               <div className="flex flex-col">
-                <h2 className="text-xl font-black uppercase tracking-tight leading-none">System Configuration</h2>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                <h2 className="text-sm font-black uppercase tracking-tight leading-none">System Configuration</h2>
+                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
                   HW REV: <span className="text-lime-400">{HW_REVISION}</span>
                 </span>
               </div>
             </div>
             <button
               onClick={() => setActiveTab('dash')}
-              className="flex items-center gap-2 px-4 py-2 bg-lime-600 rounded-xl font-bold text-sm shadow-lg shadow-lime-900/20 active:scale-95"
+              className="flex items-center gap-1 px-3 py-1.5 bg-lime-600 rounded-lg font-bold text-[10px] shadow-md shadow-lime-900/20 active:scale-95"
             >
-              <Save size={16} /> <span className="hidden md:inline">SAVE & EXIT</span>
+              <Save size={14} /> <span className="inline">SAVE & EXIT</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="grid grid-cols-2 gap-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
             {/* Column 1: Display & Units */}
-            <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-6 flex flex-col gap-6 h-fit">
+            <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col gap-3 h-fit">
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-3">Pressure Units</label>
-                <div className="grid grid-cols-4 gap-2 mb-3">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Pressure Units</label>
+                <div className="grid grid-cols-4 gap-1 mb-1.5">
                   {['psi', 'psi_inhg', 'bar', 'kpa'].map((u) => (
                     <button
                       key={u}
@@ -585,7 +589,7 @@ const App = () => {
                         setUnits(u);
                         if (u === 'psi_inhg') setPressureRef('gauge');
                       }}
-                      className={`py-2 rounded-xl text-xs font-bold uppercase border transition-all ${units === u ? 'bg-lime-500 border-lime-400 text-black shadow-lg shadow-lime-500/20' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}
+                      className={`py-1.5 rounded-lg text-[10px] font-bold uppercase border transition-all ${units === u ? 'bg-lime-500 border-lime-400 text-black shadow-md shadow-lime-500/20' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}
                     >
                       {u.replace('_', '+')}
                     </button>
@@ -593,16 +597,16 @@ const App = () => {
                 </div>
 
                 {units !== 'psi_inhg' && (
-                  <div className="flex gap-2 p-1 bg-black rounded-xl border border-slate-800 animate-in fade-in duration-300">
+                  <div className="flex gap-1 p-0.5 bg-black rounded-lg border border-slate-800 animate-in fade-in duration-300">
                     <button
                       onClick={() => setPressureRef('gauge')}
-                      className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${pressureRef === 'gauge' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
+                      className={`flex-1 py-1 rounded-[6px] text-[8px] font-bold uppercase transition-all ${pressureRef === 'gauge' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
                     >
                       Gauge (PSIg)
                     </button>
                     <button
                       onClick={() => setPressureRef('abs')}
-                      className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${pressureRef === 'abs' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
+                      className={`flex-1 py-1 rounded-[6px] text-[8px] font-bold uppercase transition-all ${pressureRef === 'abs' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
                     >
                       Absolute (PSIa)
                     </button>
@@ -611,17 +615,17 @@ const App = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-3">Gauge Scaling Limits</label>
-                <div className="flex flex-col gap-4">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Gauge Scaling Limits</label>
+                <div className="flex gap-2">
                   {/* MIN INPUT */}
                   <div className="flex-1">
-                    <span className="text-[10px] text-slate-500 block font-bold mb-1">MIN ({getInputUnitLabel(true)})</span>
-                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors">
+                    <span className="text-[8px] text-slate-500 block font-bold mb-0.5">MIN ({getInputUnitLabel(true)})</span>
+                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors h-8">
                       <button
                         onClick={() => handleAdjust(true, 'down')}
-                        className="px-4 py-2 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-r border-slate-700"
+                        className="px-2 py-1 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-r border-slate-700"
                       >
-                        <Minus size={18} />
+                        <Minus size={14} />
                       </button>
                       <input
                         type="number"
@@ -646,13 +650,13 @@ const App = () => {
 
                   {/* MAX INPUT */}
                   <div className="flex-1">
-                    <span className="text-[10px] text-slate-500 block font-bold mb-1">MAX ({getInputUnitLabel(false)})</span>
-                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors">
+                    <span className="text-[8px] text-slate-500 block font-bold mb-0.5">MAX ({getInputUnitLabel(false)})</span>
+                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors h-8">
                       <button
                         onClick={() => handleAdjust(false, 'down')}
-                        className="px-4 py-2 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-r border-slate-700"
+                        className="px-2 py-1 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-r border-slate-700"
                       >
-                        <Minus size={18} />
+                        <Minus size={14} />
                       </button>
                       <input
                         type="number"
@@ -664,114 +668,114 @@ const App = () => {
                           if (fullInjectionAt > val) setFullInjectionAt(val);
                           if (startInjectionAt > val) setStartInjectionAt(val - 1);
                         }}
-                        className="w-full bg-transparent text-center px-2 py-2 text-white font-bold outline-none hide-arrows"
+                        className="w-full bg-transparent text-center px-1 py-1 text-white text-xs font-bold outline-none hide-arrows"
                       />
                       <button
                         onClick={() => handleAdjust(false, 'up')}
-                        className="px-4 py-2 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-l border-slate-700"
+                        className="px-2 py-1 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-l border-slate-700"
                       >
-                        <Plus size={18} />
+                        <Plus size={14} />
                       </button>
                     </div>
                   </div>
                 </div>
 
                 {maxBoost > 30 && (
-                  <div className="mt-4 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-2 text-amber-500 animate-in fade-in zoom-in-95 duration-300">
-                    <AlertTriangle size={14} className="flex-shrink-0" />
-                    <span className="text-[10px] font-bold uppercase leading-tight">External MAP Sensor must be connected</span>
+                  <div className="mt-2 p-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-1.5 text-amber-500 animate-in fade-in zoom-in-95 duration-300">
+                    <AlertTriangle size={12} className="flex-shrink-0" />
+                    <span className="text-[8px] font-bold uppercase leading-tight">External MAP Sensor must be connected</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Column 2: Trigger Logic */}
-            <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-6 flex flex-col gap-6 h-fit">
+            <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col gap-3 h-fit">
               {/* Map Curve Setting */}
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-3">Injection Map Curve</label>
-                <div className="flex gap-2 p-1 bg-black rounded-xl border border-slate-800">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Injection Map Curve</label>
+                <div className="flex gap-1 p-0.5 bg-black rounded-lg border border-slate-800">
                   <button
                     onClick={() => setCurve('linear')}
-                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center justify-center gap-2 ${curve === 'linear' ? 'bg-slate-800 text-lime-400' : 'text-slate-500 hover:text-slate-400'}`}
+                    className={`flex-1 py-1 rounded-[6px] text-[8px] font-bold uppercase transition-all flex items-center justify-center gap-1.5 ${curve === 'linear' ? 'bg-slate-800 text-lime-400' : 'text-slate-500 hover:text-slate-400'}`}
                   >
-                    <TrendingUp size={14} /> Linear
+                    <TrendingUp size={12} /> Linear
                   </button>
                   <button
                     onClick={() => setCurve('exponential')}
-                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center justify-center gap-2 ${curve === 'exponential' ? 'bg-slate-800 text-lime-400' : 'text-slate-500 hover:text-slate-400'}`}
+                    className={`flex-1 py-1 rounded-[6px] text-[8px] font-bold uppercase transition-all flex items-center justify-center gap-1.5 ${curve === 'exponential' ? 'bg-slate-800 text-lime-400' : 'text-slate-500 hover:text-slate-400'}`}
                   >
-                    <Zap size={14} /> Exponential
+                    <Zap size={12} /> Exponential
                   </button>
                 </div>
               </div>
 
-              <div className="border-t border-slate-800 my-1"></div>
+              <div className="border-t border-slate-800 my-0.5"></div>
 
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Injection Mapping Mode</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Injection Mapping Mode</label>
 
-              <div className="flex gap-2 p-1 bg-black rounded-2xl border border-slate-800">
+              <div className="flex gap-1 p-0.5 bg-black rounded-xl border border-slate-800">
                 <button
                   onClick={() => setTriggerMode('thresholds')}
-                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${triggerMode === 'thresholds' ? 'bg-slate-800 text-lime-400 shadow-inner' : 'text-slate-500'}`}
+                  className={`flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all flex flex-col flex-row items-center justify-center gap-1 ${triggerMode === 'thresholds' ? 'bg-slate-800 text-lime-400 shadow-inner' : 'text-slate-500'}`}
                 >
-                  <Zap size={12} /> Thresholds
+                  <Zap size={10} /> Thresholds
                 </button>
                 <button
                   onClick={() => setTriggerMode('full_scale')}
-                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${triggerMode === 'full_scale' ? 'bg-slate-800 text-lime-400 shadow-inner' : 'text-slate-500'}`}
+                  className={`flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all flex flex-col flex-row items-center justify-center gap-1 ${triggerMode === 'full_scale' ? 'bg-slate-800 text-lime-400 shadow-inner' : 'text-slate-500'}`}
                 >
-                  <Gauge size={12} /> Full Scale
+                  <Gauge size={10} /> Full Scale
                 </button>
                 <button
                   onClick={() => setTriggerMode('manual')}
-                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${triggerMode === 'manual' ? 'bg-slate-800 text-amber-500 shadow-inner' : 'text-slate-500'}`}
+                  className={`flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all flex flex-col flex-row items-center justify-center gap-1 ${triggerMode === 'manual' ? 'bg-slate-800 text-amber-500 shadow-inner' : 'text-slate-500'}`}
                 >
-                  <Sliders size={12} /> Manual
+                  <Sliders size={10} /> Manual
                 </button>
               </div>
 
               {/* Conditional Inputs */}
-              <div className="min-h-[140px] flex flex-col justify-center gap-4">
+              <div className="min-h-[70px] flex flex-col justify-center gap-1.5">
                 {triggerMode === 'thresholds' && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div>
-                      <div className="flex justify-between text-[10px] font-bold uppercase mb-1">
+                      <div className="flex justify-between text-[8px] font-bold uppercase mb-0.5">
                         <span className="text-slate-400">Injection Start:</span>
                         <span className="text-lime-400">{formatBoost(startInjectionAt)} {getUnitLabel()}</span>
                       </div>
-                      <input type="range" min={minBoost} max={fullInjectionAt - 0.1} step="0.1" value={startInjectionAt} onChange={(e) => setStartInjectionAt(Number(e.target.value))} className="w-full accent-lime-500" />
+                      <input type="range" min={minBoost} max={fullInjectionAt - 0.1} step="0.1" value={startInjectionAt} onChange={(e) => setStartInjectionAt(Number(e.target.value))} className="w-full accent-lime-500 h-1" />
                     </div>
                     <div>
-                      <div className="flex justify-between text-[10px] font-bold uppercase mb-1">
+                      <div className="flex justify-between text-[8px] font-bold uppercase mb-0.5">
                         <span className="text-slate-400">100% Flow:</span>
                         <span className="text-cyan-400">{formatBoost(fullInjectionAt)} {getUnitLabel()}</span>
                       </div>
-                      <input type="range" min={startInjectionAt + 0.1} max={maxBoost} step="0.1" value={fullInjectionAt} onChange={(e) => setFullInjectionAt(Number(e.target.value))} className="w-full accent-cyan-500" />
+                      <input type="range" min={startInjectionAt + 0.1} max={maxBoost} step="0.1" value={fullInjectionAt} onChange={(e) => setFullInjectionAt(Number(e.target.value))} className="w-full accent-cyan-500 h-1" />
                     </div>
                   </div>
                 )}
 
                 {triggerMode === 'full_scale' && (
-                  <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700 text-center animate-in zoom-in-95 duration-300">
-                    <p className="text-[11px] text-slate-300 font-bold uppercase leading-tight">
+                  <div className="bg-slate-800/40 p-2 rounded-lg border border-slate-700 text-center animate-in zoom-in-95 duration-300">
+                    <p className="text-[9px] text-slate-300 font-bold uppercase leading-tight">
                       Pump will ramp linearly from <span className="text-lime-400">{formatBoost(minBoost)} {getUnitLabel()}</span> to <span className="text-cyan-400">{formatBoost(maxBoost)} {getUnitLabel()}</span>.
                     </p>
-                    <p className="text-[9px] text-slate-500 mt-2 italic">Based on your Gauge Scaling settings.</p>
+                    <p className="text-[8px] text-slate-500 mt-1 italic">Based on your Gauge Scaling settings.</p>
                   </div>
                 )}
 
                 {triggerMode === 'manual' && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div>
-                      <div className="flex justify-between text-[10px] font-bold uppercase mb-1">
+                      <div className="flex justify-between text-[8px] font-bold uppercase mb-0.5">
                         <span className="text-amber-500 font-black">Manual Duty Cycle:</span>
-                        <span className="text-white text-lg">{manualDuty}%</span>
+                        <span className="text-white text-xs">{manualDuty}%</span>
                       </div>
-                      <input type="range" min="0" max="100" value={manualDuty} onChange={(e) => setManualDuty(Number(e.target.value))} className="w-full accent-amber-500" />
+                      <input type="range" min="0" max="100" value={manualDuty} onChange={(e) => setManualDuty(Number(e.target.value))} className="w-full accent-amber-500 h-1" />
                     </div>
-                    <p className="text-[8px] text-red-400 font-bold uppercase text-center bg-red-950/20 py-1 rounded">
-                      Caution: Pump will run at fixed speed regardless of pressure.
+                    <p className="text-[8px] text-red-400 font-bold uppercase text-center bg-red-950/20 py-0.5 rounded">
+                      Caution: Fixed speed.
                     </p>
                   </div>
                 )}
@@ -782,9 +786,9 @@ const App = () => {
       </div>
 
       {/* Nav Dots */}
-      <div className="flex justify-center gap-2 pb-2">
-        <div className={`h-1.5 rounded-full transition-all duration-300 ${activeTab === 'dash' ? 'w-8 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-2 bg-slate-700'}`} />
-        <div className={`h-1.5 rounded-full transition-all duration-300 ${activeTab === 'settings' ? 'w-8 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-2 bg-slate-700'}`} />
+      <div className="flex justify-center gap-1.5 pb-1">
+        <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'dash' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
+        <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'settings' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
