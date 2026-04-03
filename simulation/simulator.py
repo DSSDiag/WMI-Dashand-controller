@@ -113,6 +113,71 @@ async def simulation_loop():
         await asyncio.sleep(0.1)  # 10Hz update rate, matching ESP32
 
 # ── WebSocket Server ───────────────────────────────────────────────────────────
+def update_sim_settings(msg: dict):
+    """Safely updates simulation state with validation."""
+    if not isinstance(msg, dict):
+        return
+
+    log.info(f"Updating settings: {msg}")
+
+    # system_active: bool
+    if "system_active" in msg:
+        val = msg["system_active"]
+        if isinstance(val, bool):
+            sim_state["system_active"] = val
+        else:
+            log.warning(f"Invalid type for system_active: {type(val)}")
+
+    # trigger_mode: str
+    if "trigger_mode" in msg:
+        val = msg["trigger_mode"]
+        if val in ["thresholds", "manual"]:
+            sim_state["trigger_mode"] = val
+        else:
+            log.warning(f"Invalid value for trigger_mode: {val}")
+
+    # start_psi: float
+    if "start_psi" in msg:
+        try:
+            val = float(msg["start_psi"])
+            if 0 <= val <= 100:
+                sim_state["start_psi"] = val
+            else:
+                log.warning(f"start_psi out of range: {val}")
+        except (ValueError, TypeError):
+            log.warning(f"Invalid value for start_psi: {msg.get('start_psi')}")
+
+    # full_psi: float
+    if "full_psi" in msg:
+        try:
+            val = float(msg["full_psi"])
+            if 0 <= val <= 100:
+                sim_state["full_psi"] = val
+            else:
+                log.warning(f"full_psi out of range: {val}")
+        except (ValueError, TypeError):
+            log.warning(f"Invalid value for full_psi: {msg.get('full_psi')}")
+
+    # manual_duty: float
+    if "manual_duty" in msg:
+        try:
+            val = float(msg["manual_duty"])
+            if 0 <= val <= 100:
+                sim_state["manual_duty"] = val
+            else:
+                log.warning(f"manual_duty out of range: {val}")
+        except (ValueError, TypeError):
+            log.warning(f"Invalid value for manual_duty: {msg.get('manual_duty')}")
+
+    # curve: str
+    if "curve" in msg:
+        val = msg["curve"]
+        if val in ["linear", "exponential"]:
+            sim_state["curve"] = val
+        else:
+            log.warning(f"Invalid value for curve: {val}")
+
+
 async def ws_handler(ws: WebSocketServerProtocol):
     clients.add(ws)
     log.info(f"Dashboard connected (total: {len(clients)})")
@@ -122,13 +187,7 @@ async def ws_handler(ws: WebSocketServerProtocol):
             try:
                 msg = json.loads(message)
                 if msg.get("type") == "settings":
-                    log.info(f"Received settings: {msg}")
-                    sim_state["system_active"] = msg.get("system_active", sim_state["system_active"])
-                    sim_state["trigger_mode"] = msg.get("trigger_mode", sim_state["trigger_mode"])
-                    sim_state["start_psi"] = msg.get("start_psi", sim_state["start_psi"])
-                    sim_state["full_psi"] = msg.get("full_psi", sim_state["full_psi"])
-                    sim_state["manual_duty"] = msg.get("manual_duty", sim_state["manual_duty"])
-                    sim_state["curve"] = msg.get("curve", sim_state["curve"])
+                    update_sim_settings(msg)
                 elif msg.get("type") == "prime":
                     log.info("Purge/prime triggered by dashboard")
                     # Force 100% duty for 2 seconds
