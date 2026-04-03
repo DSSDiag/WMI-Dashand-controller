@@ -17,9 +17,6 @@ unsigned long lastSettingsMs = 0;
 bool isPriming = false;
 unsigned long primeEndMs = 0;
 
-// Stub for calcDuty (defined in logic.cpp, not needed for parseIncoming tests)
-uint8_t calcDuty(float, bool, const Settings&) { return 0; }
-
 class ParseIncomingTest : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -42,7 +39,7 @@ TEST_F(ParseIncomingTest, ParsesCompleteSettings) {
     EXPECT_EQ(settings.manualDuty, 50);
     EXPECT_EQ(settings.curve, 1);
     EXPECT_TRUE(settings.armed);
-    EXPECT_EQ(lastSettingsMs, 1000);
+    EXPECT_EQ(lastSettingsMs, 1000UL);
 }
 
 TEST_F(ParseIncomingTest, ParsesPartialSettings) {
@@ -74,7 +71,7 @@ TEST_F(ParseIncomingTest, ParsesPrimeCommand) {
     parseIncoming(String(R"({"t":"prime"})"));
 
     EXPECT_TRUE(isPriming);
-    EXPECT_EQ(primeEndMs, 7000);
+    EXPECT_EQ(primeEndMs, 7000UL);
 }
 
 TEST_F(ParseIncomingTest, IgnoresInvalidJson) {
@@ -99,4 +96,119 @@ TEST_F(ParseIncomingTest, IgnoresUnknownType) {
     // Should not change anything
     EXPECT_EQ(settings.triggerMode, DEFAULT_TRIGGER_MODE);
     EXPECT_FALSE(isPriming);
+}
+
+// ── calcDuty Tests ────────────────────────────────────────────────────────────
+
+TEST(CalcDutyTest, ReturnsZeroWhenDisarmed) {
+    Settings s;
+    s.armed = false;
+    EXPECT_EQ(calcDuty(100.0f, false, s), 0);
+}
+
+TEST(CalcDutyTest, ReturnsZeroWhenTankLow) {
+    Settings s;
+    s.armed = true;
+    EXPECT_EQ(calcDuty(100.0f, true, s), 0);
+}
+
+TEST(CalcDutyTest, ManualMode) {
+    Settings s;
+    s.armed = true;
+    s.triggerMode = 2;
+    s.manualDuty = 42;
+    EXPECT_EQ(calcDuty(10.0f, false, s), 42);
+    EXPECT_EQ(calcDuty(100.0f, false, s), 42);
+}
+
+TEST(CalcDutyTest, FullScaleLinear) {
+    Settings s;
+    s.armed = true;
+    s.triggerMode = 1;
+    s.curve = 0; // Linear
+
+    float range = MAP_KPA_MAX - MAP_KPA_MIN;
+
+    // Below min
+    EXPECT_EQ(calcDuty(MAP_KPA_MIN - 10.0f, false, s), 0);
+    // At min
+    EXPECT_EQ(calcDuty(MAP_KPA_MIN, false, s), 0);
+    // Midpoint
+    EXPECT_EQ(calcDuty(MAP_KPA_MIN + range / 2.0f, false, s), 50);
+    // At max
+    EXPECT_EQ(calcDuty(MAP_KPA_MAX, false, s), 100);
+    // Above max
+    EXPECT_EQ(calcDuty(MAP_KPA_MAX + 10.0f, false, s), 100);
+}
+
+TEST(CalcDutyTest, FullScaleExponential) {
+    Settings s;
+    s.armed = true;
+    s.triggerMode = 1;
+    s.curve = 1; // Exponential
+
+    float range = MAP_KPA_MAX - MAP_KPA_MIN;
+
+    // Below min
+    EXPECT_EQ(calcDuty(MAP_KPA_MIN - 10.0f, false, s), 0);
+    // At min
+    EXPECT_EQ(calcDuty(MAP_KPA_MIN, false, s), 0);
+    // Midpoint (0.5 * 0.5 = 0.25 -> 25%)
+    EXPECT_EQ(calcDuty(MAP_KPA_MIN + range / 2.0f, false, s), 25);
+    // At max
+    EXPECT_EQ(calcDuty(MAP_KPA_MAX, false, s), 100);
+}
+
+TEST(CalcDutyTest, ThresholdsLinear) {
+    Settings s;
+    s.armed = true;
+    s.triggerMode = 0;
+    s.curve = 0; // Linear
+    s.startKpa = 110.0f;
+    s.fullKpa = 210.0f;
+
+    // Below start
+    EXPECT_EQ(calcDuty(100.0f, false, s), 0);
+    // At start
+    EXPECT_EQ(calcDuty(110.0f, false, s), 0);
+    // Midpoint
+    EXPECT_EQ(calcDuty(160.0f, false, s), 50);
+    // At full
+    EXPECT_EQ(calcDuty(210.0f, false, s), 100);
+    // Above full
+    EXPECT_EQ(calcDuty(220.0f, false, s), 100);
+}
+
+TEST(CalcDutyTest, ThresholdsExponential) {
+    Settings s;
+    s.armed = true;
+    s.triggerMode = 0;
+    s.curve = 1; // Exponential
+    s.startKpa = 110.0f;
+    s.fullKpa = 210.0f;
+
+    // Below start
+    EXPECT_EQ(calcDuty(100.0f, false, s), 0);
+    // At start
+    EXPECT_EQ(calcDuty(110.0f, false, s), 0);
+    // Midpoint (0.5 * 0.5 = 0.25 -> 25%)
+    EXPECT_EQ(calcDuty(160.0f, false, s), 25);
+    // At full
+    EXPECT_EQ(calcDuty(210.0f, false, s), 100);
+    // Above full
+    EXPECT_EQ(calcDuty(220.0f, false, s), 100);
+}
+
+TEST(CalcDutyTest, ThresholdsZeroRange) {
+    Settings s;
+    s.armed = true;
+    s.triggerMode = 0;
+    s.curve = 0;
+    s.startKpa = 150.0f;
+    s.fullKpa = 150.0f;
+
+    // Edge case: range <= 0
+    EXPECT_EQ(calcDuty(140.0f, false, s), 0);
+    EXPECT_EQ(calcDuty(150.0f, false, s), 0);
+    EXPECT_EQ(calcDuty(151.0f, false, s), 100);
 }
