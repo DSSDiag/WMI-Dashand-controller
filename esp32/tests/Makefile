@@ -5,7 +5,7 @@ CXXFLAGS = -std=c++14 -Wall -I. -I../wmi_controller -I./vendor
 LIBS = -lgtest -lgtest_main -pthread
 
 TARGET = test_logic
-SRCS = test_logic.cpp
+SRCS = test_logic.cpp ../wmi_controller/logic.cpp
 
 all: $(TARGET)
 
