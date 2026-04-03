@@ -132,14 +132,18 @@ async def handle_serial_connection(ser: serial.Serial):
         # ── Flush outgoing messages ──
         if pending_prime:
             pending_prime = False
-            ser.write(b'{"t":"prime"}\n')
+            await asyncio.get_running_loop().run_in_executor(
+                None, ser.write, b'{"t":"prime"}\n'
+            )
             log.info("Prime pulse sent to ESP32")
 
         if pending_settings:
             frame = build_settings_frame(pending_settings)
-            ser.write(frame)
-            log.debug("Settings sent: %s", frame)
             pending_settings = None
+            await asyncio.get_running_loop().run_in_executor(
+                None, ser.write, frame
+            )
+            log.debug("Settings sent: %s", frame)
 
         # ── Read incoming ──
         line = await asyncio.get_event_loop().run_in_executor(
