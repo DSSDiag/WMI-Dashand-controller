@@ -35,6 +35,7 @@ import logging
 import os
 import sys
 import time
+import functools
 from typing import Optional, Set
 
 import serial
@@ -169,18 +170,35 @@ async def handle_serial_connection(ser: serial.Serial):
 async def serial_loop():
     while True:
         port = find_esp32_port()
-        if not port:
-            log.warning("No ESP32 found — retrying in %.0fs", RECONNECT_DELAY)
-            await asyncio.sleep(RECONNECT_DELAY)
-            continue
+
+        # In a real environment, find_esp32_port() returns None if no port is found.
+        # But in docker/sandbox, it might return /dev/ttyS0 which we can't open anyway.
+        # To handle both, we should check if we can actually open it, or if it's the expected USB port
+        is_real_port = port and ("usb" in port.lower() or "acm" in port.lower() or "ch340" in port.lower() or "cp210" in port.lower() or "ttyUSB" in port or "ttyACM" in port)
+        if not port or not is_real_port:
+            print("Transferring to simulation")
+            await asyncio.sleep(3)
+
+            # Use os.execv to replace the current process with the simulator
+            simulator_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "simulation", "simulator.py")
+            os.execv(sys.executable, [sys.executable, simulator_path])
+            return
 
         log.info("Opening serial port %s @ %d", port, SERIAL_BAUD)
         try:
-            ser = serial.Serial(port, SERIAL_BAUD, timeout=SERIAL_TIMEOUT)
+            loop = asyncio.get_running_loop()
+            ser = await loop.run_in_executor(
+                None, functools.partial(serial.Serial, port, SERIAL_BAUD, timeout=SERIAL_TIMEOUT)
+            )
         except serial.SerialException as exc:
             log.error("Failed to open %s: %s", port, exc)
-            await asyncio.sleep(RECONNECT_DELAY)
-            continue
+
+            # If we fail to open the port, also transfer to simulation
+            print("Transferring to simulation")
+            await asyncio.sleep(3)
+            simulator_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "simulation", "simulator.py")
+            os.execv(sys.executable, [sys.executable, simulator_path])
+            return
 
         try:
             await handle_serial_connection(ser)
