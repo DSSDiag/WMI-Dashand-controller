@@ -111,6 +111,20 @@ def test_validation():
     assert sim_state["max_boost"] == 25.0    # Unchanged
     print("✓ Out of range min_boost/max_boost rejected")
 
+    # Test each parameter independently
+    update_sim_settings({"min_boost": -200.0})   # Only min out of range
+    assert sim_state["min_boost"] == -14.73       # Unchanged
+    assert sim_state["max_boost"] == 25.0         # Unchanged
+
+    update_sim_settings({"max_boost": 500.0})     # Only max out of range
+    assert sim_state["min_boost"] == -14.73       # Unchanged
+    assert sim_state["max_boost"] == 25.0         # Unchanged
+
+    update_sim_settings({"min_boost": -10.0})     # Only min in range
+    assert sim_state["min_boost"] == -10.0        # Changed
+    assert sim_state["max_boost"] == 25.0         # Unchanged
+    print("✓ Independent min_boost/max_boost validation correct")
+
     print("\nAll validation tests passed successfully!")
 
 if __name__ == "__main__":

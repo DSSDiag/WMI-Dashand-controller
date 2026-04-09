@@ -180,11 +180,11 @@ def update_sim_settings(msg: dict):
         except (ValueError, TypeError):
             log.warning(f"Invalid value for min_boost: {msg.get('min_boost')}")
 
-    # max_boost: float (gauge display max, used for full_scale mode)
+    # max_boost: float (gauge display max, used for full_scale mode; mirrors App.jsx 200 PSI cap)
     if "max_boost" in msg:
         try:
             val = float(msg["max_boost"])
-            if -100 <= val <= 300:
+            if -100 <= val <= 200:
                 sim_state["max_boost"] = val
             else:
                 log.warning(f"max_boost out of range: {val}")
