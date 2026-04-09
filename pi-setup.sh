@@ -22,7 +22,7 @@ echo " Repo: $REPO_DIR"
 echo "═══════════════════════════════════════════════════"
 
 # ── System packages ────────────────────────────────────────────────────────────
-echo "[1/7] Installing system packages…"
+echo "[1/8] Installing system packages…"
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
     python3-pip python3-venv \
@@ -34,13 +34,13 @@ sudo apt-get install -y --no-install-recommends \
     2>/dev/null || true
 
 # ── Python virtual environment for the bridge ─────────────────────────────────
-echo "[2/7] Setting up Python virtual environment…"
+echo "[2/8] Setting up Python virtual environment…"
 VENV_DIR="$REPO_DIR/bridge/.venv"
 python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/bridge/requirements.txt"
 
 # ── Build React dashboard (if not already built) ──────────────────────────────
-echo "[3/7] Building dashboard…"
+echo "[3/8] Building dashboard…"
 if ! command -v node &>/dev/null; then
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
@@ -49,7 +49,7 @@ cd "$REPO_DIR/dashboard" && npm install --silent && npm run build
 cd "$REPO_DIR"
 
 # ── nginx config ──────────────────────────────────────────────────────────────
-echo "[4/7] Configuring nginx…"
+echo "[4/8] Configuring nginx…"
 sudo tee /etc/nginx/sites-available/wmi-dashboard > /dev/null << EOF
 server {
     listen 80 default_server;
