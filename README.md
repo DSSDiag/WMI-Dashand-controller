@@ -306,6 +306,8 @@ sudo systemctl restart wmi-kiosk   # Restart the browser
 
 | Symptom | Check |
 |---|---|
+| **Display shows backlight only (blank screen)** | X11 is rendering to HDMI (`/dev/fb0`) instead of the SPI display (`/dev/fb1`). Re-run `pi-setup.sh` (the updated version creates `/etc/X11/xorg.conf.d/99-waveshare35.conf` and configures lightdm auto-login) then reboot. Verify with `cat /proc/fb` — you should see entry `1 FBTFT` |
+| **Display blank — kiosk never starts** | Check `sudo systemctl status wmi-kiosk`. If it shows "can't open display :0", the graphical session hasn't started. Confirm lightdm is running (`sudo systemctl status lightdm`) and auto-login is configured (`/etc/lightdm/lightdm.conf.d/01-wmi-autologin.conf`) |
 | Dashboard shows **OFF** badge | Bridge not running or no ESP32 detected — run `sudo systemctl status wmi-bridge` |
 | Pressure reads ~−14.7 PSI at idle | Normal! That is atmospheric vacuum. Engine off = ~0 inHg on vacuum gauge |
 | Pressure reads nonsense values | Re-calibrate `MAP_V_MIN_MV` / `MAP_V_MAX_MV` in `config.h` |

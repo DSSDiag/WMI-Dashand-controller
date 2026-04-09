@@ -93,6 +93,39 @@ EOF
     fi
 fi
 
+# ── X11 framebuffer configuration (route rendering to /dev/fb1, the SPI display)
+# Without this X11 defaults to /dev/fb0 (HDMI) and nothing appears on the
+# Waveshare display even though the backlight is on.
+echo "[5b/8] Configuring X11 to render to SPI display (/dev/fb1)…"
+sudo mkdir -p /etc/X11/xorg.conf.d
+sudo tee /etc/X11/xorg.conf.d/99-waveshare35.conf > /dev/null << 'EOF'
+# Route X11 to the Waveshare 3.5" SPI framebuffer (/dev/fb1).
+# The SPI overlay registers as fb1; the default HDMI/virtual device is fb0.
+Section "Device"
+    Identifier  "Waveshare35"
+    Driver      "fbdev"
+    Option      "fbdev" "/dev/fb1"
+EndSection
+
+Section "Screen"
+    Identifier  "Default Screen"
+    Device      "Waveshare35"
+EndSection
+EOF
+
+# ── Auto-login (lightdm) ──────────────────────────────────────────────────────
+# Without auto-login the graphical.target never reaches the "started" state on a
+# headless boot (no HDMI), so the kiosk service never fires.
+echo "[5c/8] Configuring lightdm auto-login for $(whoami)…"
+if dpkg -l lightdm 2>/dev/null | grep -q '^ii'; then
+    sudo mkdir -p /etc/lightdm/lightdm.conf.d
+    sudo tee /etc/lightdm/lightdm.conf.d/01-wmi-autologin.conf > /dev/null << EOF
+[Seat:*]
+autologin-user=$(whoami)
+autologin-user-timeout=0
+EOF
+fi
+
 # ── systemd service: serial bridge ────────────────────────────────────────────
 echo "[6/8] Installing wmi-bridge systemd service…"
 sudo tee /etc/systemd/system/wmi-bridge.service > /dev/null << EOF
@@ -115,6 +148,16 @@ sudo systemctl enable --now wmi-bridge
 
 # ── systemd service: Chromium kiosk ───────────────────────────────────────────
 echo "[7/8] Installing wmi-kiosk systemd service…"
+
+# Locate Chromium — Pi OS Bookworm ships it as 'chromium', older releases as
+# 'chromium-browser'.  Fall back to 'chromium' if neither is found yet (apt
+# may not have run in this shell's PATH cache).
+CHROMIUM_BIN=""
+for candidate in /usr/bin/chromium-browser /usr/bin/chromium; do
+    [ -x "$candidate" ] && CHROMIUM_BIN="$candidate" && break
+done
+CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/bin/chromium}"
+
 sudo tee /etc/systemd/system/wmi-kiosk.service > /dev/null << EOF
 [Unit]
 Description=WMI Dashboard Kiosk (Chromium)
@@ -125,7 +168,7 @@ After=graphical.target wmi-bridge.service
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/$(whoami)/.Xauthority
 ExecStartPre=/bin/sleep 3
-ExecStart=/usr/bin/chromium-browser \\
+ExecStart="$CHROMIUM_BIN" \\
     --noerrdialogs \\
     --disable-infobars \\
     --kiosk \\
@@ -136,6 +179,7 @@ ExecStart=/usr/bin/chromium-browser \\
     --touch-events=enabled \\
     --force-device-scale-factor=1 \\
     --window-size=480,320 \\
+    --disable-gpu \\
     http://localhost
 Restart=on-failure
 RestartSec=5
