@@ -263,8 +263,10 @@ const App = () => {
       full_psi: fullInjectionAt,
       manual_duty: manualDuty,
       curve,
+      min_boost: minBoost,
+      max_boost: maxBoost,
     });
-  }, [hwConnected, wsSend, systemActive, triggerMode, startInjectionAt, fullInjectionAt, manualDuty, curve]);
+  }, [hwConnected, wsSend, systemActive, triggerMode, startInjectionAt, fullInjectionAt, manualDuty, curve, minBoost, maxBoost]);
 
   // Persist user settings to localStorage so they survive reboots.
   // systemActive is intentionally excluded — system always starts disarmed.

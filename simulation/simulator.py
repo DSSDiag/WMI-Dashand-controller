@@ -46,6 +46,8 @@ sim_state = {
     "trigger_mode": "thresholds",
     "start_psi": 5.0,
     "full_psi": 20.0,
+    "min_boost": -14.73,
+    "max_boost": 20.0,
     "manual_duty": 0,
     "curve": "linear"
 }
@@ -78,6 +80,15 @@ async def simulation_loop():
         if sim_state["system_active"]:
             if sim_state["trigger_mode"] == "manual":
                 calculated_duty = sim_state["manual_duty"]
+            elif sim_state["trigger_mode"] == "full_scale":
+                p = sim_state["pressure_psi"]
+                min_b = sim_state["min_boost"]
+                max_b = sim_state["max_boost"]
+                range_val = max(0.1, max_b - min_b)
+                progress = max(0.0, min(1.0, (p - min_b) / range_val))
+                if sim_state["curve"] == "exponential":
+                    progress = math.pow(progress, 2)
+                calculated_duty = progress * 100
             else:
                 p = sim_state["pressure_psi"]
                 start = sim_state["start_psi"]
@@ -131,7 +142,7 @@ def update_sim_settings(msg: dict):
     # trigger_mode: str
     if "trigger_mode" in msg:
         val = msg["trigger_mode"]
-        if val in ["thresholds", "manual"]:
+        if val in ["thresholds", "full_scale", "manual"]:
             sim_state["trigger_mode"] = val
         else:
             log.warning(f"Invalid value for trigger_mode: {val}")
@@ -157,6 +168,28 @@ def update_sim_settings(msg: dict):
                 log.warning(f"full_psi out of range: {val}")
         except (ValueError, TypeError):
             log.warning(f"Invalid value for full_psi: {msg.get('full_psi')}")
+
+    # min_boost: float (gauge display min, used for full_scale mode)
+    if "min_boost" in msg:
+        try:
+            val = float(msg["min_boost"])
+            if -100 <= val <= 100:
+                sim_state["min_boost"] = val
+            else:
+                log.warning(f"min_boost out of range: {val}")
+        except (ValueError, TypeError):
+            log.warning(f"Invalid value for min_boost: {msg.get('min_boost')}")
+
+    # max_boost: float (gauge display max, used for full_scale mode)
+    if "max_boost" in msg:
+        try:
+            val = float(msg["max_boost"])
+            if -100 <= val <= 300:
+                sim_state["max_boost"] = val
+            else:
+                log.warning(f"max_boost out of range: {val}")
+        except (ValueError, TypeError):
+            log.warning(f"Invalid value for max_boost: {msg.get('max_boost')}")
 
     # manual_duty: float
     if "manual_duty" in msg:
