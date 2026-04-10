@@ -52,13 +52,14 @@ Pi 40-pin header                      Waveshare 3.5" Display
                                        └──────────────┘
 ```
 
-> **Note:** The `pi-setup.sh` script automatically enables `dtparam=spi=on`, `dtparam=i2c_arm=on`, and adds `dtoverlay=waveshare35a:rotate=90` to `/boot/config.txt` so the kernel drives the display with no extra manual configuration.
+> **Note:** The `pi-setup.sh` script automatically enables `dtparam=spi=on`, `dtparam=i2c_arm=on`, and adds `dtoverlay=waveshare35a:rotate=90` to `/boot/config.txt` for the ST7796S display driver. It also installs the `wmi-cap-touch.service` systemd unit, which binds the FT6336U capacitive touch controller (I2C1, address 0x38) to the `edt_ft5x06` driver at each boot.
 
 ## Setup Script Actions
 The `pi-setup.sh` script automatically configures the following in `/boot/config.txt`:
 1. `dtparam=spi=on`
 2. `dtparam=i2c_arm=on`
-3. `dtoverlay=waveshare35a:rotate=90` (Configures the SPI device tree overlay and forces the 320x480 portrait screen into 480x320 landscape)
+3. `dtoverlay=waveshare35a:rotate=90` (Configures the ST7796S SPI display overlay and forces the 320x480 portrait screen into 480x320 landscape)
+4. `wmi-cap-touch.service` (systemd oneshot service that binds the FT6336U capacitive touch controller on I2C1 address 0x38 to the `edt_ft5x06` driver at each boot)
 
 Chromium is started with `--window-size=480,320` and `--force-device-scale-factor=1` to perfectly fit the viewport.
 

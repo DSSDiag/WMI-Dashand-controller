@@ -158,7 +158,7 @@ Pi 40-pin header (top view, pin 1 top-left)
 ...
 ```
 
-> **Note:** `pi-setup.sh` automatically enables SPI (`dtparam=spi=on`), I2C (`dtparam=i2c_arm=on`), and adds the `dtoverlay=waveshare35a:rotate=90` device-tree overlay so the kernel drives the display without any extra drivers.
+> **Note:** `pi-setup.sh` automatically enables SPI (`dtparam=spi=on`), I2C (`dtparam=i2c_arm=on`), adds the `dtoverlay=waveshare35a:rotate=90` device-tree overlay for the ST7796S display, and installs the `wmi-cap-touch` systemd service which binds the FT6336U capacitive touch controller on I2C1 (address 0x38) to the `edt_ft5x06` driver at each boot.
 
 ### ESP32-S3 Wiring
 
@@ -289,6 +289,7 @@ python3 serial_bridge.py
 | Service | Description |
 |---|---|
 | `wmi-bridge.service` | Python serial bridge (auto-reconnects to ESP32) |
+| `wmi-cap-touch.service` | Binds FT6336U capacitive touch controller (I2C1 0x38) to `edt_ft5x06` driver |
 | `wmi-kiosk.service` | Chromium full-screen kiosk on `:0` |
 | `wmi-unclutter.service` | Hides mouse cursor after 1 second |
 | `nginx` | Serves built React dashboard on port 80 |
