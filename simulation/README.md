@@ -14,6 +14,14 @@ pip install websockets
 
 ## How to run
 
+> **Important:** This is a Python script. Always run it with `python3`, not `bash`:
+> ```bash
+> python3 simulator.py   ✓ correct
+> bash simulator.py      ✗ wrong — will produce import errors
+> ```
+> Alternatively, because the script has a `#!/usr/bin/env python3` shebang, you can
+> run it directly after making it executable: `chmod +x simulator.py && ./simulator.py`
+
 1. **Start the Dashboard:**
    In one terminal, start the React dashboard development server:
    ```bash

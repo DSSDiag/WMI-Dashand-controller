@@ -22,7 +22,7 @@ import threading
 from typing import Set
 
 import websockets
-from websockets.server import WebSocketServerProtocol
+from websockets.asyncio.server import ServerConnection
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 WS_HOST = "0.0.0.0"
@@ -36,7 +36,7 @@ logging.basicConfig(
 log = logging.getLogger("wmi-simulator")
 
 # ── Simulation State ───────────────────────────────────────────────────────────
-clients: Set[WebSocketServerProtocol] = set()
+clients: Set[ServerConnection] = set()
 
 sim_state = {
     "pressure_psi": -14.7,  # Start at atmospheric vacuum
@@ -211,7 +211,7 @@ def update_sim_settings(msg: dict):
             log.warning(f"Invalid value for curve: {val}")
 
 
-async def ws_handler(ws: WebSocketServerProtocol):
+async def ws_handler(ws: ServerConnection):
     clients.add(ws)
     log.info(f"Dashboard connected (total: {len(clients)})")
 

@@ -41,7 +41,7 @@ from typing import Optional, Set
 import serial
 import serial.tools.list_ports
 import websockets
-from websockets.server import WebSocketServerProtocol
+from websockets.asyncio.server import ServerConnection
 
 from bridge.logic import parse_esp32_frame, build_settings_frame
 
@@ -61,7 +61,7 @@ logging.basicConfig(
 log = logging.getLogger("wmi-bridge")
 
 # ── Shared state ───────────────────────────────────────────────────────────────
-clients: Set[WebSocketServerProtocol] = set()
+clients: Set[ServerConnection] = set()
 latest_telemetry: dict = {}
 pending_settings: Optional[dict] = None   # set by WebSocket handler, consumed by serial loop
 pending_prime: bool = False
@@ -84,7 +84,7 @@ def find_esp32_port() -> Optional[str]:
 
 
 # ── WebSocket server ───────────────────────────────────────────────────────────
-async def ws_handler(ws: WebSocketServerProtocol):
+async def ws_handler(ws: ServerConnection):
     global pending_settings, pending_prime
     clients.add(ws)
     log.info("Browser connected  (total: %d)", len(clients))
