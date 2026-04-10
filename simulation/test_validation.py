@@ -20,7 +20,7 @@ _asyncio_server_mod = types.ModuleType("websockets.asyncio.server")
 _asyncio_server_mod.ServerConnection = MockServerConnection
 _asyncio_mod.server = _asyncio_server_mod
 _websockets_pkg.asyncio = _asyncio_mod
-_websockets_pkg.serve = None
+_websockets_pkg.serve = lambda *args, **kwargs: None
 _websockets_pkg.exceptions = types.SimpleNamespace(ConnectionClosed=Exception)
 
 sys.modules['websockets'] = _websockets_pkg
