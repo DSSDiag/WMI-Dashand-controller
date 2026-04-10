@@ -1,20 +1,31 @@
 import sys
 import os
 import logging
+import types
 
 # Set up logging to see warnings
 logging.basicConfig(level=logging.INFO)
 
 # Import the simulator module
-# We need to mock things since websockets is not installed
-class MockWebsockets:
-    class server:
-        @staticmethod
-        def WebSocketServerProtocol():
-            pass
+# We need to mock things since websockets may not be installed in test environments.
+# The mock must match the import path used in simulator.py:
+#   import websockets
+#   from websockets.asyncio.server import ServerConnection
+class MockServerConnection:
+    pass
 
-sys.modules['websockets'] = MockWebsockets()
-sys.modules['websockets.server'] = MockWebsockets.server()
+_websockets_pkg = types.ModuleType("websockets")
+_asyncio_mod = types.ModuleType("websockets.asyncio")
+_asyncio_server_mod = types.ModuleType("websockets.asyncio.server")
+_asyncio_server_mod.ServerConnection = MockServerConnection
+_asyncio_mod.server = _asyncio_server_mod
+_websockets_pkg.asyncio = _asyncio_mod
+_websockets_pkg.serve = lambda *args, **kwargs: None
+_websockets_pkg.exceptions = types.SimpleNamespace(ConnectionClosed=Exception)
+
+sys.modules['websockets'] = _websockets_pkg
+sys.modules['websockets.asyncio'] = _asyncio_mod
+sys.modules['websockets.asyncio.server'] = _asyncio_server_mod
 
 from simulator import update_sim_settings, sim_state
 
