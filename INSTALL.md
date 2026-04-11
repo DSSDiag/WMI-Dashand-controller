@@ -7,9 +7,9 @@ This guide provides detailed, step-by-step instructions for loading the WMI Dash
 ## Hardware Wiring
 
 ### Display Overview
-This setup targets the **Waveshare 3.5" Capacitive Touch LCD Module** (320×480 resolution, ST7796S driver, FT6336U touch controller).
+This setup targets the **Waveshare 3.5" Capacitive Touch LCD Module** (320x480 resolution, ST7796S driver, FT6336U touch controller).
 
-Because standard dashboard designs are often landscape, this display is configured to run at **480×320 landscape** mode via the `/boot/config.txt` file and Chromium parameters.
+Because standard dashboard designs are often landscape, this display is configured to run at **480x320 landscape** mode via the `/boot/config.txt` file and Chromium parameters.
 
 ### Pin Connections (Pi to Waveshare Display)
 
@@ -62,7 +62,7 @@ Pi 40-pin header                      Waveshare 3.5" Display
 The `setup.sh` script automatically configures the following in `/boot/config.txt` (via LCD-show):
 1. `dtparam=spi=on`
 2. `dtparam=i2c_arm=on`
-3. `dtoverlay=waveshare35a:rotate=90` (Configures the ST7796S SPI display overlay and forces the 320×480 portrait screen into 480×320 landscape)
+3. `dtoverlay=waveshare35a:rotate=90` (Configures the ST7796S SPI display overlay and forces the 320x480 portrait screen into 480x320 landscape)
 4. `wmi-cap-touch.service` (systemd oneshot service that binds the FT6336U capacitive touch controller on I2C1 address 0x38 to the `edt_ft5x06` driver at each boot)
 
 Chromium is started with `--window-size=480,320` and `--force-device-scale-factor=1` to perfectly fit the viewport.
