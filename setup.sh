@@ -47,8 +47,6 @@ echo "Selected: Pi \$PI_VERSION, OS: \$OS_TYPE"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DASHBOARD_DIST="$REPO_DIR/dashboard/dist"
 BRIDGE_SCRIPT="$REPO_DIR/bridge/serial_bridge.py"
-CURRENT_USER="$(whoami)"
-USER_HOME="$(getent passwd "$CURRENT_USER" | cut -d: -f6)"
 
 # --- Install System Packages ---
 echo "[1/8] Installing system packages..."
@@ -121,9 +119,8 @@ if [ "$OS_TYPE" == "lite" ]; then
         sudo mkdir -p /etc/lightdm/lightdm.conf.d
         sudo tee /etc/lightdm/lightdm.conf.d/01-wmi-autologin.conf > /dev/null << AUTOLOGINEOF
 [Seat:*]
-autologin-user=$CURRENT_USER
+autologin-user=$(whoami)
 autologin-user-timeout=0
-user-session=openbox
 AUTOLOGINEOF
     fi
 fi
@@ -138,7 +135,7 @@ After=network.target
 ExecStart=$VENV_DIR/bin/python3 $BRIDGE_SCRIPT
 Restart=on-failure
 RestartSec=3
-User=$CURRENT_USER
+User=$(whoami)
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
@@ -147,61 +144,39 @@ BRIDGEEOF
 sudo systemctl daemon-reload
 sudo systemctl enable --now wmi-bridge
 
-# Kiosk launcher and service
-sudo tee /usr/local/bin/wmi-kiosk-launch.sh > /dev/null << 'KIOSKSCRIPTEOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-export DISPLAY=:0
-export XAUTHORITY="$HOME/.Xauthority"
-
-for _ in $(seq 1 30); do
-    if [ -S /tmp/.X11-unix/X0 ] && command -v xset >/dev/null 2>&1 && xset q >/dev/null 2>&1; then
-        break
-    fi
-    sleep 2
-done
-
-xset s off || true
-xset -dpms || true
-xset s noblank || true
-
+# Kiosk Service
 CHROMIUM_BIN=""
 for candidate in /usr/bin/chromium-browser /usr/bin/chromium; do
     [ -x "$candidate" ] && CHROMIUM_BIN="$candidate" && break
 done
 CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/bin/chromium}"
 
-exec "$CHROMIUM_BIN" \
-    --noerrdialogs \
-    --disable-infobars \
-    --kiosk \
-    --no-first-run \
-    --disable-translate \
-    --disable-features=TranslateUI \
-    --overscroll-history-navigation=0 \
-    --touch-events=enabled \
-    --force-device-scale-factor=1 \
-    --window-size=480,320 \
-    --disable-gpu \
-    http://localhost
-KIOSKSCRIPTEOF
-sudo chmod 755 /usr/local/bin/wmi-kiosk-launch.sh
-
 sudo tee /etc/systemd/system/wmi-kiosk.service > /dev/null << KIOSKEOF
 [Unit]
 Description=WMI Dashboard Kiosk (Chromium)
-Wants=graphical.target network-online.target
-After=graphical.target network-online.target nginx.service wmi-bridge.service systemd-user-sessions.service
+Wants=graphical.target
+After=graphical.target wmi-bridge.service
 
 [Service]
-Type=simple
-User=$CURRENT_USER
 Environment=DISPLAY=:0
-Environment=XAUTHORITY=$USER_HOME/.Xauthority
-ExecStart=/usr/local/bin/wmi-kiosk-launch.sh
-Restart=always
+Environment=XAUTHORITY=/home/$(whoami)/.Xauthority
+ExecStartPre=/bin/sleep 3
+ExecStart="$CHROMIUM_BIN" \\
+    --noerrdialogs \\
+    --disable-infobars \\
+    --kiosk \\
+    --no-first-run \\
+    --disable-translate \\
+    --disable-features=TranslateUI \\
+    --overscroll-history-navigation=0 \\
+    --touch-events=enabled \\
+    --force-device-scale-factor=1 \\
+    --window-size=480,320 \\
+    --disable-gpu \\
+    http://localhost
+Restart=on-failure
 RestartSec=5
+User=$(whoami)
 
 [Install]
 WantedBy=graphical.target
@@ -210,14 +185,13 @@ KIOSKEOF
 sudo tee /etc/systemd/system/wmi-unclutter.service > /dev/null << UNCLUTTEREOF
 [Unit]
 Description=Unclutter (hide mouse cursor)
-After=graphical.target systemd-user-sessions.service
+After=graphical.target
 
 [Service]
 Environment=DISPLAY=:0
-Environment=XAUTHORITY=$USER_HOME/.Xauthority
 ExecStart=/usr/bin/unclutter -idle 1
 Restart=always
-User=$CURRENT_USER
+User=$(whoami)
 
 [Install]
 WantedBy=graphical.target
@@ -227,7 +201,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable wmi-kiosk wmi-unclutter
 
 echo "[7/8] Adding user to dialout group..."
-sudo usermod -aG dialout "$CURRENT_USER"
+sudo usermod -aG dialout "$(whoami)"
 
 echo "[8/8] Installing 52Pi 3.5\" Display Driver..."
 cd "$REPO_DIR"
