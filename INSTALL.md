@@ -61,6 +61,8 @@ The `setup.sh` script automatically configures the following in `/boot/config.tx
 1. `dtparam=spi=on`
 2. `dtoverlay=mhs35:rotate=90` (Configures the ILI9486 SPI display and XPT2046 resistive touch overlay, forces the 320x480 portrait screen into 480x320 landscape)
 
+> **Raspberry Pi OS Bookworm note:** On Bookworm the boot partition is at `/boot/firmware/` and `LCD-show` expects `/boot/config.txt`. `setup.sh` automatically creates a `/boot/config.txt → /boot/firmware/config.txt` symlink before running the driver installer, so no manual action is needed.
+
 Chromium is started with `--window-size=480,320` and `--force-device-scale-factor=1` to perfectly fit the viewport.
 
 If touch accuracy is poor after installation, calibrate the resistive touch panel using `xinput-calibrator`:
@@ -68,7 +70,7 @@ If touch accuracy is poor after installation, calibrate the resistive touch pane
 sudo apt install xinput-calibrator
 xinput_calibrator
 ```
-If touch axis inversion occurs after the rotation (e.g. up registers as right), add `swapxy=1` or `invertx=1` to the `dtoverlay=MHS35` line in `/boot/firmware/config.txt` depending on your kernel version. Refer to the [52Pi K-0403 wiki](https://wiki.52pi.com/index.php?title=K-0403) for further axis calibration guidance.
+If touch axis inversion occurs after the rotation (e.g. up registers as right), add `swapxy=1` or `invertx=1` to the `dtoverlay=mhs35:rotate=90` line in `/boot/firmware/config.txt` (Bookworm) or `/boot/config.txt` (Bullseye and earlier). Refer to the [52Pi K-0403 wiki](https://wiki.52pi.com/index.php?title=K-0403) for further axis calibration guidance.
 
 ---
 
