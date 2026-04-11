@@ -121,6 +121,7 @@ if [ "$OS_TYPE" == "lite" ]; then
 [Seat:*]
 autologin-user=$(whoami)
 autologin-user-timeout=0
+user-session=openbox
 AUTOLOGINEOF
     fi
 fi
@@ -145,38 +146,63 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now wmi-bridge
 
 # Kiosk Service
+CURRENT_USER="$(whoami)"
+USER_HOME="$(getent passwd "$CURRENT_USER" | cut -d: -f6)"
+
+sudo tee /usr/local/bin/wmi-kiosk-launch.sh > /dev/null << 'KIOSKSCRIPTEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+export DISPLAY=:0
+export XAUTHORITY="$HOME/.Xauthority"
+
+for _ in $(seq 1 30); do
+    if [ -S /tmp/.X11-unix/X0 ] && command -v xset >/dev/null 2>&1 && xset q >/dev/null 2>&1; then
+        break
+    fi
+    sleep 2
+done
+
+xset s off || true
+xset -dpms || true
+xset s noblank || true
+
 CHROMIUM_BIN=""
 for candidate in /usr/bin/chromium-browser /usr/bin/chromium; do
     [ -x "$candidate" ] && CHROMIUM_BIN="$candidate" && break
 done
 CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/bin/chromium}"
 
+exec "$CHROMIUM_BIN" \
+    --noerrdialogs \
+    --disable-infobars \
+    --kiosk \
+    --no-first-run \
+    --disable-translate \
+    --disable-features=TranslateUI \
+    --overscroll-history-navigation=0 \
+    --touch-events=enabled \
+    --force-device-scale-factor=1 \
+    --window-size=480,320 \
+    --disable-gpu \
+    http://localhost
+KIOSKSCRIPTEOF
+sudo chmod 755 /usr/local/bin/wmi-kiosk-launch.sh
+
 sudo tee /etc/systemd/system/wmi-kiosk.service > /dev/null << KIOSKEOF
 [Unit]
 Description=WMI Dashboard Kiosk (Chromium)
-Wants=graphical.target
-After=graphical.target wmi-bridge.service
+Wants=graphical.target network-online.target
+After=graphical.target network-online.target nginx.service wmi-bridge.service systemd-user-sessions.service
 
 [Service]
+Type=simple
+User=$CURRENT_USER
 Environment=DISPLAY=:0
-Environment=XAUTHORITY=/home/$(whoami)/.Xauthority
-ExecStartPre=/bin/sleep 3
-ExecStart="$CHROMIUM_BIN" \\
-    --noerrdialogs \\
-    --disable-infobars \\
-    --kiosk \\
-    --no-first-run \\
-    --disable-translate \\
-    --disable-features=TranslateUI \\
-    --overscroll-history-navigation=0 \\
-    --touch-events=enabled \\
-    --force-device-scale-factor=1 \\
-    --window-size=480,320 \\
-    --disable-gpu \\
-    http://localhost
-Restart=on-failure
+Environment=XAUTHORITY=$USER_HOME/.Xauthority
+ExecStart=/usr/local/bin/wmi-kiosk-launch.sh
+Restart=always
 RestartSec=5
-User=$(whoami)
 
 [Install]
 WantedBy=graphical.target
