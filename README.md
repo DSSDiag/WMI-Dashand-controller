@@ -108,7 +108,7 @@ During development, if you do not have an ESP32 connected, you can run the inter
 | Part | Notes |
 |---|---|
 | Raspberry Pi Zero 2 W | Any Pi with USB-OTG or USB-A works |
-| 3.5″ GPIO touch screen | 320x480 Waveshare ST7796S SPI Display (forced to landscape 480x320) |
+| 3.5″ GPIO touch screen | 52Pi K-0403 Resistive Touch LCD — ILI9486 display, XPT2046 touch (forced to landscape 480x320) |
 | ESP32-S3 DevKit | Any variant with USB-CDC (native USB) |
 | Automotive MAP sensor | 1-bar (e.g. GM 12569240) or 2-bar (e.g. GM 16040749) |
 | N-channel MOSFET module **or** 5V relay module | For pump/solenoid control |
@@ -117,45 +117,44 @@ During development, if you do not have an ESP32 connected, you can run the inter
 
 ### Raspberry Pi GPIO Screen Wiring
 
-The Waveshare 3.5″ ST7796S display is designed as a GPIO HAT — plug it directly onto the Pi's 40-pin header and all connections are made automatically.  If you need to wire it manually (e.g. via ribbon cable or breadboard), use the table below.
+The 52Pi K-0403 3.5″ Resistive Touch LCD is designed as a GPIO HAT — plug it directly onto the Pi's 40-pin header and all connections are made automatically.  If you need to wire it manually (e.g. via ribbon cable or breadboard), use the tables below.
 
-**SPI bus — display (ST7796S driver)**
+**SPI bus — display (ILI9486 driver)**
 
 | Display pin | Raspberry Pi GPIO | 40-pin header | Function |
 |---|---|---|---|
-| VCC | 3.3 V | Pin 1 | Power |
+| VCC | 5 V | Pin 2 | Power |
 | GND | GND | Pin 6 | Ground |
 | MOSI | GPIO 10 | Pin 19 | SPI0 MOSI |
 | MISO | GPIO 9 | Pin 21 | SPI0 MISO |
 | CLK | GPIO 11 | Pin 23 | SPI0 SCLK |
-| CS | GPIO 8 | Pin 24 | SPI0 CE0 |
+| CS | GPIO 8 | Pin 24 | SPI0 CE0 (display chip select) |
 | DC | GPIO 25 | Pin 22 | Data / Command select |
 | RST | GPIO 27 | Pin 13 | Hardware reset |
 | BL | GPIO 18 | Pin 12 | Backlight (PWM) |
 
-**I2C bus — capacitive touch (FT6336U controller)**
+**SPI bus — resistive touch (XPT2046 controller)**
 
 | Touch pin | Raspberry Pi GPIO | 40-pin header | Function |
 |---|---|---|---|
-| SDA | GPIO 2 | Pin 3 | I2C1 SDA |
-| SCL | GPIO 3 | Pin 5 | I2C1 SCL |
-| INT | GPIO 4 | Pin 7 | Touch interrupt (active-low) |
+| TP_CS | GPIO 7 | Pin 26 | SPI0 CE1 (touch chip select) |
+| TP_IRQ | GPIO 17 | Pin 11 | Touch interrupt (active-low) |
 
 ```
 Pi 40-pin header (top view, pin 1 top-left)
- 1 [3V3 ]─── VCC            2 [ 5V ]
- 3 [SDA ]─── Touch SDA      4 [ 5V ]
- 5 [SCL ]─── Touch SCL      6 [GND ]─── GND
- 7 [GP4 ]─── Touch INT      8 [TX  ]
+ 1 [3V3 ]                   2 [ 5V ]─── VCC
+ 3 [SDA ]                   4 [ 5V ]
+ 5 [SCL ]                   6 [GND ]─── GND
+ 7 [GP4 ]                   8 [TX  ]
  9 [GND ]                  10 [RX  ]
-11 [GP17]                  12 [GP18]─── BL
+11 [GP17]─── TP_IRQ        12 [GP18]─── BL
 13 [GP27]─── RST           14 [GND ]
 15 [GP22]                  16 [GP23]
 17 [3V3 ]                  18 [GP24]
 19 [GP10]─── MOSI          20 [GND ]
 21 [GP9 ]─── MISO          22 [GP25]─── DC
-23 [GP11]─── CLK           24 [GP8 ]─── CS
-25 [GND ]                  26 [GP7 ]
+23 [GP11]─── CLK           24 [GP8 ]─── CS (display)
+25 [GND ]                  26 [GP7 ]─── TP_CS (touch)
 ...
 ```
 
@@ -292,7 +291,6 @@ python3 serial_bridge.py
 | Service | Description |
 |---|---|
 | `wmi-bridge.service` | Python serial bridge (auto-reconnects to ESP32) |
-| `wmi-cap-touch.service` | Binds FT6336U capacitive touch controller (I2C1 0x38) to `edt_ft5x06` driver |
 | `wmi-kiosk.service` | Chromium full-screen kiosk on `:0` |
 | `wmi-unclutter.service` | Hides mouse cursor after 1 second |
 | `nginx` | Serves built React dashboard on port 80 |
