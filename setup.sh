@@ -49,7 +49,7 @@ DASHBOARD_DIST="$REPO_DIR/dashboard/dist"
 BRIDGE_SCRIPT="$REPO_DIR/bridge/serial_bridge.py"
 
 # --- Install System Packages ---
-echo "[1/7] Installing system packages..."
+echo "[1/8] Installing system packages..."
 sudo apt-get update -qq
 
 BASE_PACKAGES="python3-pip python3-venv nginx chromium chromium-browser unclutter x11-xserver-utils xdotool git"
@@ -60,8 +60,8 @@ fi
 
 sudo apt-get install -y --no-install-recommends $BASE_PACKAGES 2>/dev/null || true
 
-# --- Setup Python Venv ---
-echo "[2/7] Setting up Python virtual environment…"
+# --- Setup Python Venv (Bridge) ---
+echo "[2/8] Setting up Python virtual environment for bridge…"
 VENV_DIR="$REPO_DIR/bridge/.venv"
 if [ ! -d "$VENV_DIR" ]; then
     python3 -m venv "$VENV_DIR"
@@ -69,11 +69,23 @@ fi
 if [ -f "$VENV_DIR/bin/pip" ]; then
     "$VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/bridge/requirements.txt"
 else
-    echo "Warning: pip not found in virtual environment. Skipping pip install."
+    echo "Warning: pip not found in bridge virtual environment. Skipping pip install."
+fi
+
+# --- Setup Python Venv (Simulation) ---
+echo "[3/8] Setting up Python virtual environment for simulation…"
+SIM_VENV_DIR="$REPO_DIR/simulation/.venv"
+if [ ! -d "$SIM_VENV_DIR" ]; then
+    python3 -m venv "$SIM_VENV_DIR"
+fi
+if [ -f "$SIM_VENV_DIR/bin/pip" ]; then
+    "$SIM_VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/simulation/requirements.txt"
+else
+    echo "Warning: pip not found in simulation virtual environment. Skipping pip install."
 fi
 
 # --- Build Dashboard ---
-echo "[3/7] Building dashboard…"
+echo "[4/8] Building dashboard…"
 if ! command -v node &>/dev/null; then
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
@@ -82,7 +94,7 @@ cd "$REPO_DIR/dashboard" && npm install --silent && npm run build
 cd "$REPO_DIR"
 
 # --- Configure Nginx ---
-echo "[4/7] Configuring nginx…"
+echo "[5/8] Configuring nginx…"
 sudo tee /etc/nginx/sites-available/wmi-dashboard > /dev/null << SERVEREOF
 server {
     listen 80 default_server;
@@ -98,7 +110,7 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl enable --now nginx
 
 # --- GUI / Kiosk / Bridge Services ---
-echo "[5/7] Configuring services and GUI..."
+echo "[6/8] Configuring services and GUI..."
 
 if [ "$OS_TYPE" == "lite" ]; then
     echo "Configuring lightdm auto-login and window manager for Lite OS…"
@@ -188,10 +200,10 @@ UNCLUTTEREOF
 sudo systemctl daemon-reload
 sudo systemctl enable wmi-kiosk wmi-unclutter
 
-echo "[6/7] Adding user to dialout group..."
+echo "[7/8] Adding user to dialout group..."
 sudo usermod -aG dialout "$(whoami)"
 
-echo "[7/7] Installing 52Pi 3.5\" Display Driver..."
+echo "[8/8] Installing 52Pi 3.5\" Display Driver..."
 cd "$REPO_DIR"
 if [ ! -d "LCD-show" ]; then
     git clone https://github.com/goodtft/LCD-show.git

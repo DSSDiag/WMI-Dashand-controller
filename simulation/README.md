@@ -6,11 +6,24 @@ It allows you to view and test the React dashboard without needing the actual ES
 
 ## Requirements
 
-The simulator requires `websockets`. You can install it using pip:
+The simulator requires `websockets`. On Raspberry Pi OS Bookworm (and other modern Debian-based systems), bare `pip install` is blocked by [PEP 668](https://peps.python.org/pep-0668/). There are two ways to install the dependency:
+
+**Option A — Use the venv created by `setup.sh` (recommended on Pi):**
+
+`setup.sh` automatically creates a virtual environment at `simulation/.venv` and installs `websockets` there. Activate it before running the simulator:
 
 ```bash
-pip install websockets
+source simulation/.venv/bin/activate
+python3 simulation/simulator.py
 ```
+
+**Option B — Manual install with `--break-system-packages` (dev/desktop only):**
+
+```bash
+pip install websockets --break-system-packages
+```
+
+> ⚠️ Option B modifies system Python packages. Prefer Option A when in doubt.
 
 ## How to run
 

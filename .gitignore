@@ -4,6 +4,8 @@ dashboard/dist/
 
 # Python bridge
 bridge/.venv/
+# Python simulation
+simulation/.venv/
 __pycache__/
 *.pyc
 *.pyo
