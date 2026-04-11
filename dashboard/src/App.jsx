@@ -89,7 +89,13 @@ function useSerialBridge({ onTelemetry }) {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'telemetry') onTelemetry(msg);
+      if (msg.type === 'telemetry') {
+  onTelemetry(msg);
+}
+
+if (msg.type === 'status') {
+  setHwConnected(msg.serial_connected);
+}
       } catch {
         /* ignore malformed frames */
       }
