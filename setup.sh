@@ -158,10 +158,16 @@ export XAUTHORITY="$HOME/.Xauthority"
 
 for _ in $(seq 1 30); do
     if [ -S /tmp/.X11-unix/X0 ] && command -v xset >/dev/null 2>&1 && xset q >/dev/null 2>&1; then
+        X_READY=1
         break
     fi
     sleep 2
 done
+
+if [ "${X_READY:-0}" -ne 1 ]; then
+    echo "wmi-kiosk-launch: X server on :0 did not become ready in time." >&2
+    exit 1
+fi
 
 xset s off || true
 xset -dpms || true
@@ -172,6 +178,11 @@ for candidate in /usr/bin/chromium-browser /usr/bin/chromium; do
     [ -x "$candidate" ] && CHROMIUM_BIN="$candidate" && break
 done
 CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/bin/chromium}"
+
+if [ ! -x "$CHROMIUM_BIN" ]; then
+    echo "wmi-kiosk-launch: Chromium binary not found or not executable: $CHROMIUM_BIN" >&2
+    exit 1
+fi
 
 exec "$CHROMIUM_BIN" \
     --noerrdialogs \
