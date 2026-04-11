@@ -60,7 +60,7 @@ WMI-Dashand-controller/
 ├── simulation/
 │   ├── simulator.py           ← Interactive Python simulator for local dev
 │   └── README.md
-├── pi-setup.sh                ← One-shot Pi setup script
+├── setup.sh                   ← Interactive hardware setup script
 └── README.md
 ```
 
@@ -158,7 +158,7 @@ Pi 40-pin header (top view, pin 1 top-left)
 ...
 ```
 
-> **Note:** `pi-setup.sh` automatically enables SPI (`dtparam=spi=on`), I2C (`dtparam=i2c_arm=on`), adds the `dtoverlay=waveshare35a:rotate=90` device-tree overlay for the ST7796S display, and installs the `wmi-cap-touch` systemd service which binds the FT6336U capacitive touch controller on I2C1 (address 0x38) to the `edt_ft5x06` driver at each boot.
+> **Note:** `./setup.sh` automatically handles dependencies, networking, and system services (including graphical support for Lite OS). It also automatically triggers the display driver installation.
 
 ### ESP32-S3 Wiring
 
@@ -249,9 +249,9 @@ Clone this repo and run the setup script:
 ```bash
 git clone https://github.com/DSSDiag/WMI-Dashand-controller.git
 cd WMI-Dashand-controller
-chmod +x pi-setup.sh
-./pi-setup.sh
-sudo reboot
+chmod +x setup.sh
+./setup.sh
+# The script will prompt for Pi version and OS type, and reboot automatically when display driver installs.
 ```
 
 The script will:
@@ -307,7 +307,7 @@ sudo systemctl restart wmi-kiosk   # Restart the browser
 
 | Symptom | Check |
 |---|---|
-| **Display shows backlight only (blank screen)** | X11 is rendering to HDMI (`/dev/fb0`) instead of the SPI display (`/dev/fb1`). Re-run `pi-setup.sh` (the updated version creates `/etc/X11/xorg.conf.d/99-waveshare35.conf` and configures lightdm auto-login) then reboot. Verify with `cat /proc/fb` — you should see entry `1 FBTFT` |
+| **Display shows backlight only (blank screen)** | X11 is rendering to HDMI (`/dev/fb0`) instead of the SPI display (`/dev/fb1`). Re-run `./setup.sh` and select the appropriate options. Verify with `cat /proc/fb` — you should see entry `1 FBTFT` |
 | **Display blank — kiosk never starts** | Check `sudo systemctl status wmi-kiosk`. If it shows "can't open display :0", the graphical session hasn't started. Confirm lightdm is running (`sudo systemctl status lightdm`) and auto-login is configured (`/etc/lightdm/lightdm.conf.d/01-wmi-autologin.conf`) |
 | Dashboard shows **OFF** badge | Bridge not running or no ESP32 detected — run `sudo systemctl status wmi-bridge` |
 | Pressure reads ~−14.7 PSI at idle | Normal! That is atmospheric vacuum. Engine off = ~0 inHg on vacuum gauge |

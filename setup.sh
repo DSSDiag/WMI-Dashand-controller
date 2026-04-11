@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# interactive-setup.sh - Interactive setup for WMI Dashboard
+# setup.sh - Interactive setup for WMI Dashboard
 
-set -e
+set -euo pipefail
 
 echo "═══════════════════════════════════════════════════"
 echo " WMI Dashboard — Interactive Hardware Setup"
@@ -32,14 +32,14 @@ case $PI_CHOICE in
     1) PI_VERSION="zero2w" ;;
     2) PI_VERSION="pi4" ;;
     3) PI_VERSION="pi5" ;;
-    *) echo "Invalid Pi choice."; return 1 2>/dev/null || true ;;
+    *) echo "Invalid Pi choice."; exit 1 ;;
 esac
 
 OS_TYPE=""
 case $OS_CHOICE in
     1) OS_TYPE="lite" ;;
     2) OS_TYPE="full" ;;
-    *) echo "Invalid OS choice."; return 1 2>/dev/null || true ;;
+    *) echo "Invalid OS choice."; exit 1 ;;
 esac
 
 echo "Selected: Pi \$PI_VERSION, OS: \$OS_TYPE"
@@ -66,7 +66,11 @@ VENV_DIR="$REPO_DIR/bridge/.venv"
 if [ ! -d "$VENV_DIR" ]; then
     python3 -m venv "$VENV_DIR"
 fi
-"$VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/bridge/requirements.txt"
+if [ -f "$VENV_DIR/bin/pip" ]; then
+    "$VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/bridge/requirements.txt"
+else
+    echo "Warning: pip not found in virtual environment. Skipping pip install."
+fi
 
 # --- Build Dashboard ---
 echo "[3/7] Building dashboard…"
