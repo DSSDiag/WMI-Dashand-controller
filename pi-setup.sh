@@ -29,11 +29,20 @@ sudo apt-get install -y --no-install-recommends \
     nginx \
     lightdm \
     openbox \
-    chromium-browser \
     unclutter \
     x11-xserver-utils \
     xdotool \
     2>/dev/null || true
+
+# Chromium package name differs: 'chromium-browser' on Bullseye, 'chromium' on Bookworm.
+# Both Lite and Full OS are handled here.
+if apt-cache show chromium-browser &>/dev/null; then
+    sudo apt-get install -y --no-install-recommends chromium-browser
+elif apt-cache show chromium &>/dev/null; then
+    sudo apt-get install -y --no-install-recommends chromium
+else
+    echo "Warning: could not find a chromium package — kiosk will not start until chromium is installed" >&2
+fi
 
 # ── Python virtual environment for the bridge ─────────────────────────────────
 echo "[2/8] Setting up Python virtual environment…"
@@ -70,13 +79,21 @@ sudo nginx -t && sudo systemctl enable --now nginx
 # Without auto-login the graphical.target never reaches the "started" state on a
 # headless boot (no HDMI), so the kiosk service never fires.
 echo "[5/8] Configuring lightdm auto-login and window manager…"
-sudo update-alternatives --set x-session-manager /usr/bin/openbox-session
+# Register openbox-session as the x-session-manager alternative (safe on both Lite
+# and Full OS — on Full OS this overrides LXDE/PIXEL so the Pi Zero 2 W has enough
+# free RAM to run the kiosk; on Lite this sets the only available session).
+if [ -x /usr/bin/openbox-session ]; then
+    sudo update-alternatives --install /usr/bin/x-session-manager x-session-manager \
+        /usr/bin/openbox-session 50 2>/dev/null || true
+    sudo update-alternatives --set x-session-manager /usr/bin/openbox-session 2>/dev/null || true
+fi
 if dpkg -l lightdm 2>/dev/null | grep -q '^ii'; then
     sudo mkdir -p /etc/lightdm/lightdm.conf.d
     sudo tee /etc/lightdm/lightdm.conf.d/01-wmi-autologin.conf > /dev/null << EOF
 [Seat:*]
 autologin-user=$(whoami)
 autologin-user-timeout=0
+user-session=openbox
 EOF
 fi
 
