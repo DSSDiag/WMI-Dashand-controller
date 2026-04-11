@@ -25,8 +25,8 @@ The display is designed as a GPIO HAT — simply press it onto the Pi's 40-pin h
 | MISO | GPIO 9 | Pin 21 | SPI0 MISO (data from display) |
 | CLK | GPIO 11 | Pin 23 | SPI0 SCLK (clock) |
 | CS | GPIO 8 | Pin 24 | SPI0 CE0 (display chip select) |
-| DC | GPIO 25 | Pin 22 | Data / Command select |
-| RST | GPIO 27 | Pin 13 | Hardware reset (active-low) |
+| DC | GPIO 24 | Pin 18 | Data / Command select |
+| RST | GPIO 25 | Pin 22 | Hardware reset (active-low) |
 | BL | GPIO 18 | Pin 12 | Backlight enable / PWM |
 
 #### SPI bus — resistive touch (XPT2046 controller)
@@ -48,8 +48,8 @@ Pi 40-pin header                      52Pi K-0403 3.5" Display
  Pin 21  [GP9 ] ─────────────────────► MISO  (SPI)   │
  Pin 23  [GP11] ─────────────────────► CLK   (SPI)   │
  Pin 24  [GP8 ] ─────────────────────► CS    (display)│
- Pin 22  [GP25] ─────────────────────► DC             │
- Pin 13  [GP27] ─────────────────────► RST            │
+ Pin 18  [GP24] ─────────────────────► DC             │
+ Pin 22  [GP25] ─────────────────────► RST            │
  Pin 12  [GP18] ─────────────────────► BL             │
  Pin 26  [GP7 ] ─────────────────────► TP_CS  (touch) │
  Pin 11  [GP17] ─────────────────────► TP_IRQ (touch) │
@@ -59,7 +59,7 @@ Pi 40-pin header                      52Pi K-0403 3.5" Display
 ### Setup Script Actions
 The `setup.sh` script automatically configures the following in `/boot/config.txt` (via LCD-show):
 1. `dtparam=spi=on`
-2. `dtoverlay=MHS35` (Configures the ILI9486 SPI display and XPT2046 resistive touch overlay, forces the 320x480 portrait screen into 480x320 landscape)
+2. `dtoverlay=mhs35:rotate=90` (Configures the ILI9486 SPI display and XPT2046 resistive touch overlay, forces the 320x480 portrait screen into 480x320 landscape)
 
 Chromium is started with `--window-size=480,320` and `--force-device-scale-factor=1` to perfectly fit the viewport.
 

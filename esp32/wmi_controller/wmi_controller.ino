@@ -77,7 +77,7 @@ void applyPwm(uint8_t duty0to100) {
 
 // ── Parse incoming serial JSON from Pi ───────────────────────────────────────
 void parseIncoming(const String& line) {
-  StaticJsonDocument<256> doc;
+  JsonDocument doc;
   if (deserializeJson(doc, line) != DeserializationError::Ok) return;
 
   const char* t = doc["t"];
@@ -99,7 +99,7 @@ void parseIncoming(const String& line) {
 
 // ── Send telemetry JSON to Pi ─────────────────────────────────────────────────
 void sendTelemetry() {
-  StaticJsonDocument<128> doc;
+  JsonDocument doc;
   doc["t"] = "d";
   doc["p"] = serialized(String(pressureKpa, 1));
   doc["d"] = pumpDuty;

@@ -147,7 +147,7 @@ async def handle_serial_connection(ser: serial.Serial):
             log.debug("Settings sent: %s", frame)
 
         # ── Read incoming ──
-        line = await asyncio.get_event_loop().run_in_executor(
+        line = await asyncio.get_running_loop().run_in_executor(
             None, ser.readline
         )
         line = line.decode("utf-8", errors="replace").strip()
