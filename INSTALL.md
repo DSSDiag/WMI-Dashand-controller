@@ -64,14 +64,11 @@ The Raspberry Pi runs the React-based touch dashboard in a full-screen Chromium 
    ```
 5. Make the setup script executable:
    ```bash
-   chmod +x pi-setup.sh
+   chmod +x setup.sh
    ```
-6. Run the automated setup script. This script installs necessary packages (nginx, Python venv, Chromium), builds the React dashboard in `dashboard/`, and creates systemd services to run the Python bridge (`bridge/serial_bridge.py`) and the Chromium kiosk automatically on boot.
+6. Run the automated setup script. This script prompts for your Pi version and OS type. It installs necessary packages (nginx, Python venv, Chromium), builds the React dashboard in `dashboard/`, and creates systemd services to run the Python bridge (`bridge/serial_bridge.py`) and the Chromium kiosk automatically on boot. Finally, it installs the 52Pi display driver and auto-reboots.
    ```bash
-   ./pi-setup.sh
+   ./setup.sh
    ```
-7. Once the script finishes successfully, reboot the Pi:
-   ```bash
-   sudo reboot
-   ```
+7. Once the display driver installation finishes successfully, the Pi will reboot automatically.
 8. On boot, the Pi should launch straight into the WMI Dashboard and automatically connect to the ESP32 to display live data.
