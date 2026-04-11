@@ -58,7 +58,7 @@ if [ "$OS_TYPE" == "lite" ]; then
     BASE_PACKAGES="$BASE_PACKAGES lightdm openbox"
 fi
 
-sudo apt-get install -y --no-install-recommends $BASE_PACKAGES 2>/dev/null || true
+sudo apt-get install -y --no-install-recommends $BASE_PACKAGES
 
 # --- Setup Python Venv (Bridge) ---
 echo "[2/8] Setting up Python virtual environment for bridge…"
