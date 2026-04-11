@@ -61,6 +61,7 @@ WMI-Dashand-controller/
 │   ├── simulator.py           ← Interactive Python simulator for local dev
 │   └── README.md
 ├── setup.sh                   ← Interactive hardware setup script
+├── INSTALL.md                 ← Detailed hardware wiring & installation guide
 └── README.md
 ```
 
@@ -230,6 +231,8 @@ Runs pump at 100 % for 2 seconds to purge air from lines.
 ---
 
 ## Installation
+
+> For detailed step-by-step instructions including hardware wiring diagrams, see **[INSTALL.md](INSTALL.md)**.
 
 ### 1 — Flash the ESP32
 
