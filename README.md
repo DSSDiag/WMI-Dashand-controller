@@ -129,8 +129,8 @@ The 52Pi K-0403 3.5″ Resistive Touch LCD is designed as a GPIO HAT — plug it
 | MISO | GPIO 9 | Pin 21 | SPI0 MISO |
 | CLK | GPIO 11 | Pin 23 | SPI0 SCLK |
 | CS | GPIO 8 | Pin 24 | SPI0 CE0 (display chip select) |
-| DC | GPIO 25 | Pin 22 | Data / Command select |
-| RST | GPIO 27 | Pin 13 | Hardware reset |
+| DC | GPIO 24 | Pin 18 | Data / Command select |
+| RST | GPIO 25 | Pin 22 | Hardware reset |
 | BL | GPIO 18 | Pin 12 | Backlight (PWM) |
 
 **SPI bus — resistive touch (XPT2046 controller)**
@@ -148,11 +148,11 @@ Pi 40-pin header (top view, pin 1 top-left)
  7 [GP4 ]                   8 [TX  ]
  9 [GND ]                  10 [RX  ]
 11 [GP17]─── TP_IRQ        12 [GP18]─── BL
-13 [GP27]─── RST           14 [GND ]
+13 [GP27]                  14 [GND ]
 15 [GP22]                  16 [GP23]
-17 [3V3 ]                  18 [GP24]
+17 [3V3 ]                  18 [GP24]─── DC
 19 [GP10]─── MOSI          20 [GND ]
-21 [GP9 ]─── MISO          22 [GP25]─── DC
+21 [GP9 ]─── MISO          22 [GP25]─── RST
 23 [GP11]─── CLK           24 [GP8 ]─── CS (display)
 25 [GND ]                  26 [GP7 ]─── TP_CS (touch)
 ...

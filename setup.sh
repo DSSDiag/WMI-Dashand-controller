@@ -52,7 +52,7 @@ BRIDGE_SCRIPT="$REPO_DIR/bridge/serial_bridge.py"
 echo "[1/7] Installing system packages..."
 sudo apt-get update -qq
 
-BASE_PACKAGES="python3-pip python3-venv nginx chromium-browser unclutter x11-xserver-utils xdotool git"
+BASE_PACKAGES="python3-pip python3-venv nginx chromium chromium-browser unclutter x11-xserver-utils xdotool git"
 if [ "$OS_TYPE" == "lite" ]; then
     echo "Lite OS detected. Adding lightdm and openbox for GUI support..."
     BASE_PACKAGES="$BASE_PACKAGES lightdm openbox"
@@ -197,6 +197,14 @@ if [ ! -d "LCD-show" ]; then
     git clone https://github.com/goodtft/LCD-show.git
 fi
 chmod -R 755 LCD-show
+
+# On Raspberry Pi OS Bookworm the boot partition is mounted at /boot/firmware/.
+# The goodtft LCD-show scripts write to /boot/config.txt which doesn't exist there.
+# Create a symlink so MHS35-show writes to the right place automatically.
+if [ ! -e "/boot/config.txt" ] && [ -f "/boot/firmware/config.txt" ]; then
+    echo "Bookworm detected: creating /boot/config.txt → /boot/firmware/config.txt symlink for LCD-show..."
+    sudo ln -s /boot/firmware/config.txt /boot/config.txt
+fi
 
 # Force GUI target before display driver reboot
 sudo systemctl set-default graphical.target
