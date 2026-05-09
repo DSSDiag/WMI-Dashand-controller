@@ -89,13 +89,9 @@ function useSerialBridge({ onTelemetry }) {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-      if (msg.type === 'telemetry') {
-  onTelemetry(msg);
-}
-
-if (msg.type === 'status') {
-  setHwConnected(msg.serial_connected);
-}
+        if (msg.type === 'telemetry') {
+          onTelemetry(msg);
+        }
       } catch {
         /* ignore malformed frames */
       }
@@ -799,24 +795,6 @@ const App = () => {
         <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'settings' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes spray-flow {
-          from { stroke-dashoffset: 20; }
-          to { stroke-dashoffset: 0; }
-        }
-        .animate-spray { animation: spray-flow 0.3s linear infinite; }
-        .animate-spray-fast { animation: spray-flow 0.2s linear infinite; }
-        .animate-spray-slow { animation: spray-flow 0.4s linear infinite; }
-        .hide-arrows::-webkit-inner-spin-button,
-        .hide-arrows::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .hide-arrows { -moz-appearance: textfield; }
-        input[type=range] { -webkit-appearance: none; background: transparent; }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: #0f172a; border-radius: 3px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: currentColor; margin-top: -6px; box-shadow: 0 0 15px rgba(0,0,0,0.5); border: 2px solid #000; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-      `}} />
     </div>
   );
 };
