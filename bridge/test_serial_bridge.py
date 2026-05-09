@@ -125,3 +125,23 @@ def test_build_settings_frame_invalid_types():
     settings = {"start_psi": "invalid"}
     with pytest.raises(ValueError):
         build_settings_frame(settings)
+
+from unittest.mock import MagicMock, patch
+from bridge.serial_bridge import handle_serial, WATCHDOG_TIMEOUT
+
+@pytest.mark.asyncio
+async def test_handle_serial_timeout():
+    """Test that handle_serial raises Exception('timeout') when no data is received for WATCHDOG_TIMEOUT."""
+    ser_mock = MagicMock()
+    ser_mock.readline.return_value = b"" # Simulate empty line from serial
+
+    # Mock time.monotonic to simulate time advancing
+    t = 0.0
+    def mock_time():
+        nonlocal t
+        t += WATCHDOG_TIMEOUT / 2 + 0.1
+        return t
+
+    with patch("bridge.serial_bridge.time.monotonic", side_effect=mock_time):
+        with pytest.raises(Exception, match="timeout"):
+            await handle_serial(ser_mock)
