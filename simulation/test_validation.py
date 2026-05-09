@@ -27,10 +27,13 @@ sys.modules['websockets'] = _websockets_pkg
 sys.modules['websockets.asyncio'] = _asyncio_mod
 sys.modules['websockets.asyncio.server'] = _asyncio_server_mod
 
-from simulator import update_sim_settings, sim_state
+from simulator import WS_HOST, update_sim_settings, sim_state
 
 def test_validation():
     print("Running validation tests...")
+
+    assert WS_HOST == "127.0.0.1"
+    print("✓ Simulator WebSocket host restricted to localhost")
 
     # Initial state
     initial_state = sim_state.copy()

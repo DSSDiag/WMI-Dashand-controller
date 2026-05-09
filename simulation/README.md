@@ -2,7 +2,7 @@
 
 This directory contains an interactive Python simulator (`simulator.py`) for the Water/Methanol Injection (WMI) system.
 
-It allows you to view and test the React dashboard without needing the actual ESP32 hardware or the main serial bridge running. It spins up a local WebSocket server on port `8765` and feeds simulated telemetry data (boost pressure, pump duty, tank status) to the dashboard.
+It allows you to view and test the React dashboard without needing the actual ESP32 hardware or the main serial bridge running. It spins up a local-only WebSocket server on `127.0.0.1:8765` and feeds simulated telemetry data (boost pressure, pump duty, tank status) to the dashboard.
 
 ## Requirements
 
