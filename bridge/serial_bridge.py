@@ -14,7 +14,6 @@ import asyncio
 import json
 import logging
 import time
-import functools
 from typing import Optional, Set
 
 import serial
