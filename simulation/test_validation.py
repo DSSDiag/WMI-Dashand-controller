@@ -69,6 +69,16 @@ def test_validation():
     assert sim_state["manual_duty"] == 50.0
     print("✓ Invalid types ignored as expected")
 
+    # Test None values for numeric fields
+    none_msg = {
+        "start_psi": None
+    }
+    update_sim_settings(none_msg)
+
+    # Values should remain from previous valid update
+    assert sim_state["start_psi"] == 10.5
+    print("✓ None types ignored as expected")
+
     # Test invalid values (out of range)
     out_of_range_msg = {
         "start_psi": 150.0,  # Range 0-100
