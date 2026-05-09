@@ -1,3 +1,4 @@
+import asyncio
 import json
 import pytest
 from bridge.logic import parse_esp32_frame, ATM_KPA, KPA_ABS_TO_PSI_GAUGE, build_settings_frame
@@ -125,3 +126,21 @@ def test_build_settings_frame_invalid_types():
     settings = {"start_psi": "invalid"}
     with pytest.raises(ValueError):
         build_settings_frame(settings)
+
+@pytest.mark.asyncio
+async def test_handle_serial_timeout():
+    from unittest.mock import MagicMock, AsyncMock, patch
+    import bridge.serial_bridge as serial_bridge
+
+    mock_ser = MagicMock()
+    mock_ser.readline.return_value = b""
+
+    with patch('bridge.serial_bridge.time') as mock_time, \
+         patch('bridge.serial_bridge.send_status', new_callable=AsyncMock) as mock_send_status:
+
+        # Simulate last_data initialized at 0.0, then loop checks time at 6.0
+        mock_time.monotonic.side_effect = [0.0, 9999.0]
+
+        with pytest.raises(Exception, match="timeout"):
+            # Ensure it actually runs and hits the timeout instead of hanging
+            await asyncio.wait_for(serial_bridge.handle_serial(mock_ser), timeout=1.0)
