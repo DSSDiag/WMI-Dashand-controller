@@ -1,15 +1,5 @@
 # --- FIXED serial_bridge.py ---
 
-# Key changes:
-
-# - NEVER switches to simulator
-
-# - Always retries serial
-
-# - Sends status to UI
-
-# - Safer handling
-
 import asyncio
 import json
 import logging
@@ -42,107 +32,101 @@ pending_prime: bool = False
 serial_connected = False
 
 def find_esp32_port():
-ports = list(serial.tools.list_ports.comports())
-for p in ports:
-name = (p.device + (p.description or "")).lower()
-if any(x in name for x in ["usb", "acm", "ch340", "cp210"]):
-return p.device
-return None
+    ports = list(serial.tools.list_ports.comports())
+    for p in ports:
+        name = (p.device + (p.description or "")).lower()
+        if any(x in name for x in ["usb", "acm", "ch340", "cp210"]):
+            return p.device
+    return None
 
 async def broadcast(msg):
-if not clients:
-return
-data = json.dumps(msg)
-await asyncio.gather(*(c.send(data) for c in clients), return_exceptions=True)
+    if not clients:
+        return
+    data = json.dumps(msg)
+    await asyncio.gather(*(c.send(data) for c in clients), return_exceptions=True)
 
 async def send_status():
-await broadcast({
-"type": "status",
-"serial_connected": serial_connected
-})
+    await broadcast({
+        "type": "status",
+        "serial_connected": serial_connected
+    })
 
 async def ws_handler(ws: ServerConnection):
-global pending_settings, pending_prime
-clients.add(ws)
+    global pending_settings, pending_prime
+    clients.add(ws)
 
-```
-await send_status()
-
-try:
-    async for message in ws:
-        msg = json.loads(message)
-
-        if msg.get("type") == "settings":
-            pending_settings = msg
-
-        elif msg.get("type") == "prime":
-            pending_prime = True
-
-finally:
-    clients.remove(ws)
-```
-
-async def handle_serial(ser):
-global pending_settings, pending_prime, latest_telemetry, serial_connected
-
-```
-serial_connected = True
-await send_status()
-
-last_data = time.monotonic()
-
-while True:
-    if pending_prime:
-        pending_prime = False
-        ser.write(b'{"t":"prime"}\n')
-
-    if pending_settings:
-        ser.write(build_settings_frame(pending_settings))
-        pending_settings = None
-
-    line = ser.readline().decode(errors="ignore").strip()
-
-    if not line:
-        if time.monotonic() - last_data > WATCHDOG_TIMEOUT:
-            raise Exception("timeout")
-        continue
-
-    data = parse_esp32_frame(line)
-    if data:
-        latest_telemetry = data
-        last_data = time.monotonic()
-        await broadcast(data)
-```
-
-async def serial_loop():
-global serial_connected
-
-```
-while True:
-    port = find_esp32_port()
-
-    if not port:
-        serial_connected = False
-        await send_status()
-        await asyncio.sleep(RECONNECT_DELAY)
-        continue
+    await send_status()
 
     try:
-        ser = serial.Serial(port, SERIAL_BAUD, timeout=SERIAL_TIMEOUT)
-        log.info(f"Connected to {port}")
-        await handle_serial(ser)
+        async for message in ws:
+            msg = json.loads(message)
 
-    except Exception as e:
-        log.warning(f"Serial lost: {e}")
-        serial_connected = False
-        await send_status()
+            if msg.get("type") == "settings":
+                pending_settings = msg
 
-    await asyncio.sleep(RECONNECT_DELAY)
-```
+            elif msg.get("type") == "prime":
+                pending_prime = True
+
+    finally:
+        clients.remove(ws)
+
+async def handle_serial(ser):
+    global pending_settings, pending_prime, latest_telemetry, serial_connected
+
+    serial_connected = True
+    await send_status()
+
+    last_data = time.monotonic()
+
+    while True:
+        if pending_prime:
+            pending_prime = False
+            ser.write(b'{"t":"prime"}\n')
+
+        if pending_settings:
+            ser.write(build_settings_frame(pending_settings))
+            pending_settings = None
+
+        line = ser.readline().decode(errors="ignore").strip()
+
+        if not line:
+            if time.monotonic() - last_data > WATCHDOG_TIMEOUT:
+                raise Exception("timeout")
+            continue
+
+        data = parse_esp32_frame(line)
+        if data:
+            latest_telemetry = data
+            last_data = time.monotonic()
+            await broadcast(data)
+
+async def serial_loop():
+    global serial_connected
+
+    while True:
+        port = find_esp32_port()
+
+        if not port:
+            serial_connected = False
+            await send_status()
+            await asyncio.sleep(RECONNECT_DELAY)
+            continue
+
+        try:
+            ser = serial.Serial(port, SERIAL_BAUD, timeout=SERIAL_TIMEOUT)
+            log.info(f"Connected to {port}")
+            await handle_serial(ser)
+
+        except Exception as e:
+            log.warning(f"Serial lost: {e}")
+            serial_connected = False
+            await send_status()
+
+        await asyncio.sleep(RECONNECT_DELAY)
 
 async def main():
-async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
-await serial_loop()
+    async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
+        await serial_loop()
 
-asyncio.run(main())
-
+if __name__ == '__main__':
+    asyncio.run(main())
