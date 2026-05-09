@@ -79,6 +79,15 @@ def test_validation():
     assert sim_state["start_psi"] == 10.5
     print("✓ None types ignored as expected")
 
+    # Test missing start_psi key
+    missing_start_msg = {
+        "system_active": True
+    }
+    update_sim_settings(missing_start_msg)
+    assert sim_state["start_psi"] == 10.5
+    assert sim_state["system_active"] == True
+    print("✓ Missing start_psi key handled as expected")
+
     # Test invalid values (out of range)
     out_of_range_msg = {
         "start_psi": 150.0,  # Range 0-100
