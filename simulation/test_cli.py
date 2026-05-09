@@ -1,5 +1,4 @@
 import sys
-import os
 import types
 
 # Mock websockets before importing simulator, just like in test_validation.py
@@ -19,7 +18,6 @@ sys.modules['websockets'] = _websockets_pkg
 sys.modules['websockets.asyncio'] = _asyncio_mod
 sys.modules['websockets.asyncio.server'] = _asyncio_server_mod
 
-import builtins
 import io
 import unittest
 from unittest.mock import patch
@@ -100,6 +98,11 @@ class TestCLIThread(unittest.TestCase):
     def test_invalid_input(self):
         # Test that invalid input is ignored and loops again
         self.run_cli_with_inputs(['x', 't'])
+        self.assertTrue(sim_state["tank_low"])
+
+    def test_command_input_normalization(self):
+        # Ensure strip/lower behavior accepts mixed-case and padded input
+        self.run_cli_with_inputs(['  T  '])
         self.assertTrue(sim_state["tank_low"])
 
 if __name__ == '__main__':
