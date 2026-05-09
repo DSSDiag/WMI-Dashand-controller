@@ -17,7 +17,6 @@ import asyncio
 import json
 import logging
 import math
-import sys
 import threading
 from typing import Set
 
