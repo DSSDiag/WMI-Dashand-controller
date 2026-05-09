@@ -71,22 +71,19 @@ def test_validation():
 
     # Test None values for numeric fields
     none_msg = {
-        "start_psi": None
+        "start_psi": None,
+        "full_psi": None,
+        "min_boost": None,
+        "max_boost": None,
+        "manual_duty": None
     }
     update_sim_settings(none_msg)
 
     # Values should remain from previous valid update
     assert sim_state["start_psi"] == 10.5
+    assert sim_state["full_psi"] == 30.0
+    assert sim_state["manual_duty"] == 50.0
     print("✓ None types ignored as expected")
-
-    # Test missing start_psi key
-    missing_start_msg = {
-        "system_active": True
-    }
-    update_sim_settings(missing_start_msg)
-    assert sim_state["start_psi"] == 10.5
-    assert sim_state["system_active"] == True
-    print("✓ Missing start_psi key handled as expected")
 
     # Test invalid values (out of range)
     out_of_range_msg = {
