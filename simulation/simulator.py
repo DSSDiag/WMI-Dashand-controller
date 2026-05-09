@@ -25,7 +25,7 @@ import websockets
 from websockets.asyncio.server import ServerConnection
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-WS_HOST = "0.0.0.0"
+WS_HOST = "127.0.0.1"
 WS_PORT = 8765
 
 logging.basicConfig(
