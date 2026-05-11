@@ -125,3 +125,90 @@ def test_build_settings_frame_invalid_types():
     settings = {"start_psi": "invalid"}
     with pytest.raises(ValueError):
         build_settings_frame(settings)
+
+from unittest.mock import patch, MagicMock
+from bridge.serial_bridge import find_esp32_port
+
+def test_find_esp32_port_match_usb():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyUSB0'
+        port1.description = 'USB Serial'
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() == '/dev/ttyUSB0'
+
+def test_find_esp32_port_match_acm():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyACM0'
+        port1.description = 'ttyACM0'
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() == '/dev/ttyACM0'
+
+def test_find_esp32_port_match_ch340():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyS0'
+        port1.description = 'CH340 serial converter'
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() == '/dev/ttyS0'
+
+def test_find_esp32_port_match_cp210():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyS1'
+        port1.description = 'CP210x UART Bridge'
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() == '/dev/ttyS1'
+
+def test_find_esp32_port_no_match():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyS0'
+        port1.description = 'Standard COM port'
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() is None
+
+def test_find_esp32_port_case_insensitivity():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyS2'
+        port1.description = 'cH340 converter'
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() == '/dev/ttyS2'
+
+def test_find_esp32_port_none_description():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyUSB0'
+        port1.description = None
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() == '/dev/ttyUSB0'
+
+def test_find_esp32_port_multiple_ports():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyS0'
+        port1.description = 'Standard COM port'
+
+        port2 = MagicMock()
+        port2.device = '/dev/ttyUSB0'
+        port2.description = 'USB Serial'
+
+        mock_comports.return_value = [port1, port2]
+
+        assert find_esp32_port() == '/dev/ttyUSB0'
