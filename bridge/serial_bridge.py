@@ -1,20 +1,9 @@
 # --- FIXED serial_bridge.py ---
 
-# Key changes:
-
-# - NEVER switches to simulator
-
-# - Always retries serial
-
-# - Sends status to UI
-
-# - Safer handling
-
 import asyncio
 import json
 import logging
 import time
-import functools
 from typing import Optional, Set
 
 import serial
@@ -65,7 +54,6 @@ async def ws_handler(ws: ServerConnection):
     global pending_settings, pending_prime
     clients.add(ws)
 
-
     await send_status()
 
     try:
@@ -81,10 +69,8 @@ async def ws_handler(ws: ServerConnection):
     finally:
         clients.remove(ws)
 
-
 async def handle_serial(ser):
     global pending_settings, pending_prime, latest_telemetry, serial_connected
-
 
     serial_connected = True
     await send_status()
@@ -113,10 +99,8 @@ async def handle_serial(ser):
             last_data = time.monotonic()
             await broadcast(data)
 
-
 async def serial_loop():
     global serial_connected
-
 
     while True:
         port = find_esp32_port()
@@ -139,11 +123,9 @@ async def serial_loop():
 
         await asyncio.sleep(RECONNECT_DELAY)
 
-
 async def main():
     async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
         await serial_loop()
 
 if __name__ == '__main__':
     asyncio.run(main())
-
