@@ -52,13 +52,23 @@ BRIDGE_SCRIPT="$REPO_DIR/bridge/serial_bridge.py"
 echo "[1/8] Installing system packages..."
 sudo apt-get update -qq
 
-BASE_PACKAGES="python3-pip python3-venv nginx chromium chromium-browser unclutter x11-xserver-utils xdotool git"
+BASE_PACKAGES="python3-pip python3-venv nginx chromium chromium-browser unclutter x11-xserver-utils xdotool git curl"
 if [ "$OS_TYPE" == "lite" ]; then
     echo "Lite OS detected. Adding lightdm and openbox for GUI support..."
     BASE_PACKAGES="$BASE_PACKAGES lightdm openbox"
 fi
 
 sudo apt-get install -y --no-install-recommends $BASE_PACKAGES
+
+ensure_nginx_installed() {
+    if command -v nginx >/dev/null 2>&1; then
+        return 0
+    fi
+
+    echo "nginx was not found after package installation. Installing nginx now..."
+    sudo apt-get update -qq
+    sudo apt-get install -y --no-install-recommends nginx
+}
 
 # --- Setup Python Venv (Bridge) ---
 echo "[2/8] Setting up Python virtual environment for bridge…"
@@ -95,6 +105,8 @@ cd "$REPO_DIR"
 
 # --- Configure Nginx ---
 echo "[5/8] Configuring nginx…"
+ensure_nginx_installed
+sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 sudo tee /etc/nginx/sites-available/wmi-dashboard > /dev/null << SERVEREOF
 server {
     listen 80 default_server;
@@ -132,7 +144,8 @@ Description=WMI Serial Bridge (ESP32 ↔ Dashboard)
 After=network.target
 
 [Service]
-ExecStart=$VENV_DIR/bin/python3 $BRIDGE_SCRIPT
+WorkingDirectory=$REPO_DIR
+ExecStart=$VENV_DIR/bin/python3 -m bridge.serial_bridge
 Restart=on-failure
 RestartSec=3
 User=$(whoami)
