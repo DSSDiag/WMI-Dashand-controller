@@ -75,6 +75,7 @@ echo "Selected: Pi $PI_VERSION, OS: $OS_TYPE, Display: $DISPLAY_TYPE (${DISPLAY_
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DASHBOARD_DIST="$REPO_DIR/dashboard/dist"
+NGINX_DASHBOARD_ROOT="/var/www/wmi-dashboard"
 BRIDGE_SCRIPT="$REPO_DIR/bridge/serial_bridge.py"
 RUN_USER="${SUDO_USER:-$(whoami)}"
 RUN_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6)"
@@ -139,11 +140,17 @@ cd "$REPO_DIR"
 # --- Configure Nginx ---
 echo "[5/9] Configuring nginx…"
 ensure_nginx_installed
+sudo rm -rf "$NGINX_DASHBOARD_ROOT"
+sudo mkdir -p "$NGINX_DASHBOARD_ROOT"
+sudo cp -a "$DASHBOARD_DIST"/. "$NGINX_DASHBOARD_ROOT"/
+sudo chown -R root:www-data "$NGINX_DASHBOARD_ROOT"
+sudo find "$NGINX_DASHBOARD_ROOT" -type d -exec chmod 755 {} \;
+sudo find "$NGINX_DASHBOARD_ROOT" -type f -exec chmod 644 {} \;
 sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 sudo tee /etc/nginx/sites-available/wmi-dashboard > /dev/null << SERVEREOF
 server {
     listen 80 default_server;
-    root $DASHBOARD_DIST;
+    root $NGINX_DASHBOARD_ROOT;
     index index.html;
     location / {
         try_files \$uri \$uri/ /index.html;
