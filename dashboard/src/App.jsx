@@ -324,7 +324,7 @@ const App = () => {
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-12 h-12 bg-black rounded-xl border border-slate-700 flex items-center justify-center p-1.5 shadow-[0_0_14px_rgba(163,230,53,0.18)] overflow-hidden flex-shrink-0">
                 <img
-                  src="/logo.svg"
+                  src="/logo.png"
                   alt="Logo"
                   className="w-full h-full object-contain"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
