@@ -386,17 +386,17 @@ const App = () => {
             <div className="col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden group">
 
               {/* Background Radial Gauge */}
-              <div className="absolute -right-8 -top-8 w-48 h-48 pointer-events-none opacity-40">
+              <div className="absolute -right-20 -top-20 w-72 h-72 pointer-events-none opacity-50">
                 <svg viewBox="0 0 240 240" className="w-full h-full" style={{ transform: 'rotate(135deg)' }}>
                   <circle
                     cx="120" cy="120" r="100"
-                    fill="none" stroke="currentColor" strokeWidth="24"
+                    fill="none" stroke="currentColor" strokeWidth="28"
                     strokeLinecap="round" className="text-slate-800"
                     strokeDasharray="471.24 628.32"
                   />
                   <circle
                     cx="120" cy="120" r="100"
-                    fill="none" stroke="currentColor" strokeWidth="24"
+                    fill="none" stroke="currentColor" strokeWidth="28"
                     strokeLinecap="round" className="text-lime-500 transition-all duration-100 ease-linear"
                     strokeDasharray={`${(Math.max(0, Math.min(100, ((rawBoost - minBoost) / (maxBoost - minBoost)) * 100)) / 100) * 471.24} 628.32`}
                   />
