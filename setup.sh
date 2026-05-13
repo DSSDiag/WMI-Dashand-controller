@@ -84,7 +84,7 @@ RUN_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6)"
 echo "[1/9] Installing system packages..."
 sudo apt-get update -qq
 
-BASE_PACKAGES="ca-certificates curl git python3-pip python3-venv nginx chromium chromium-browser unclutter x11-xserver-utils xdotool libinput-tools"
+BASE_PACKAGES="ca-certificates curl git python3-pip python3-venv nginx chromium chromium-browser unclutter x11-xserver-utils xdotool libinput-tools plymouth plymouth-themes"
 if [ "$OS_TYPE" == "lite" ] || [ "$DISPLAY_TYPE" == "dsi5" ]; then
     echo "Adding GUI support packages..."
     BASE_PACKAGES="$BASE_PACKAGES lightdm openbox xserver-xorg xinit dbus-x11"
@@ -170,10 +170,132 @@ elif [ -f /boot/config.txt ]; then
 else
     BOOT_CONFIG=""
 fi
+if [ -f /boot/firmware/cmdline.txt ]; then
+    BOOT_CMDLINE="/boot/firmware/cmdline.txt"
+elif [ -f /boot/cmdline.txt ]; then
+    BOOT_CMDLINE="/boot/cmdline.txt"
+else
+    BOOT_CMDLINE=""
+fi
 
 if [ -n "$BOOT_CONFIG" ]; then
     sudo cp "$BOOT_CONFIG" "${BOOT_CONFIG}.wmi-backup.$(date +%Y%m%d-%H%M%S)"
 fi
+if [ -n "$BOOT_CMDLINE" ]; then
+    sudo cp "$BOOT_CMDLINE" "${BOOT_CMDLINE}.wmi-backup.$(date +%Y%m%d-%H%M%S)"
+fi
+
+set_boot_config_value() {
+    local key="$1"
+    local value="$2"
+    if [ -z "$BOOT_CONFIG" ]; then
+        return 0
+    fi
+
+    grep -q "^${key}=" "$BOOT_CONFIG" \
+        && sudo sed -i "s/^${key}=.*/${key}=${value}/" "$BOOT_CONFIG" \
+        || echo "${key}=${value}" | sudo tee -a "$BOOT_CONFIG" >/dev/null
+}
+
+set_boot_cmdline_token() {
+    if [ -z "$BOOT_CMDLINE" ]; then
+        return 0
+    fi
+
+    local cmdline
+    cmdline="$(sudo tr -d '\n' < "$BOOT_CMDLINE")"
+
+    # Remove tokens that draw boot text on the attached display or conflict with the branded splash.
+    for token in console=tty1 nosplash plymouth.enable=0; do
+        cmdline=" $cmdline "
+        cmdline="${cmdline// $token / }"
+        cmdline="${cmdline#"${cmdline%%[![:space:]]*}"}"
+        cmdline="${cmdline%"${cmdline##*[![:space:]]}"}"
+    done
+
+    # Keep this to one line. Raspberry Pi firmware expects cmdline.txt that way.
+    for token in quiet splash loglevel=0 logo.nologo vt.global_cursor_default=0 systemd.show_status=false rd.udev.log_level=3 plymouth.ignore-serial-consoles; do
+        if [[ " $cmdline " != *" $token "* ]]; then
+            cmdline="$cmdline $token"
+        fi
+    done
+
+    printf '%s\n' "$cmdline" | sudo tee "$BOOT_CMDLINE" >/dev/null
+}
+
+configure_plymouth_theme() {
+    local theme_dir="/usr/share/plymouth/themes/mild-modz"
+    local logo_source="$REPO_DIR/dashboard/public/logo.png"
+
+    if [ ! -f "$logo_source" ]; then
+        echo "Warning: logo asset not found at $logo_source. Skipping branded boot splash."
+        return 0
+    fi
+
+    sudo mkdir -p "$theme_dir"
+    sudo cp "$logo_source" "$theme_dir/logo.png"
+    printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAICAYAAAA4GpVBAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAQSURBVBhXYxCXUfnPQJgAAMroCrHpRHBSAAAAAElFTkSuQmCC' | base64 -d | sudo tee "$theme_dir/bar-bg.png" >/dev/null
+    printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAICAYAAAA4GpVBAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAQSURBVBhXY1j8n+E/A2ECAKSDFQmK/XW8AAAAAElFTkSuQmCC' | base64 -d | sudo tee "$theme_dir/bar-fg.png" >/dev/null
+    sudo tee "$theme_dir/mild-modz.plymouth" >/dev/null << 'PLYMOUTHEOF'
+[Plymouth Theme]
+Name=Mild Modz
+Description=Mild Modz kiosk boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/mild-modz
+ScriptFile=/usr/share/plymouth/themes/mild-modz/mild-modz.script
+PLYMOUTHEOF
+    sudo tee "$theme_dir/mild-modz.script" >/dev/null << 'SCRIPTEOF'
+Window.SetBackgroundTopColor(0.0, 0.0, 0.0);
+Window.SetBackgroundBottomColor(0.0, 0.0, 0.0);
+
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+logo = Image("logo.png");
+logo_scale = Math.Min((screen_width * 0.52) / logo.GetWidth(), (screen_height * 0.60) / logo.GetHeight());
+logo = logo.Scale(Math.Int(logo.GetWidth() * logo_scale), Math.Int(logo.GetHeight() * logo_scale));
+logo_sprite = Sprite(logo);
+logo_sprite.SetX((screen_width - logo.GetWidth()) / 2);
+logo_sprite.SetY((screen_height - logo.GetHeight()) / 2 - 22);
+logo_sprite.SetZ(10);
+
+bar_width = screen_width * 0.48;
+if (bar_width > 380) bar_width = 380;
+bar_height = 8;
+bar_x = (screen_width - bar_width) / 2;
+bar_y = (screen_height + logo.GetHeight()) / 2 + 10;
+
+bar_bg = Image("bar-bg.png").Scale(bar_width, bar_height);
+bar_bg_sprite = Sprite(bar_bg);
+bar_bg_sprite.SetX(bar_x);
+bar_bg_sprite.SetY(bar_y);
+bar_bg_sprite.SetZ(11);
+
+bar_fg_sprite = Sprite();
+bar_fg_sprite.SetX(bar_x);
+bar_fg_sprite.SetY(bar_y);
+bar_fg_sprite.SetZ(12);
+
+fun progress_callback(duration, progress) {
+    fill_width = Math.Int(bar_width * progress);
+    if (fill_width < 1) fill_width = 1;
+    bar_fg = Image("bar-fg.png").Scale(fill_width, bar_height);
+    bar_fg_sprite.SetImage(bar_fg);
+}
+
+Plymouth.SetBootProgressFunction(progress_callback);
+SCRIPTEOF
+
+    sudo plymouth-set-default-theme -R mild-modz || sudo update-alternatives --set default.plymouth "$theme_dir/mild-modz.plymouth" || true
+    sudo update-initramfs -u || true
+}
+
+echo "Configuring branded Mild Modz boot splash and hiding boot text..."
+set_boot_config_value "disable_splash" "1"
+set_boot_cmdline_token
+configure_plymouth_theme
 
 if [ "$DISPLAY_TYPE" == "dsi5" ]; then
     echo "Configuring for 5 inch DSI ribbon display. No SPI LCD overlay will be installed."
@@ -184,13 +306,8 @@ if [ "$DISPLAY_TYPE" == "dsi5" ]; then
         sudo sed -i '/MHS35/d' "$BOOT_CONFIG"
         sudo sed -i '/52Pi/d' "$BOOT_CONFIG"
 
-        grep -q '^disable_fw_kms_setup=' "$BOOT_CONFIG" \
-            && sudo sed -i 's/^disable_fw_kms_setup=.*/disable_fw_kms_setup=0/' "$BOOT_CONFIG" \
-            || echo 'disable_fw_kms_setup=0' | sudo tee -a "$BOOT_CONFIG" >/dev/null
-
-        grep -q '^max_framebuffers=' "$BOOT_CONFIG" \
-            && sudo sed -i 's/^max_framebuffers=.*/max_framebuffers=2/' "$BOOT_CONFIG" \
-            || echo 'max_framebuffers=2' | sudo tee -a "$BOOT_CONFIG" >/dev/null
+        set_boot_config_value "disable_fw_kms_setup" "0"
+        set_boot_config_value "max_framebuffers" "2"
     fi
 else
     echo "Configuring legacy 3.5 inch GPIO/SPI display path."
