@@ -303,6 +303,52 @@ const App = () => {
     triggerMode === 'full_scale'
       ? 100
       : Math.max(0, Math.min(100, 100 - ((startInjectionAt - minBoost) / range) * 100));
+  const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
+  const boostNeedleAngle = -135 + (boostPercent * 2.7);
+  const renderBoostGaugeLayer = (className) => (
+    <div className={`absolute w-[27rem] h-[27rem] pointer-events-none z-0 ${className}`}>
+      <svg viewBox="0 0 240 240" className="w-full h-full" style={{ transform: 'rotate(135deg)' }}>
+        <defs>
+          <linearGradient id="boostArcFade" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#a3e635" stopOpacity="1" />
+            <stop offset="62%" stopColor="#a3e635" stopOpacity="0.72" />
+            <stop offset="100%" stopColor="#a3e635" stopOpacity="0.22" />
+          </linearGradient>
+          <linearGradient id="boostNeedleFade" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#ecfccb" stopOpacity="0.95" />
+            <stop offset="70%" stopColor="#a3e635" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#a3e635" stopOpacity="0.18" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx="120" cy="120" r="100"
+          fill="none" stroke="currentColor" strokeWidth="28"
+          strokeLinecap="round" className="text-slate-800"
+          strokeDasharray="471.24 628.32"
+        />
+        <circle
+          cx="120" cy="120" r="100"
+          fill="none" stroke="url(#boostArcFade)" strokeWidth="28"
+          strokeLinecap="round" className="transition-all duration-100 ease-linear"
+          strokeDasharray={`${(boostPercent / 100) * 471.24} 628.32`}
+        />
+        <g
+          className="transition-transform duration-100 ease-linear"
+          style={{
+            transformOrigin: '120px 120px',
+            transform: `rotate(${boostNeedleAngle}deg)`,
+          }}
+        >
+          <line
+            x1="120" y1="120" x2="120" y2="33"
+            stroke="url(#boostNeedleFade)" strokeWidth="5"
+            strokeLinecap="round"
+          />
+          <circle cx="120" cy="120" r="8" fill="#a3e635" opacity="0.75" />
+        </g>
+      </svg>
+    </div>
+  );
 
   return (
     <div className="h-screen w-screen bg-slate-950 text-slate-100 font-sans p-2 flex flex-col gap-2 select-none overflow-hidden relative">
@@ -383,25 +429,8 @@ const App = () => {
           {/* Main Grid */}
           <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
             {/* Boost Gauge */}
-            <div className="col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden group">
-
-              {/* Background Radial Gauge */}
-              <div className="absolute -right-20 -top-20 w-72 h-72 pointer-events-none opacity-50">
-                <svg viewBox="0 0 240 240" className="w-full h-full" style={{ transform: 'rotate(135deg)' }}>
-                  <circle
-                    cx="120" cy="120" r="100"
-                    fill="none" stroke="currentColor" strokeWidth="28"
-                    strokeLinecap="round" className="text-slate-800"
-                    strokeDasharray="471.24 628.32"
-                  />
-                  <circle
-                    cx="120" cy="120" r="100"
-                    fill="none" stroke="currentColor" strokeWidth="28"
-                    strokeLinecap="round" className="text-lime-500 transition-all duration-100 ease-linear"
-                    strokeDasharray={`${(Math.max(0, Math.min(100, ((rawBoost - minBoost) / (maxBoost - minBoost)) * 100)) / 100) * 471.24} 628.32`}
-                  />
-                </svg>
-              </div>
+            <div className="col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden group z-10">
+              {renderBoostGaugeLayer('right-[-7rem] top-[-2.5rem] opacity-55')}
 
               <div className="relative z-10 flex-1 flex flex-col">
                 <div className="flex items-center gap-1">
@@ -468,12 +497,13 @@ const App = () => {
               </div>
             </div>
 
-            <div className="col-span-5 flex flex-col gap-2">
+            <div className="col-span-5 flex flex-col gap-2 z-10">
               {/* Pump Flow */}
-              <div className="flex-1 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex items-center justify-between">
-                <div className="flex flex-col">
+              <div className="flex-1 bg-slate-900/40 rounded-xl border border-slate-800 p-3 flex items-center justify-between relative overflow-hidden">
+                {renderBoostGaugeLayer('left-[-19.65rem] top-[-2.5rem] opacity-20')}
+                <div className="flex flex-col relative z-10">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pump Flow</span>
-                  <span className={`text-4xl font-black transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
+                  <span className={`text-6xl font-black tracking-tighter tabular-nums leading-none transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
                     {Math.round(dutyCycle)}%
                   </span>
                   {triggerMode === 'manual' && (
@@ -482,7 +512,7 @@ const App = () => {
                 </div>
 
                 {/* Injector SVG */}
-                <div className="h-20 w-16 flex flex-col items-center justify-start relative mr-1">
+                <div className="h-20 w-16 flex flex-col items-center justify-start relative mr-1 z-10">
                   <svg width="100%" height="100%" viewBox="0 0 60 110" className="overflow-visible">
                     <defs>
                       <linearGradient id="sprayGrad" x1="0" y1="0" x2="0" y2="1">
