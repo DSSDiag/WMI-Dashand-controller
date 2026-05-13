@@ -306,7 +306,7 @@ const App = () => {
   const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
   const renderBoostGaugeLayer = (className) => (
-    <div className={`absolute w-[27rem] h-[27rem] pointer-events-none z-0 ${className}`}>
+    <div className={`absolute w-[30rem] h-[30rem] pointer-events-none z-0 ${className}`}>
       <svg viewBox="0 0 240 240" className="w-full h-full" style={{ transform: 'rotate(135deg)' }}>
         <defs>
           <linearGradient id="boostArcFade" x1="0" y1="0" x2="1" y2="0">
@@ -340,11 +340,11 @@ const App = () => {
           }}
         >
           <line
-            x1="120" y1="120" x2="120" y2="33"
-            stroke="url(#boostNeedleFade)" strokeWidth="5"
+            x1="120" y1="120" x2="120" y2="28"
+            stroke="url(#boostNeedleFade)" strokeWidth="7"
             strokeLinecap="round"
           />
-          <circle cx="120" cy="120" r="8" fill="#a3e635" opacity="0.75" />
+          <circle cx="120" cy="120" r="10" fill="#a3e635" opacity="0.85" />
         </g>
       </svg>
     </div>
@@ -430,7 +430,7 @@ const App = () => {
           <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
             {/* Boost Gauge */}
             <div className="col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden group z-10">
-              {renderBoostGaugeLayer('right-[-7rem] top-[-2.5rem] opacity-55')}
+              {renderBoostGaugeLayer('right-[-4.75rem] top-[-0.75rem] opacity-70')}
 
               <div className="relative z-10 flex-1 flex flex-col">
                 <div className="flex items-center gap-1">
@@ -500,7 +500,7 @@ const App = () => {
             <div className="col-span-5 flex flex-col gap-2 z-10">
               {/* Pump Flow */}
               <div className="flex-1 bg-slate-900/40 rounded-xl border border-slate-800 p-3 flex items-center justify-between relative overflow-hidden">
-                {renderBoostGaugeLayer('left-[-19.65rem] top-[-2.5rem] opacity-20')}
+                {renderBoostGaugeLayer('left-[-21.85rem] top-[-0.75rem] opacity-32')}
                 <div className="flex flex-col relative z-10">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pump Flow</span>
                   <span className={`text-6xl font-black tracking-tighter tabular-nums leading-none transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
