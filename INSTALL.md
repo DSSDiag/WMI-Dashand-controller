@@ -1,144 +1,250 @@
 # Installation Guide
 
-This guide provides detailed, step-by-step instructions for loading the WMI Dashboard software onto the Raspberry Pi and the WMI Controller firmware onto the ESP32-S3 (or ESP32-C3).
+This guide covers the WMI Dashboard on the current test hardware:
+
+- Raspberry Pi 3
+- Raspberry Pi OS Bookworm
+- 5 inch landscape capacitive touch display connected to the Raspberry Pi DSI ribbon connector
+- ESP32-S3 or ESP32-C3 controller connected to the Pi over USB serial
+
+The Pi runs the React touch dashboard in a full-screen Chromium kiosk. A Python bridge service passes telemetry and settings between the dashboard and the ESP32 controller.
 
 ---
 
-## Hardware Wiring
+## 1. Flash the ESP32 controller
 
-### Display Overview
-This setup targets the **52Pi K-0403 3.5″ Resistive Touch LCD** (320x480 resolution, ILI9486 driver, XPT2046 touch controller).
+The ESP32 reads the MAP sensor, calculates pump duty cycle, controls the pump, and sends telemetry to the Raspberry Pi.
 
-Because standard dashboard designs are often landscape, this display is configured to run at **480x320 landscape** mode via the `/boot/config.txt` file and Chromium parameters.
+### Arduino IDE prerequisites
 
-### Pin Connections (Pi to 52Pi K-0403 Display)
+1. Install Arduino IDE 2.x.
+2. Open **File** → **Preferences**.
+3. Add this URL to **Additional boards manager URLs**:
+   ```text
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+4. Open **Tools** → **Board** → **Boards Manager** and install `esp32` by Espressif Systems.
+5. Open **Sketch** → **Include Library** → **Manage Libraries** and install `ArduinoJson` version 7.x or later.
 
-The display is designed as a GPIO HAT — simply press it onto the Pi's 40-pin header and all connections are made automatically. If you need to wire it manually (e.g. using a ribbon cable or jumper wires), the tables below list every connection.
+### Flashing steps
 
-#### SPI bus — display video (ILI9486 driver)
+1. Connect the ESP32 to your computer over USB.
+2. Open `esp32/wmi_controller/wmi_controller.ino`.
+3. Select the correct board, for example **ESP32S3 Dev Module** or **ESP32C3 Dev Module**.
+4. Select the ESP32 serial port.
+5. Set **USB CDC On Boot** to **Enabled** when using native USB serial.
+6. Adjust `esp32/wmi_controller/config.h` if your pinout or MAP calibration differs.
+7. Upload the sketch.
+8. Open Serial Monitor at `115200` baud and confirm the controller emits newline-terminated JSON frames.
 
-| Display label | Raspberry Pi GPIO | 40-pin header pin | Function |
-|---|---|---|---|
-| VCC | 5 V | Pin 2 | Power |
-| GND | GND | Pin 6 | Ground |
-| MOSI | GPIO 10 | Pin 19 | SPI0 MOSI (data to display) |
-| MISO | GPIO 9 | Pin 21 | SPI0 MISO (data from display) |
-| CLK | GPIO 11 | Pin 23 | SPI0 SCLK (clock) |
-| CS | GPIO 8 | Pin 24 | SPI0 CE0 (display chip select) |
-| DC | GPIO 24 | Pin 18 | Data / Command select |
-| RST | GPIO 25 | Pin 22 | Hardware reset (active-low) |
-| BL | GPIO 18 | Pin 12 | Backlight enable / PWM |
+---
 
-#### SPI bus — resistive touch (XPT2046 controller)
+## 2. Prepare the Raspberry Pi 3
 
-| Display label | Raspberry Pi GPIO | 40-pin header pin | Function |
-|---|---|---|---|
-| TP_CS | GPIO 7 | Pin 26 | SPI0 CE1 (touch chip select) |
-| TP_IRQ | GPIO 17 | Pin 11 | Touch interrupt (active-low) |
+### SD card image
 
-#### Quick-reference wiring diagram
+Use Raspberry Pi Imager.
 
-```
-Pi 40-pin header                      52Pi K-0403 3.5" Display
-(pin 1 = top-left)
-                                       ┌──────────────┐
- Pin  2  [ 5V ] ─────────────────────► VCC            │
- Pin  6  [GND ] ─────────────────────► GND            │
- Pin 19  [GP10] ─────────────────────► MOSI  (SPI)   │
- Pin 21  [GP9 ] ─────────────────────► MISO  (SPI)   │
- Pin 23  [GP11] ─────────────────────► CLK   (SPI)   │
- Pin 24  [GP8 ] ─────────────────────► CS    (display)│
- Pin 18  [GP24] ─────────────────────► DC             │
- Pin 22  [GP25] ─────────────────────► RST            │
- Pin 12  [GP18] ─────────────────────► BL             │
- Pin 26  [GP7 ] ─────────────────────► TP_CS  (touch) │
- Pin 11  [GP17] ─────────────────────► TP_IRQ (touch) │
-                                       └──────────────┘
+Recommended test image:
+
+```text
+Raspberry Pi OS Bookworm 64-bit with Desktop
 ```
 
-### Setup Script Actions
-The `setup.sh` script automatically configures the following in `/boot/config.txt` (via LCD-show):
-1. `dtparam=spi=on`
-2. `dtoverlay=mhs35:rotate=90` (Configures the ILI9486 SPI display and XPT2046 resistive touch overlay, forces the 320x480 portrait screen into 480x320 landscape)
+Bookworm Lite can also be used. If Lite is selected in the installer, the script installs LightDM/Openbox/X11 so the kiosk can run.
 
-> **Raspberry Pi OS Bookworm note:** On Bookworm the boot partition is at `/boot/firmware/` and `LCD-show` expects `/boot/config.txt`. `setup.sh` automatically creates a `/boot/config.txt → /boot/firmware/config.txt` symlink before running the driver installer, so no manual action is needed.
+Set these in Imager before writing:
 
-Chromium is started with `--window-size=480,320` and `--force-device-scale-factor=1` to perfectly fit the viewport.
+- Hostname, for example `wmidash`
+- SSH enabled
+- Username and password
+- Wi-Fi credentials if not using Ethernet
 
-If touch accuracy is poor after installation, calibrate the resistive touch panel using `xinput-calibrator`:
+### Display connection
+
+Power the Pi off before connecting the display.
+
+Connect the 5 inch capacitive screen to the Raspberry Pi **DSI display connector** using the ribbon cable. This is the small flat-flex display connector near the end of the Pi board. It is not HDMI, not GPIO SPI, and not the camera CSI connector.
+
+The `setup.sh` script on this branch includes a DSI display path. It does **not** install the old `LCD-show` / `MHS35-show` SPI display driver for this display choice.
+
+Default kiosk geometry:
+
+```text
+800x480 landscape
+```
+
+If your 5 inch DSI display uses another resolution, run the setup with overrides:
+
 ```bash
-sudo apt install xinput-calibrator
-xinput_calibrator
+WMI_DISPLAY_WIDTH=1024 WMI_DISPLAY_HEIGHT=600 ./setup.sh
 ```
-If touch axis inversion occurs after the rotation (e.g. up registers as right), add `swapxy=1` or `invertx=1` to the `dtoverlay=mhs35:rotate=90` line in `/boot/firmware/config.txt` (Bookworm) or `/boot/config.txt` (Bullseye and earlier). Refer to the [52Pi K-0403 wiki](https://wiki.52pi.com/index.php?title=K-0403) for further axis calibration guidance.
 
 ---
 
-## 1. Setting up the ESP32 (Sensor & Pump Controller)
+## 3. Install the Pi dashboard
 
-The ESP32 reads the MAP sensor, calculates pump duty cycle, controls the pump, and sends data to the Raspberry Pi.
+SSH into the Pi, then run:
 
-### Prerequisites
-1. Download and install [Arduino IDE 2.x](https://www.arduino.cc/en/software).
-2. Open Arduino IDE, go to **File** -> **Preferences**.
-3. In the "Additional boards manager URLs" field, add:
-   `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
-4. Go to **Tools** -> **Board** -> **Boards Manager**, search for `esp32` by Espressif Systems, and click **Install**.
-5. Go to **Sketch** -> **Include Library** -> **Manage Libraries**, search for `ArduinoJson` (by Benoit Blanchon, version 7.x or later), and click **Install**.
+```bash
+git clone https://github.com/DSSDiag/WMI-Dashand-controller.git
+cd WMI-Dashand-controller
+git fetch origin
+git checkout rpi3-5inch-dsi-install
+chmod +x setup.sh
+./setup.sh
+```
 
-### Flashing the Firmware
-1. **Connect** your ESP32 board to your computer via USB.
-2. In Arduino IDE, go to **File** -> **Open** and navigate to the repository directory.
-3. Open the file `esp32/wmi_controller/wmi_controller.ino`.
-4. In the top dropdown (or under **Tools** -> **Board**), select your specific ESP32 board (e.g., **ESP32S3 Dev Module** or **ESP32C3 Dev Module** depending on your hardware).
-5. Under **Tools** -> **Port**, select the COM port (Windows) or `/dev/tty.*` port (macOS/Linux) corresponding to your ESP32.
-6. Under **Tools** -> **USB CDC On Boot**, ensure it is set to **Enabled** (this is critical for the native USB serial communication with the Pi).
-7. (Optional) Open the `config.h` file (the tab next to `wmi_controller.ino` in the IDE) to adjust pin assignments or MAP sensor calibration (e.g., `MAP_V_MIN_MV` and `MAP_V_MAX_MV`) if needed.
-8. Click the **Upload** button (the right-pointing arrow at the top left). The IDE will compile and flash the firmware.
-9. You can open the **Serial Monitor** (set to 115200 baud) to verify the ESP32 is outputting JSON data frames.
+When prompted, choose:
+
+```text
+Pi version: 2) Pi 3
+OS type:    choose Lite or Full/Desktop to match your SD image
+Display:    1) 5 inch capacitive DSI ribbon display, landscape, usually 800x480
+```
+
+Then reboot:
+
+```bash
+sudo reboot
+```
+
+The installer does the following:
+
+- Installs system packages for X11, LightDM, Openbox, Chromium, nginx, Python, Node, and touch diagnostics.
+- Creates Python virtual environments for the bridge and simulator.
+- Builds the React dashboard.
+- Serves the dashboard through nginx on port `80`.
+- Configures graphical autologin where needed.
+- Starts Chromium in full-screen kiosk mode at `http://localhost`.
+- Installs `wmi-bridge.service` for ESP32 serial communication.
+- Installs `wmi-kiosk.service` for the dashboard browser.
+- Installs `wmi-unclutter.service` to hide the cursor.
+- Adds the current user to the `dialout` group for serial access.
 
 ---
 
-## 2. Setting up the Raspberry Pi (Touch Dashboard)
+## 4. What the DSI path changes
 
-The Raspberry Pi runs the React-based touch dashboard in a full-screen Chromium kiosk and runs a Python bridge service to communicate with the ESP32.
+For the 5 inch DSI display, the installer:
 
-> **Hardware wiring:** Before powering on, make sure the 52Pi K-0403 3.5″ Resistive Touch LCD is attached to the Pi's 40-pin GPIO header. For full GPIO pin assignments (SPI display + XPT2046 resistive touch), see **[Hardware Wiring — Pin Connections](#pin-connections-pi-to-52pi-k-0403-display)** or the **[README Hardware section](README.md#raspberry-pi-gpio-screen-wiring)**.
+- Removes old `waveshare35a` and `mhs35` overlay lines from `config.txt` if found.
+- Leaves SPI display overlays alone unless the legacy 3.5 inch display option is selected.
+- Sets `disable_fw_kms_setup=0`.
+- Sets `max_framebuffers=2`.
+- Forces the kiosk window to the selected geometry, default `800x480`.
+- Adds an Openbox autostart command that attempts to set the connected display output to the selected mode with `xrandr` where the driver permits it.
 
-### Prerequisites
-1. You will need a Raspberry Pi Zero 2 W (or any Pi with USB-OTG/USB-A).
-2. Download and install [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
-3. Insert a micro SD card into your computer.
-4. Open Raspberry Pi Imager.
-   - Choose **Device**: Raspberry Pi Zero 2 W.
-   - Choose **OS**: Raspberry Pi OS (Legacy, 64-bit) or standard Raspberry Pi OS (Bookworm, 64-bit) with Desktop.
-   - Choose **Storage**: Select your SD card.
-5. Click **Next** -> **Edit Settings**.
-   - Set a hostname (e.g., `wmidash`).
-   - Enable SSH (Use password authentication).
-   - Set username (`pi`) and a secure password.
-   - Configure your Wi-Fi settings (SSID and password).
-6. Click **Save** and then **Write**. Wait for the process to complete, then insert the SD card into the Pi and power it on.
+For the legacy 3.5 inch GPIO/SPI display option, the script still runs the `LCD-show` / `MHS35-show` path.
 
-### Installation via Setup Script
-1. Connect your ESP32 to the Raspberry Pi via USB.
-2. Find the IP address of your Raspberry Pi on your network (e.g., via your router's admin page).
-3. SSH into the Pi from your computer:
-   ```bash
-   ssh pi@<YOUR_PI_IP_ADDRESS>
-   ```
-4. Clone this repository to the Pi:
-   ```bash
-   git clone https://github.com/DSSDiag/WMI-Dashand-controller.git
-   cd WMI-Dashand-controller
-   ```
-5. Make the setup script executable:
-   ```bash
-   chmod +x setup.sh
-   ```
-6. Run the automated setup script. This script prompts for your Pi version and OS type. It installs necessary packages (nginx, Python venv, Chromium), builds the React dashboard in `dashboard/`, and creates systemd services to run the Python bridge (`bridge/serial_bridge.py`) and the Chromium kiosk automatically on boot. Finally, it installs the 52Pi display driver and auto-reboots.
-   ```bash
-   ./setup.sh
-   ```
-7. Once the display driver installation finishes successfully, the Pi will reboot automatically.
-8. On boot, the Pi should launch straight into the WMI Dashboard and automatically connect to the ESP32 to display live data.
+---
+
+## 5. After reboot checks
+
+Run these from SSH after the Pi reboots.
+
+### Check display output
+
+```bash
+xrandr --query
+```
+
+Expected result: one connected display, usually reporting `800x480` or your panel's native resolution.
+
+### Check touch input
+
+```bash
+libinput list-devices
+```
+
+Expected result: a touch device appears. Capacitive DSI panels usually expose touch through the display stack or I2C/USB depending on the panel board.
+
+### Check kiosk
+
+```bash
+sudo systemctl status wmi-kiosk
+```
+
+Restart it if needed:
+
+```bash
+sudo systemctl restart wmi-kiosk
+```
+
+### Check bridge
+
+```bash
+sudo systemctl status wmi-bridge
+sudo journalctl -u wmi-bridge -f
+```
+
+### Check ESP32 serial device
+
+```bash
+ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+```
+
+---
+
+## 6. Useful service commands
+
+```bash
+sudo systemctl restart wmi-bridge
+sudo systemctl restart wmi-kiosk
+sudo systemctl restart nginx
+```
+
+Follow bridge logs live:
+
+```bash
+sudo journalctl -u wmi-bridge -f
+```
+
+Follow kiosk logs live:
+
+```bash
+sudo journalctl -u wmi-kiosk -f
+```
+
+---
+
+## 7. Troubleshooting
+
+| Symptom | Likely cause | Check / fix |
+|---|---|---|
+| Backlight on, no dashboard | Kiosk or graphical session failed | `sudo systemctl status lightdm wmi-kiosk` |
+| Desktop appears but no dashboard | Chromium kiosk failed | `sudo journalctl -u wmi-kiosk -n 80 --no-pager` |
+| Dashboard appears but touch does nothing | Touch device not detected | `libinput list-devices` |
+| Touch works but coordinates are rotated/wrong | Panel orientation mismatch | Check `xrandr --query`; confirm panel native landscape mode |
+| Dashboard shows `OFF` badge | Bridge disconnected or no ESP32 serial device | `sudo systemctl status wmi-bridge`; `ls /dev/ttyUSB* /dev/ttyACM*` |
+| Serial permission denied | User not in `dialout` until after reboot | Reboot, then retry |
+| Old 3.5 inch SPI screen behaviour persists | Previous config still has a SPI display overlay | Re-run `./setup.sh`, choose the DSI display option, then reboot |
+
+---
+
+## 8. Manual development
+
+Dashboard only:
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+Bridge only:
+
+```bash
+cd bridge
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+python3 serial_bridge.py
+```
+
+Simulator:
+
+```bash
+cd simulation
+python3 simulator.py
+```

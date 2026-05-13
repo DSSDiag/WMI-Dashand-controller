@@ -320,9 +320,9 @@ const App = () => {
             ================================================================ */}
         <div className="min-w-full flex flex-col gap-2">
           {/* Header */}
-          <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-md p-2 rounded-xl border border-slate-800 shadow-md">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-black rounded-lg border border-slate-700 flex items-center justify-center p-1 shadow-[0_0_10px_rgba(163,230,53,0.15)] overflow-hidden">
+          <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-slate-800 shadow-md">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 bg-black rounded-xl border border-slate-700 flex items-center justify-center p-1.5 shadow-[0_0_14px_rgba(163,230,53,0.18)] overflow-hidden flex-shrink-0">
                 <img
                   src="/logo.svg"
                   alt="Logo"
@@ -330,52 +330,52 @@ const App = () => {
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               </div>
-              <div className="flex flex-col justify-center">
-                <h1 className="text-sm font-black tracking-tighter leading-none italic">
+              <div className="flex flex-col justify-center min-w-0">
+                <h1 className="text-xl font-black tracking-tight leading-none italic">
                   <span className="text-white">MILD</span>
                   <span className="mx-1"> </span>
                   <span className="text-lime-400">MODZ</span>
                 </h1>
-                <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mt-0.5">
-                  <span className="text-lime-700 mr-1">NOTHING MILD</span>
+                <p className="text-xs uppercase tracking-widest text-slate-500 font-bold mt-1">
+                  <span className="text-lime-700 mr-1.5">NOTHING MILD</span>
                   <span>·</span>
-                  <span className="ml-1 truncate w-16 inline-block align-bottom">{status}</span>
+                  <span className="ml-1.5 truncate w-28 inline-block align-bottom">{status}</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-3 items-center flex-shrink-0">
               {/* Hardware connection indicator */}
               <div
                 title={hwConnected ? 'Hardware connected' : 'Disconnected'}
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border text-[8px] font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
               >
-                {hwConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
+                {hwConnected ? <Wifi size={15} /> : <WifiOff size={15} />}
                 <span className="inline">{hwConnected ? 'ON' : 'OFF'}</span>
               </div>
 
               <button
                 onClick={handlePrime}
                 disabled={isPriming || !systemActive}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg border transition-all ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
               >
-                <RefreshCw size={12} className={isPriming ? 'animate-spin' : ''} />
-                <span className="text-[10px] font-bold uppercase inline">Purge</span>
+                <RefreshCw size={18} className={isPriming ? 'animate-spin' : ''} />
+                <span className="text-sm font-bold uppercase inline">Purge</span>
               </button>
 
               <button
                 onClick={() => setSystemActive(!systemActive)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all shadow-md text-xs ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition-all shadow-md text-base ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
               >
-                <Power size={14} />
+                <Power size={21} />
                 {systemActive ? 'Kill' : 'Arm'}
               </button>
 
               <button
                 onClick={() => setActiveTab('settings')}
-                className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
+                className="p-2 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
               >
-                <ChevronRight size={20} className="text-slate-400" />
+                <ChevronRight size={30} className="text-slate-400" />
               </button>
             </div>
           </div>
@@ -386,17 +386,17 @@ const App = () => {
             <div className="col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden group">
 
               {/* Background Radial Gauge */}
-              <div className="absolute -right-8 -top-8 w-48 h-48 pointer-events-none opacity-40">
+              <div className="absolute -right-20 -top-20 w-72 h-72 pointer-events-none opacity-50">
                 <svg viewBox="0 0 240 240" className="w-full h-full" style={{ transform: 'rotate(135deg)' }}>
                   <circle
                     cx="120" cy="120" r="100"
-                    fill="none" stroke="currentColor" strokeWidth="24"
+                    fill="none" stroke="currentColor" strokeWidth="28"
                     strokeLinecap="round" className="text-slate-800"
                     strokeDasharray="471.24 628.32"
                   />
                   <circle
                     cx="120" cy="120" r="100"
-                    fill="none" stroke="currentColor" strokeWidth="24"
+                    fill="none" stroke="currentColor" strokeWidth="28"
                     strokeLinecap="round" className="text-lime-500 transition-all duration-100 ease-linear"
                     strokeDasharray={`${(Math.max(0, Math.min(100, ((rawBoost - minBoost) / (maxBoost - minBoost)) * 100)) / 100) * 471.24} 628.32`}
                   />
@@ -560,23 +560,23 @@ const App = () => {
             SETTINGS PAGE
             ================================================================ */}
         <div className="min-w-full flex flex-col gap-2">
-          <div className="flex justify-between items-center bg-slate-900/80 p-2 rounded-xl border border-slate-800 shadow-md">
-            <div className="flex items-center gap-2">
-              <button onClick={() => setActiveTab('dash')} className="p-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
-                <ChevronLeft size={20} />
+          <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800 shadow-md">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => setActiveTab('dash')} className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
+                <ChevronLeft size={30} />
               </button>
-              <div className="flex flex-col">
-                <h2 className="text-sm font-black uppercase tracking-tight leading-none">System Configuration</h2>
-                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+              <div className="flex flex-col min-w-0">
+                <h2 className="text-xl font-black uppercase tracking-tight leading-none">System Configuration</h2>
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
                   HW REV: <span className="text-lime-400">{HW_REVISION}</span>
                 </span>
               </div>
             </div>
             <button
               onClick={() => setActiveTab('dash')}
-              className="flex items-center gap-1 px-3 py-1.5 bg-lime-600 rounded-lg font-bold text-[10px] shadow-md shadow-lime-900/20 active:scale-95"
+              className="flex items-center gap-1.5 px-4 py-2 bg-lime-600 rounded-lg font-bold text-sm shadow-md shadow-lime-900/20 active:scale-95"
             >
-              <Save size={14} /> <span className="inline">SAVE & EXIT</span>
+              <Save size={21} /> <span className="inline">SAVE & EXIT</span>
             </button>
           </div>
 
