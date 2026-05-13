@@ -32,3 +32,40 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+.settings-page label {
+  font-size: 0.82rem !important;
+  line-height: 1.1rem !important;
+}
+
+.settings-page .text-\[8px\] {
+  font-size: 0.72rem !important;
+  line-height: 0.95rem !important;
+}
+
+.settings-page .text-\[9px\],
+.settings-page .text-\[10px\],
+.settings-page .text-xs {
+  font-size: 0.82rem !important;
+  line-height: 1.05rem !important;
+}
+
+.settings-page button {
+  min-height: 2.2rem;
+}
+
+.settings-page input[type="number"] {
+  font-size: 1.05rem !important;
+  line-height: 1.2rem !important;
+}
+
+.settings-page input[type=range]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+}
+
+.settings-page input[type=range]::-webkit-slider-thumb {
+  height: 22px;
+  width: 22px;
+  margin-top: -7px;
+}

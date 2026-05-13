@@ -430,7 +430,7 @@ const App = () => {
           <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
             {/* Boost Gauge */}
             <div className="col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden group z-10">
-              {renderBoostGaugeLayer('right-[-4.75rem] top-[-0.75rem] opacity-70')}
+              {renderBoostGaugeLayer('right-[-6.25rem] top-[0.8rem] opacity-70')}
 
               <div className="relative z-10 flex-1 flex flex-col">
                 <div className="flex items-center gap-1">
@@ -500,7 +500,7 @@ const App = () => {
             <div className="col-span-5 flex flex-col gap-2 z-10">
               {/* Pump Flow */}
               <div className="flex-1 bg-slate-900/40 rounded-xl border border-slate-800 p-3 flex items-center justify-between relative overflow-hidden">
-                {renderBoostGaugeLayer('left-[-21.85rem] top-[-0.75rem] opacity-32')}
+                {renderBoostGaugeLayer('left-[-21.85rem] top-[-0.75rem] opacity-18')}
                 <div className="flex flex-col relative z-10">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pump Flow</span>
                   <span className={`text-6xl font-black tracking-tighter tabular-nums leading-none transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
@@ -589,7 +589,7 @@ const App = () => {
         {/* ================================================================
             SETTINGS PAGE
             ================================================================ */}
-        <div className="min-w-full flex flex-col gap-2">
+        <div className="settings-page min-w-full flex flex-col gap-2">
           <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800 shadow-md">
             <div className="flex items-center gap-3 min-w-0">
               <button onClick={() => setActiveTab('dash')} className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
