@@ -91,6 +91,16 @@ fi
 
 sudo apt-get install -y --no-install-recommends $BASE_PACKAGES || true
 
+ensure_nginx_installed() {
+    if command -v nginx >/dev/null 2>&1; then
+        return 0
+    fi
+
+    echo "nginx was not found after package installation. Installing nginx now..."
+    sudo apt-get update -qq
+    sudo apt-get install -y --no-install-recommends nginx
+}
+
 # --- Setup Python Venv (Bridge) ---
 echo "[2/9] Setting up Python virtual environment for bridge…"
 VENV_DIR="$REPO_DIR/bridge/.venv"
@@ -128,6 +138,8 @@ cd "$REPO_DIR"
 
 # --- Configure Nginx ---
 echo "[5/9] Configuring nginx…"
+ensure_nginx_installed
+sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 sudo tee /etc/nginx/sites-available/wmi-dashboard > /dev/null << SERVEREOF
 server {
     listen 80 default_server;
@@ -214,8 +226,8 @@ Description=WMI Serial Bridge (ESP32 ↔ Dashboard)
 After=network.target
 
 [Service]
-ExecStart=$VENV_DIR/bin/python3 $BRIDGE_SCRIPT
 WorkingDirectory=$REPO_DIR
+ExecStart=$VENV_DIR/bin/python3 -m bridge.serial_bridge
 Restart=on-failure
 RestartSec=3
 User=$RUN_USER
