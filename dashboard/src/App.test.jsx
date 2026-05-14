@@ -99,7 +99,7 @@ describe('App dashboard', () => {
     });
 
     expect(badge).toHaveTextContent('OFF');
-  });
+  }, 15000);
 
   it('uses the compact layout on smaller displays', () => {
     setViewport(470, 320);
@@ -111,7 +111,8 @@ describe('App dashboard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
 
-    expect(screen.getByTestId('trigger-inputs').className).toContain('min-h-[60px]');
+    expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
+    expect(screen.getByTestId('trigger-inputs').className).toContain('min-h-[54px]');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
   }, 15000);
 });

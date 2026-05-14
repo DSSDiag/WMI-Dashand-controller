@@ -76,3 +76,40 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px
   width: 22px;
   margin-top: -7px;
 }
+
+.settings-page.compact-settings label {
+  font-size: 0.68rem !important;
+  line-height: 0.82rem !important;
+}
+
+.settings-page.compact-settings .text-\[8px\] {
+  font-size: 0.6rem !important;
+  line-height: 0.78rem !important;
+}
+
+.settings-page.compact-settings .text-\[9px\],
+.settings-page.compact-settings .text-\[10px\],
+.settings-page.compact-settings .text-xs {
+  font-size: 0.72rem !important;
+  line-height: 0.88rem !important;
+}
+
+.settings-page.compact-settings button {
+  min-height: 1.85rem;
+}
+
+.settings-page.compact-settings input[type="number"] {
+  font-size: 0.92rem !important;
+  line-height: 1rem !important;
+}
+
+.settings-page.compact-settings input[type=range]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.settings-page.compact-settings input[type=range]::-webkit-slider-thumb {
+  height: 18px;
+  width: 18px;
+  margin-top: -6px;
+}

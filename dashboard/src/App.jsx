@@ -651,19 +651,19 @@ const App = () => {
         {/* ================================================================
             SETTINGS PAGE
             ================================================================ */}
-        <div className={`settings-page min-w-full flex flex-col ${isCompactDisplay ? 'gap-1.5' : 'gap-2'}`}>
-            <div className={`flex justify-between items-center bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-2' : 'p-3'}`}>
-              <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-2' : 'gap-3'}`}>
+        <div className={`settings-page min-w-full flex flex-col ${isCompactDisplay ? 'compact-settings gap-1' : 'gap-2'}`}>
+            <div className={`flex justify-between items-center bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-1.5' : 'p-3'}`}>
+              <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
               <button
                 onClick={() => setActiveTab('dash')}
                 aria-label="Return to dashboard"
-                className={`${isCompactDisplay ? 'p-1.5' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'p-1' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
               >
-                <ChevronLeft size={30} />
+                <ChevronLeft size={isCompactDisplay ? 24 : 30} />
               </button>
               <div className="flex flex-col min-w-0">
-                <h2 className={`${isCompactDisplay ? 'text-lg' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>System Configuration</h2>
-                <span className={`${isCompactDisplay ? 'text-[10px] mt-0.5' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
+                <h2 className={`${isCompactDisplay ? 'text-base' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>System Configuration</h2>
+                <span className={`${isCompactDisplay ? 'text-[9px] mt-0' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
                   HW REV: <span className="text-lime-400">{HW_REVISION}</span>
                 </span>
               </div>
@@ -671,15 +671,15 @@ const App = () => {
             <button
               onClick={() => setActiveTab('dash')}
               aria-label="Save settings and return to dashboard"
-              className={`flex items-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'}`}
+              className={`flex items-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'px-2.5 py-1 text-[11px]' : 'px-4 py-2 text-sm'}`}
             >
-              <Save size={21} /> <span className="inline">SAVE & EXIT</span>
+              <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
             </button>
           </div>
 
-          <div className={`grid grid-cols-2 flex-1 overflow-y-auto custom-scrollbar ${isCompactDisplay ? 'gap-1.5 pr-0.5' : 'gap-2 pr-1'}`}>
+          <div className={`grid grid-cols-2 flex-1 overflow-y-auto custom-scrollbar ${isCompactDisplay ? 'gap-1 pr-0' : 'gap-2 pr-1'}`}>
             {/* Column 1: Display & Units */}
-            <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2.5 gap-2.5' : 'p-3 gap-3'}`}>
+            <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2 gap-1.5' : 'p-3 gap-3'}`}>
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Pressure Units</label>
                 <div className="grid grid-cols-4 gap-1 mb-1.5">
@@ -717,13 +717,13 @@ const App = () => {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Gauge Scaling Limits</label>
-                <div className="flex gap-2">
+                <div className={`${isCompactDisplay ? 'flex gap-1.5' : 'flex gap-2'}`}>
                   {/* MIN INPUT */}
                   <div className="flex-1">
                     <span className="text-[8px] text-slate-500 block font-bold mb-0.5">MIN ({getInputUnitLabel(true)})</span>
                     <div
                       data-testid="gauge-limit-min"
-                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[2.2rem_2.2rem]' : 'flex h-8'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
+                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[1.9rem_1.95rem]' : 'flex h-8'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
                     >
                       <button
                         onClick={() => handleAdjust(true, 'down')}
@@ -747,7 +747,7 @@ const App = () => {
                           if (startInjectionAt < val) setStartInjectionAt(val);
                           if (fullInjectionAt < val) setFullInjectionAt(val + 1);
                         }}
-                        className={`${isCompactDisplay ? 'col-span-2 h-[2.2rem] border-t' : 'w-full px-2 py-2'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
+                        className={`${isCompactDisplay ? 'col-span-2 h-[1.95rem] border-t' : 'w-full px-2 py-2'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
                       />
                     </div>
                   </div>
@@ -757,7 +757,7 @@ const App = () => {
                     <span className="text-[8px] text-slate-500 block font-bold mb-0.5">MAX ({getInputUnitLabel(false)})</span>
                     <div
                       data-testid="gauge-limit-max"
-                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[2.2rem_2.2rem]' : 'flex h-8'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
+                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[1.9rem_1.95rem]' : 'flex h-8'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
                     >
                       <button
                         onClick={() => handleAdjust(false, 'down')}
@@ -781,7 +781,7 @@ const App = () => {
                           if (fullInjectionAt > val) setFullInjectionAt(val);
                           if (startInjectionAt > val) setStartInjectionAt(val - 1);
                         }}
-                        className={`${isCompactDisplay ? 'col-span-2 h-[2.2rem] border-t text-sm' : 'w-full px-1 py-1 text-xs'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
+                        className={`${isCompactDisplay ? 'col-span-2 h-[1.95rem] border-t text-sm' : 'w-full px-1 py-1 text-xs'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
                       />
                     </div>
                   </div>
@@ -797,7 +797,7 @@ const App = () => {
             </div>
 
             {/* Column 2: Trigger Logic */}
-            <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2.5 gap-2' : 'p-3 gap-3'}`}>
+            <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2 gap-1.5' : 'p-3 gap-3'}`}>
               {/* Map Curve Setting */}
               <div>
                 <label className={`text-[10px] font-bold text-slate-500 uppercase tracking-widest block ${isCompactDisplay ? 'mb-1' : 'mb-1.5'}`}>Injection Map Curve</label>
@@ -845,10 +845,10 @@ const App = () => {
               {/* Conditional Inputs */}
               <div
                 data-testid="trigger-inputs"
-                className={`${isCompactDisplay ? 'min-h-[60px]' : 'min-h-[70px]'} flex flex-col justify-center gap-1.5`}
+                className={`${isCompactDisplay ? 'min-h-[54px] gap-1' : 'min-h-[70px] gap-1.5'} flex flex-col justify-center`}
               >
                 {triggerMode === 'thresholds' && (
-                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className={`${isCompactDisplay ? 'space-y-1' : 'space-y-1.5'} animate-in fade-in slide-in-from-top-2 duration-300`}>
                     <div>
                       <div className="flex justify-between text-[8px] font-bold uppercase mb-0.5">
                         <span className="text-slate-400">Injection Start:</span>
