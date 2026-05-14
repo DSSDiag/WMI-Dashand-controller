@@ -107,9 +107,11 @@ describe('App dashboard', () => {
     render(<App />);
 
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-cols-1');
+    expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-rows-2');
 
     fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
 
     expect(screen.getByTestId('trigger-inputs').className).toContain('min-h-[60px]');
-  });
+    expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
+  }, 15000);
 });

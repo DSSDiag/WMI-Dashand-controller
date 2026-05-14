@@ -38,8 +38,8 @@ const HW_REVISION = 'MMWMI02B+';
 const DEFAULT_MIN_BOOST_PSI = -14.73;
 const DASHBOARD_WIDTH = 480;
 const DASHBOARD_HEIGHT = 320;
-const DASHBOARD_FIT_WIDTH = 500;
-const DASHBOARD_FIT_HEIGHT = 340;
+const DASHBOARD_FIT_WIDTH = 520;
+const DASHBOARD_FIT_HEIGHT = 356;
 
 function getViewportScale() {
   if (typeof window === 'undefined') return 1;
@@ -321,6 +321,7 @@ const App = () => {
   const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
   const isCompactDisplay = viewportScale < 0.995;
+  const compactPad = isCompactDisplay ? 'p-1.5 gap-1.5' : 'p-2 gap-2';
   const connectionIndicator = hwConnected
     ? {
         label: 'HW',
@@ -405,20 +406,20 @@ const App = () => {
             transform: `scale(${viewportScale})`,
           }}
         >
-          <div className="h-full w-full font-sans p-2 flex flex-col gap-2 select-none overflow-hidden relative">
+          <div className={`h-full w-full font-sans flex flex-col select-none overflow-hidden relative ${compactPad}`}>
 
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-500/10 rounded-full blur-[60px] pointer-events-none" />
             <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-[60px] pointer-events-none" />
 
       <div
-        className="flex-1 flex transition-transform duration-500 ease-out h-full"
+        className="flex-1 flex transition-transform duration-200 ease-out h-full"
         style={{ transform: activeTab === 'dash' ? 'translateX(0%)' : 'translateX(-100%)' }}
       >
 
         {/* ================================================================
             DASHBOARD PAGE
             ================================================================ */}
-        <div className="min-w-full flex flex-col gap-2">
+        <div className={`min-w-full flex flex-col ${isCompactDisplay ? 'gap-1.5' : 'gap-2'}`}>
           {/* Header */}
           <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-slate-800 shadow-md">
             <div className="flex items-center gap-3 min-w-0">
@@ -485,9 +486,9 @@ const App = () => {
           </div>
 
           {/* Main Grid */}
-          <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
+          <div className={`grid grid-cols-12 flex-1 min-h-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-2'}`}>
             {/* Boost Gauge */}
-            <div className="col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden group z-10">
+            <div className={`col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col justify-between relative overflow-hidden group z-10 ${isCompactDisplay ? 'p-2.5' : 'p-3'}`}>
               {renderBoostGaugeLayer('right-[-6.25rem] top-[0.8rem] opacity-70')}
 
               <div className="relative z-10 flex-1 flex flex-col">
@@ -498,7 +499,7 @@ const App = () => {
                   )}
                 </div>
                 <div className="flex flex-col mt-1">
-                  <span className={`text-6xl font-black tracking-tighter tabular-nums drop-shadow-md leading-none transition-colors duration-300 ${isOutOfBounds ? 'text-red-500' : 'text-white'}`}>
+                  <span className={`${isCompactDisplay ? 'text-5xl' : 'text-6xl'} font-black tracking-tighter tabular-nums drop-shadow-md leading-none transition-colors duration-300 ${isOutOfBounds ? 'text-red-500' : 'text-white'}`}>
                     {formatBoost(rawBoost)}
                   </span>
                   <div className="flex items-end gap-2 mt-1">
@@ -547,7 +548,7 @@ const App = () => {
               </div>
 
               {/* Boost progress bar */}
-              <div className="w-full bg-slate-800 h-4 rounded-full mt-2 overflow-hidden border border-slate-700 p-0.5 relative z-10 flex-shrink-0">
+              <div className={`w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700 p-0.5 relative z-10 flex-shrink-0 ${isCompactDisplay ? 'h-3.5 mt-1.5' : 'h-4 mt-2'}`}>
                 <div
                   className="h-full bg-gradient-to-r from-lime-600 to-emerald-400 rounded-full transition-all duration-100"
                   style={{ width: `${Math.max(0, Math.min(100, ((rawBoost - minBoost) / (maxBoost - minBoost)) * 100))}%` }}
@@ -555,13 +556,13 @@ const App = () => {
               </div>
             </div>
 
-            <div className="col-span-5 flex flex-col gap-2 z-10">
+            <div className={`col-span-5 flex flex-col z-10 ${isCompactDisplay ? 'gap-1.5' : 'gap-2'}`}>
               {/* Pump Flow */}
-              <div className="flex-1 bg-slate-900/40 rounded-xl border border-slate-800 p-3 flex items-center justify-between relative overflow-hidden">
+              <div className={`flex-1 bg-slate-900/40 rounded-xl border border-slate-800 flex items-center justify-between relative overflow-hidden ${isCompactDisplay ? 'p-2.5' : 'p-3'}`}>
                 {renderBoostGaugeLayer('left-[-21.85rem] top-[-0.75rem] opacity-18')}
                 <div className="flex flex-col relative z-10">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pump Flow</span>
-                  <span className={`text-6xl font-black tracking-tighter tabular-nums leading-none transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
+                  <span className={`${isCompactDisplay ? 'text-5xl' : 'text-6xl'} font-black tracking-tighter tabular-nums leading-none transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
                     {Math.round(dutyCycle)}%
                   </span>
                   {triggerMode === 'manual' && (
@@ -611,10 +612,10 @@ const App = () => {
 
               <div
                 data-testid="dash-secondary-cards"
-                className={`${isCompactDisplay ? 'grid grid-cols-1 gap-2 h-[6.25rem]' : 'flex gap-2 h-14'} flex-shrink-0`}
+                className={`${isCompactDisplay ? 'grid grid-cols-1 grid-rows-2 gap-1.5 h-[5.75rem]' : 'flex gap-2 h-14'} flex-shrink-0`}
               >
                 {/* Map Curve Display */}
-                <div className={`flex-1 bg-slate-900/50 rounded-xl border border-slate-800 ${isCompactDisplay ? 'px-2.5 py-2 items-start' : 'p-2 items-center'} flex flex-col justify-center shadow-inner`}>
+                <div className={`flex-1 bg-slate-900/50 rounded-xl border border-slate-800 ${isCompactDisplay ? 'px-2 py-1.5 items-start' : 'p-2 items-center'} flex flex-col justify-center shadow-inner`}>
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Curve</span>
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] font-black text-lime-400 uppercase tracking-widest">{curve}</span>
@@ -631,7 +632,7 @@ const App = () => {
                 </div>
 
                 {/* Tank Status */}
-                <div className={`flex-1 rounded-xl border p-2 flex ${isCompactDisplay ? 'flex-row justify-between px-2.5' : 'flex-col justify-center items-center'} items-center gap-1 transition-all ${tankIsLow ? 'bg-red-950/30 border-red-500/50 shadow-md shadow-red-900/20' : 'bg-slate-900/50 border-slate-800'}`}>
+                <div className={`flex-1 rounded-xl border flex ${isCompactDisplay ? 'flex-row justify-between px-2 py-1.5' : 'flex-col justify-center items-center p-2'} items-center gap-1 transition-all ${tankIsLow ? 'bg-red-950/30 border-red-500/50 shadow-md shadow-red-900/20' : 'bg-slate-900/50 border-slate-800'}`}>
                   <div className="flex items-center gap-1.5">
                     <div className={`${tankIsLow ? 'text-red-500 animate-pulse' : 'text-slate-500'}`}>
                       {tankIsLow ? <AlertTriangle size={14} /> : <Droplet size={14} />}
@@ -720,12 +721,21 @@ const App = () => {
                   {/* MIN INPUT */}
                   <div className="flex-1">
                     <span className="text-[8px] text-slate-500 block font-bold mb-0.5">MIN ({getInputUnitLabel(true)})</span>
-                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors h-8">
+                    <div
+                      data-testid="gauge-limit-min"
+                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[2.2rem_2.2rem]' : 'flex h-8'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
+                    >
                       <button
                         onClick={() => handleAdjust(true, 'down')}
-                        className="px-2 py-1 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-r border-slate-700"
+                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-b' : 'px-2 py-1 border-r'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
                       >
                         <Minus size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleAdjust(true, 'up')}
+                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-l border-b' : 'px-4 py-2 border-l'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
+                      >
+                        <Plus size={isCompactDisplay ? 14 : 18} />
                       </button>
                       <input
                         type="number"
@@ -737,26 +747,29 @@ const App = () => {
                           if (startInjectionAt < val) setStartInjectionAt(val);
                           if (fullInjectionAt < val) setFullInjectionAt(val + 1);
                         }}
-                        className="w-full bg-transparent text-center px-2 py-2 text-white font-bold outline-none hide-arrows"
+                        className={`${isCompactDisplay ? 'col-span-2 h-[2.2rem] border-t' : 'w-full px-2 py-2'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
                       />
-                      <button
-                        onClick={() => handleAdjust(true, 'up')}
-                        className="px-4 py-2 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-l border-slate-700"
-                      >
-                        <Plus size={18} />
-                      </button>
                     </div>
                   </div>
 
                   {/* MAX INPUT */}
                   <div className="flex-1">
                     <span className="text-[8px] text-slate-500 block font-bold mb-0.5">MAX ({getInputUnitLabel(false)})</span>
-                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors h-8">
+                    <div
+                      data-testid="gauge-limit-max"
+                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[2.2rem_2.2rem]' : 'flex h-8'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
+                    >
                       <button
                         onClick={() => handleAdjust(false, 'down')}
-                        className="px-2 py-1 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-r border-slate-700"
+                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-b' : 'px-2 py-1 border-r'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
                       >
                         <Minus size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleAdjust(false, 'up')}
+                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-l border-b' : 'px-2 py-1 border-l'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
+                      >
+                        <Plus size={14} />
                       </button>
                       <input
                         type="number"
@@ -768,14 +781,8 @@ const App = () => {
                           if (fullInjectionAt > val) setFullInjectionAt(val);
                           if (startInjectionAt > val) setStartInjectionAt(val - 1);
                         }}
-                        className="w-full bg-transparent text-center px-1 py-1 text-white text-xs font-bold outline-none hide-arrows"
+                        className={`${isCompactDisplay ? 'col-span-2 h-[2.2rem] border-t text-sm' : 'w-full px-1 py-1 text-xs'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
                       />
-                      <button
-                        onClick={() => handleAdjust(false, 'up')}
-                        className="px-2 py-1 bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-l border-slate-700"
-                      >
-                        <Plus size={14} />
-                      </button>
                     </div>
                   </div>
                 </div>

@@ -16,6 +16,13 @@ html, body, #root {
   overflow: hidden;
 }
 
+button,
+input,
+select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @keyframes spray-flow {
   from { stroke-dashoffset: 20; }
   to { stroke-dashoffset: 0; }
