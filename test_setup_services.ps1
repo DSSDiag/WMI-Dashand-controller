@@ -11,13 +11,41 @@ foreach ($script in $scripts) {
         throw "$script does not set WorkingDirectory to repo root for wmi-bridge.service"
     }
 
-    if ($content -notmatch 'ExecStart=\$VENV_DIR/bin/python3 -m bridge\.serial_bridge') {
+    if (
+        $content -notmatch 'ExecStart=\$VENV_DIR/bin/python3 -m bridge\.serial_bridge' -and
+        $content -notmatch 'ExecStart=\$VENV_DIR/bin/python3 -m \$BRIDGE_MODULE'
+    ) {
         throw "$script does not run bridge.serial_bridge as a module"
+    }
+
+    if ($content -match 'BRIDGE_MODULE="bridge\.serial_bridge"' -or $script -eq 'setup-precomf.sh') {
+        # expected
+    }
+    elseif ($content -match 'BRIDGE_MODULE=' -and $content -notmatch 'BRIDGE_MODULE="bridge\.serial_bridge"') {
+        throw "$script does not point BRIDGE_MODULE at bridge.serial_bridge"
     }
 
     if ($content -match 'ExecStart=\$VENV_DIR/bin/python3 \$BRIDGE_SCRIPT') {
         throw "$script still launches bridge/serial_bridge.py directly"
     }
+}
+
+$setupScript = Get-Content -Path (Join-Path $repoRoot 'setup.sh') -Raw -Encoding UTF8
+
+if ($setupScript -notmatch 'write_managed_file "\$bash_profile"') {
+    throw 'setup.sh does not preserve existing .bash_profile content'
+}
+
+if ($setupScript -notmatch 'write_managed_file "\$xinitrc"') {
+    throw 'setup.sh does not preserve existing .xinitrc content'
+}
+
+if ($setupScript -match 'cat > "\$RUN_HOME/\.bash_profile"') {
+    throw 'setup.sh still overwrites .bash_profile directly'
+}
+
+if ($setupScript -match 'cat > "\$RUN_HOME/\.xinitrc"') {
+    throw 'setup.sh still overwrites .xinitrc directly'
 }
 
 Write-Host 'setup service checks passed'

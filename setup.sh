@@ -145,17 +145,52 @@ prepare_bookworm_lcd_show_symlink() {
     fi
 }
 
+write_managed_file() {
+    local target="$1"
+    local start_marker="$2"
+    local end_marker="$3"
+    local temp_file="$4"
+    python3 - "$target" "$start_marker" "$end_marker" "$temp_file" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+target = Path(sys.argv[1])
+start = sys.argv[2]
+end = sys.argv[3]
+snippet_path = Path(sys.argv[4])
+existing = target.read_text() if target.exists() else ""
+pattern = re.compile(rf"\n?{re.escape(start)}\n.*?\n{re.escape(end)}\n?", re.DOTALL)
+existing = re.sub(pattern, "\n", existing).strip("\n")
+snippet = snippet_path.read_text().rstrip("\n")
+result = f"{existing}\n\n{snippet}\n" if existing else f"{snippet}\n"
+target.write_text(result)
+PY
+}
+
 configure_tty1_startx_kiosk() {
-    cat > "$RUN_HOME/.bash_profile" <<'EOF'
+    local bash_profile="$RUN_HOME/.bash_profile"
+    local xinitrc="$RUN_HOME/.xinitrc"
+    local bash_temp
+    local xinit_temp
+
+    bash_temp="$(mktemp)"
+    xinit_temp="$(mktemp)"
+    trap 'rm -f "$bash_temp" "$xinit_temp"' RETURN
+
+    cat > "$bash_temp" <<'EOF'
+# >>> WMI tty1 kiosk autostart >>>
 export FRAMEBUFFER=/dev/fb1
 
 if [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
     exec startx
 fi
+# <<< WMI tty1 kiosk autostart <<<
 EOF
 
-    cat > "$RUN_HOME/.xinitrc" <<EOF
+    cat > "$xinit_temp" <<EOF
 #!/bin/sh
+# >>> WMI kiosk xinit >>>
 set -eu
 
 xset s off
@@ -164,10 +199,14 @@ xset s noblank
 
 openbox-session &
 exec "$KIOSK_LAUNCHER"
+# <<< WMI kiosk xinit <<<
 EOF
 
-    chmod 644 "$RUN_HOME/.bash_profile"
-    chmod 755 "$RUN_HOME/.xinitrc"
+    write_managed_file "$bash_profile" "# >>> WMI tty1 kiosk autostart >>>" "# <<< WMI tty1 kiosk autostart <<<" "$bash_temp"
+    write_managed_file "$xinitrc" "# >>> WMI kiosk xinit >>>" "# <<< WMI kiosk xinit <<<" "$xinit_temp"
+
+    chmod 644 "$bash_profile"
+    chmod 755 "$xinitrc"
 }
 
 boot_config_path() {
