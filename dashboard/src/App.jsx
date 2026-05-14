@@ -7,16 +7,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { formatBoost as formatBoostUtil, ATM_PSI, PSI_TO_BAR, PSI_TO_KPA, PSI_TO_INHG } from './utils';
 import {
   Droplet,
-  Activity,
   AlertTriangle,
-  Settings,
   Power,
   Gauge,
-  Thermometer,
   RefreshCw,
   ChevronRight,
   ChevronLeft,
-  ChevronDown,
   Save,
   Zap,
   Sliders,
@@ -81,7 +77,7 @@ function loadSettings() {
   return DEFAULT_SETTINGS;
 }
 
-function useSerialBridge({ onTelemetry }) {
+function useSerialBridge({ onTelemetry, onStatus }) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
   const reconnectTimer = useRef(null);
@@ -105,6 +101,9 @@ function useSerialBridge({ onTelemetry }) {
         if (msg.type === 'telemetry') {
           onTelemetry(msg);
         }
+        if (msg.type === 'status' && onStatus) {
+          onStatus(Boolean(msg.serial_connected));
+        }
       } catch {
         /* ignore malformed frames */
       }
@@ -113,11 +112,12 @@ function useSerialBridge({ onTelemetry }) {
     ws.onclose = () => {
       setConnected(false);
       wsRef.current = null;
+      onStatus?.(false);
       reconnectTimer.current = setTimeout(_connect, WS_RECONNECT_MS);
     };
 
     ws.onerror = () => ws.close();
-  }, [onTelemetry]);
+  }, [onTelemetry, onStatus]);
 
   useEffect(() => {
     connect();
@@ -174,7 +174,7 @@ const App = () => {
   const [isPriming, setIsPriming] = useState(false);
 
   // Hardware bridge state
-  const [hwConnected, setHwConnected] = useState(false);
+  const [serialConnected, setSerialConnected] = useState(false);
 
   // --- UNIT CONVERSION LOGIC ---
   const formatBoost = (psiGauge) => formatBoostUtil(psiGauge, units, pressureRef);
@@ -259,14 +259,15 @@ const App = () => {
     }
   }, []);
 
+  const handleBridgeStatus = useCallback((isSerialConnected) => {
+    setSerialConnected(isSerialConnected);
+  }, []);
+
   const { connected: bridgeConnected, send: wsSend } = useSerialBridge({
     onTelemetry: handleTelemetry,
+    onStatus: handleBridgeStatus,
   });
-
-  // Track bridge connected state so simulation can yield
-  useEffect(() => {
-    setHwConnected(bridgeConnected);
-  }, [bridgeConnected]);
+  const hwConnected = bridgeConnected && serialConnected;
 
   // Send settings to ESP32 whenever they change (only when hardware is connected)
   useEffect(() => {
@@ -319,6 +320,27 @@ const App = () => {
       : Math.max(0, Math.min(100, 100 - ((startInjectionAt - minBoost) / range) * 100));
   const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
+  const isCompactDisplay = viewportScale < 0.995;
+  const connectionIndicator = hwConnected
+    ? {
+        label: 'HW',
+        title: 'Hardware connected',
+        tone: 'bg-lime-500/10 border-lime-500/30 text-lime-400',
+        Icon: Wifi,
+      }
+    : bridgeConnected
+      ? {
+          label: 'LINK',
+          title: 'Bridge online, waiting for controller',
+          tone: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+          Icon: Wifi,
+        }
+      : {
+          label: 'OFF',
+          title: 'Bridge disconnected',
+          tone: 'bg-red-500/10 border-red-500/30 text-red-500',
+          Icon: WifiOff,
+        };
 
   useEffect(() => {
     const handleResize = () => setViewportScale(getViewportScale());
@@ -425,16 +447,18 @@ const App = () => {
             <div className="flex gap-3 items-center flex-shrink-0">
               {/* Hardware connection indicator */}
               <div
-                title={hwConnected ? 'Hardware connected' : 'Disconnected'}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-bold uppercase tracking-wider ${hwConnected ? 'bg-lime-500/10 border-lime-500/30 text-lime-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
+                data-testid="hardware-status"
+                title={connectionIndicator.title}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-bold uppercase tracking-wider ${connectionIndicator.tone}`}
               >
-                {hwConnected ? <Wifi size={15} /> : <WifiOff size={15} />}
-                <span className="inline">{hwConnected ? 'ON' : 'OFF'}</span>
+                <connectionIndicator.Icon size={15} />
+                <span className="inline">{connectionIndicator.label}</span>
               </div>
 
               <button
                 onClick={handlePrime}
                 disabled={isPriming || !systemActive}
+                aria-label="Prime system"
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
               >
                 <RefreshCw size={18} className={isPriming ? 'animate-spin' : ''} />
@@ -443,6 +467,7 @@ const App = () => {
 
               <button
                 onClick={() => setSystemActive(!systemActive)}
+                aria-label={systemActive ? 'Kill system' : 'Arm system'}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition-all shadow-md text-base ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
               >
                 <Power size={21} />
@@ -451,6 +476,7 @@ const App = () => {
 
               <button
                 onClick={() => setActiveTab('settings')}
+                aria-label="Open settings"
                 className="p-2 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
               >
                 <ChevronRight size={30} className="text-slate-400" />
@@ -583,9 +609,12 @@ const App = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2 h-14 flex-shrink-0">
+              <div
+                data-testid="dash-secondary-cards"
+                className={`${isCompactDisplay ? 'grid grid-cols-1 gap-2 h-[6.25rem]' : 'flex gap-2 h-14'} flex-shrink-0`}
+              >
                 {/* Map Curve Display */}
-                <div className="flex-1 bg-slate-900/50 rounded-xl border border-slate-800 p-2 flex flex-col justify-center items-center shadow-inner">
+                <div className={`flex-1 bg-slate-900/50 rounded-xl border border-slate-800 ${isCompactDisplay ? 'px-2.5 py-2 items-start' : 'p-2 items-center'} flex flex-col justify-center shadow-inner`}>
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Curve</span>
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] font-black text-lime-400 uppercase tracking-widest">{curve}</span>
@@ -602,7 +631,7 @@ const App = () => {
                 </div>
 
                 {/* Tank Status */}
-                <div className={`flex-1 rounded-xl border p-2 flex flex-col justify-center items-center gap-1 transition-all ${tankIsLow ? 'bg-red-950/30 border-red-500/50 shadow-md shadow-red-900/20' : 'bg-slate-900/50 border-slate-800'}`}>
+                <div className={`flex-1 rounded-xl border p-2 flex ${isCompactDisplay ? 'flex-row justify-between px-2.5' : 'flex-col justify-center items-center'} items-center gap-1 transition-all ${tankIsLow ? 'bg-red-950/30 border-red-500/50 shadow-md shadow-red-900/20' : 'bg-slate-900/50 border-slate-800'}`}>
                   <div className="flex items-center gap-1.5">
                     <div className={`${tankIsLow ? 'text-red-500 animate-pulse' : 'text-slate-500'}`}>
                       {tankIsLow ? <AlertTriangle size={14} /> : <Droplet size={14} />}
@@ -621,30 +650,35 @@ const App = () => {
         {/* ================================================================
             SETTINGS PAGE
             ================================================================ */}
-        <div className="settings-page min-w-full flex flex-col gap-2">
-          <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800 shadow-md">
-            <div className="flex items-center gap-3 min-w-0">
-              <button onClick={() => setActiveTab('dash')} className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
+        <div className={`settings-page min-w-full flex flex-col ${isCompactDisplay ? 'gap-1.5' : 'gap-2'}`}>
+            <div className={`flex justify-between items-center bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-2' : 'p-3'}`}>
+              <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-2' : 'gap-3'}`}>
+              <button
+                onClick={() => setActiveTab('dash')}
+                aria-label="Return to dashboard"
+                className={`${isCompactDisplay ? 'p-1.5' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
+              >
                 <ChevronLeft size={30} />
               </button>
               <div className="flex flex-col min-w-0">
-                <h2 className="text-xl font-black uppercase tracking-tight leading-none">System Configuration</h2>
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
+                <h2 className={`${isCompactDisplay ? 'text-lg' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>System Configuration</h2>
+                <span className={`${isCompactDisplay ? 'text-[10px] mt-0.5' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
                   HW REV: <span className="text-lime-400">{HW_REVISION}</span>
                 </span>
               </div>
             </div>
             <button
               onClick={() => setActiveTab('dash')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-lime-600 rounded-lg font-bold text-sm shadow-md shadow-lime-900/20 active:scale-95"
+              aria-label="Save settings and return to dashboard"
+              className={`flex items-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'}`}
             >
               <Save size={21} /> <span className="inline">SAVE & EXIT</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+          <div className={`grid grid-cols-2 flex-1 overflow-y-auto custom-scrollbar ${isCompactDisplay ? 'gap-1.5 pr-0.5' : 'gap-2 pr-1'}`}>
             {/* Column 1: Display & Units */}
-            <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col gap-3 h-fit">
+            <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2.5 gap-2.5' : 'p-3 gap-3'}`}>
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Pressure Units</label>
                 <div className="grid grid-cols-4 gap-1 mb-1.5">
@@ -756,10 +790,10 @@ const App = () => {
             </div>
 
             {/* Column 2: Trigger Logic */}
-            <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-3 flex flex-col gap-3 h-fit">
+            <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2.5 gap-2' : 'p-3 gap-3'}`}>
               {/* Map Curve Setting */}
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Injection Map Curve</label>
+                <label className={`text-[10px] font-bold text-slate-500 uppercase tracking-widest block ${isCompactDisplay ? 'mb-1' : 'mb-1.5'}`}>Injection Map Curve</label>
                 <div className="flex gap-1 p-0.5 bg-black rounded-lg border border-slate-800">
                   <button
                     onClick={() => setCurve('linear')}
@@ -776,33 +810,36 @@ const App = () => {
                 </div>
               </div>
 
-              <div className="border-t border-slate-800 my-0.5"></div>
+              <div className={`border-t border-slate-800 ${isCompactDisplay ? 'my-0' : 'my-0.5'}`}></div>
 
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Injection Mapping Mode</label>
 
               <div className="flex gap-1 p-0.5 bg-black rounded-xl border border-slate-800">
                 <button
                   onClick={() => setTriggerMode('thresholds')}
-                  className={`flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all flex flex-col flex-row items-center justify-center gap-1 ${triggerMode === 'thresholds' ? 'bg-slate-800 text-lime-400 shadow-inner' : 'text-slate-500'}`}
+                  className={`flex-1 rounded-lg text-[8px] font-black uppercase transition-all flex items-center justify-center gap-1 ${isCompactDisplay ? 'py-1' : 'py-1.5'} ${triggerMode === 'thresholds' ? 'bg-slate-800 text-lime-400 shadow-inner' : 'text-slate-500'}`}
                 >
                   <Zap size={10} /> Thresholds
                 </button>
                 <button
                   onClick={() => setTriggerMode('full_scale')}
-                  className={`flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all flex flex-col flex-row items-center justify-center gap-1 ${triggerMode === 'full_scale' ? 'bg-slate-800 text-lime-400 shadow-inner' : 'text-slate-500'}`}
+                  className={`flex-1 rounded-lg text-[8px] font-black uppercase transition-all flex items-center justify-center gap-1 ${isCompactDisplay ? 'py-1' : 'py-1.5'} ${triggerMode === 'full_scale' ? 'bg-slate-800 text-lime-400 shadow-inner' : 'text-slate-500'}`}
                 >
                   <Gauge size={10} /> Full Scale
                 </button>
                 <button
                   onClick={() => setTriggerMode('manual')}
-                  className={`flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all flex flex-col flex-row items-center justify-center gap-1 ${triggerMode === 'manual' ? 'bg-slate-800 text-amber-500 shadow-inner' : 'text-slate-500'}`}
+                  className={`flex-1 rounded-lg text-[8px] font-black uppercase transition-all flex items-center justify-center gap-1 ${isCompactDisplay ? 'py-1' : 'py-1.5'} ${triggerMode === 'manual' ? 'bg-slate-800 text-amber-500 shadow-inner' : 'text-slate-500'}`}
                 >
                   <Sliders size={10} /> Manual
                 </button>
               </div>
 
               {/* Conditional Inputs */}
-              <div className="min-h-[70px] flex flex-col justify-center gap-1.5">
+              <div
+                data-testid="trigger-inputs"
+                className={`${isCompactDisplay ? 'min-h-[60px]' : 'min-h-[70px]'} flex flex-col justify-center gap-1.5`}
+              >
                 {triggerMode === 'thresholds' && (
                   <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div>
@@ -852,7 +889,7 @@ const App = () => {
       </div>
 
       {/* Nav Dots */}
-      <div className="flex justify-center gap-1.5 pb-1">
+      <div className={`flex justify-center ${isCompactDisplay ? 'gap-1 pb-0.5' : 'gap-1.5 pb-1'}`}>
         <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'dash' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
         <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'settings' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
       </div>
