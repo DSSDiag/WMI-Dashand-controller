@@ -106,6 +106,7 @@ describe('App dashboard', () => {
 
     render(<App />);
 
+    expect(screen.getByTestId('dashboard-header').className).toContain('p-2');
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-cols-1');
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-rows-2');
 

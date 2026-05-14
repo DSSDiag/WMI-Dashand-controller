@@ -322,6 +322,35 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
   const isCompactDisplay = forceCompact || viewportScale < 0.995;
   const compactPad = isCompactDisplay ? 'p-1.5 gap-1.5' : 'p-2 gap-2';
+  const compactGaugeTheme = isCompactDisplay
+    ? {
+        arcStartOpacity: 0.34,
+        arcMidOpacity: 0.16,
+        arcEndOpacity: 0.04,
+        needleStartOpacity: 0.34,
+        needleMidOpacity: 0.12,
+        needleEndOpacity: 0.03,
+        centerOpacity: 0.3,
+        needleWidth: 5,
+        centerRadius: 8,
+      }
+    : {
+        arcStartOpacity: 1,
+        arcMidOpacity: 0.72,
+        arcEndOpacity: 0.22,
+        needleStartOpacity: 0.95,
+        needleMidOpacity: 0.55,
+        needleEndOpacity: 0.18,
+        centerOpacity: 0.85,
+        needleWidth: 7,
+        centerRadius: 10,
+      };
+  const mainGaugeLayerClass = isCompactDisplay
+    ? 'right-[-8.4rem] top-[0.4rem] opacity-45'
+    : 'right-[-6.25rem] top-[0.8rem] opacity-70';
+  const pumpGaugeLayerClass = isCompactDisplay
+    ? 'left-[-22.5rem] top-[-1rem] opacity-12'
+    : 'left-[-21.85rem] top-[-0.75rem] opacity-18';
   const connectionIndicator = hwConnected
     ? {
         label: 'HW',
@@ -350,19 +379,19 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const renderBoostGaugeLayer = (className) => (
+  const renderBoostGaugeLayer = (className, idSuffix) => (
     <div className={`absolute w-[30rem] h-[30rem] pointer-events-none z-0 ${className}`}>
       <svg viewBox="0 0 240 240" className="w-full h-full" style={{ transform: 'rotate(135deg)' }}>
         <defs>
-          <linearGradient id="boostArcFade" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#a3e635" stopOpacity="1" />
-            <stop offset="62%" stopColor="#a3e635" stopOpacity="0.72" />
-            <stop offset="100%" stopColor="#a3e635" stopOpacity="0.22" />
+          <linearGradient id={`boostArcFade-${idSuffix}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#a3e635" stopOpacity={compactGaugeTheme.arcStartOpacity} />
+            <stop offset="62%" stopColor="#a3e635" stopOpacity={compactGaugeTheme.arcMidOpacity} />
+            <stop offset="100%" stopColor="#a3e635" stopOpacity={compactGaugeTheme.arcEndOpacity} />
           </linearGradient>
-          <linearGradient id="boostNeedleFade" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#ecfccb" stopOpacity="0.95" />
-            <stop offset="70%" stopColor="#a3e635" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#a3e635" stopOpacity="0.18" />
+          <linearGradient id={`boostNeedleFade-${idSuffix}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#ecfccb" stopOpacity={compactGaugeTheme.needleStartOpacity} />
+            <stop offset="70%" stopColor="#a3e635" stopOpacity={compactGaugeTheme.needleMidOpacity} />
+            <stop offset="100%" stopColor="#a3e635" stopOpacity={compactGaugeTheme.needleEndOpacity} />
           </linearGradient>
         </defs>
         <circle
@@ -373,7 +402,7 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
         />
         <circle
           cx="120" cy="120" r="100"
-          fill="none" stroke="url(#boostArcFade)" strokeWidth="28"
+          fill="none" stroke={`url(#boostArcFade-${idSuffix})`} strokeWidth="28"
           strokeLinecap="round" className="transition-all duration-100 ease-linear"
           strokeDasharray={`${(boostPercent / 100) * 471.24} 628.32`}
         />
@@ -386,10 +415,10 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
         >
           <line
             x1="120" y1="120" x2="120" y2="28"
-            stroke="url(#boostNeedleFade)" strokeWidth="7"
+            stroke={`url(#boostNeedleFade-${idSuffix})`} strokeWidth={compactGaugeTheme.needleWidth}
             strokeLinecap="round"
           />
-          <circle cx="120" cy="120" r="10" fill="#a3e635" opacity="0.85" />
+          <circle cx="120" cy="120" r={compactGaugeTheme.centerRadius} fill="#a3e635" opacity={compactGaugeTheme.centerOpacity} />
         </g>
       </svg>
     </div>
@@ -421,9 +450,12 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
             ================================================================ */}
         <div className={`min-w-full flex flex-col ${isCompactDisplay ? 'gap-1.5' : 'gap-2'}`}>
           {/* Header */}
-          <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-slate-800 shadow-md">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 bg-black rounded-xl border border-slate-700 flex items-center justify-center p-1.5 shadow-[0_0_14px_rgba(163,230,53,0.18)] overflow-hidden flex-shrink-0">
+          <div
+            data-testid="dashboard-header"
+            className={`flex justify-between items-center bg-slate-900/80 backdrop-blur-md rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-2' : 'p-3'}`}
+          >
+            <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-2' : 'gap-3'}`}>
+              <div className={`${isCompactDisplay ? 'w-10 h-10 rounded-lg p-1' : 'w-12 h-12 rounded-xl p-1.5'} bg-black border border-slate-700 flex items-center justify-center shadow-[0_0_14px_rgba(163,230,53,0.18)] overflow-hidden flex-shrink-0`}>
                 <img
                   src="/logo.png"
                   alt="Logo"
@@ -432,27 +464,27 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
                 />
               </div>
               <div className="flex flex-col justify-center min-w-0">
-                <h1 className="text-xl font-black tracking-tight leading-none italic">
+                <h1 className={`${isCompactDisplay ? 'text-lg' : 'text-xl'} font-black tracking-tight leading-none italic`}>
                   <span className="text-white">MILD</span>
                   <span className="mx-1"> </span>
                   <span className="text-lime-400">MODZ</span>
                 </h1>
-                <p className="text-xs uppercase tracking-widest text-slate-500 font-bold mt-1">
-                  <span className="text-lime-700 mr-1.5">NOTHING MILD</span>
+                <p className={`${isCompactDisplay ? 'text-[9px] mt-0.5' : 'text-xs mt-1'} uppercase tracking-widest text-slate-500 font-bold`}>
+                  <span className={`${isCompactDisplay ? 'mr-1 text-lime-700/90' : 'mr-1.5 text-lime-700'}`}>NOTHING MILD</span>
                   <span>·</span>
-                  <span className="ml-1.5 truncate w-28 inline-block align-bottom">{status}</span>
+                  <span className={`${isCompactDisplay ? 'ml-1 w-24' : 'ml-1.5 w-28'} truncate inline-block align-bottom`}>{status}</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-3 items-center flex-shrink-0">
+            <div className={`flex items-center flex-shrink-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
               {/* Hardware connection indicator */}
               <div
                 data-testid="hardware-status"
                 title={connectionIndicator.title}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-bold uppercase tracking-wider ${connectionIndicator.tone}`}
+                className={`flex items-center rounded-lg border font-bold uppercase tracking-wider ${isCompactDisplay ? 'gap-1 px-1.5 py-0.5 text-[10px]' : 'gap-1.5 px-2 py-1 text-xs'} ${connectionIndicator.tone}`}
               >
-                <connectionIndicator.Icon size={15} />
+                <connectionIndicator.Icon size={isCompactDisplay ? 12 : 15} />
                 <span className="inline">{connectionIndicator.label}</span>
               </div>
 
@@ -460,27 +492,27 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
                 onClick={handlePrime}
                 disabled={isPriming || !systemActive}
                 aria-label="Prime system"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
+                className={`flex items-center rounded-lg border transition-all ${isCompactDisplay ? 'gap-1 px-2 py-1.5 text-[11px]' : 'gap-1.5 px-3 py-2'} ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
               >
-                <RefreshCw size={18} className={isPriming ? 'animate-spin' : ''} />
-                <span className="text-sm font-bold uppercase inline">Purge</span>
+                <RefreshCw size={isCompactDisplay ? 14 : 18} className={isPriming ? 'animate-spin' : ''} />
+                <span className={`${isCompactDisplay ? 'text-[11px]' : 'text-sm'} font-bold uppercase inline`}>Purge</span>
               </button>
 
               <button
                 onClick={() => setSystemActive(!systemActive)}
                 aria-label={systemActive ? 'Kill system' : 'Arm system'}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition-all shadow-md text-base ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
+                className={`flex items-center rounded-lg font-bold uppercase tracking-wider transition-all shadow-md ${isCompactDisplay ? 'gap-1 px-2.5 py-1.5 text-sm' : 'gap-1.5 px-4 py-2 text-base'} ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
               >
-                <Power size={21} />
+                <Power size={isCompactDisplay ? 16 : 21} />
                 {systemActive ? 'Kill' : 'Arm'}
               </button>
 
               <button
                 onClick={() => setActiveTab('settings')}
                 aria-label="Open settings"
-                className="p-2 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
+                className={`${isCompactDisplay ? 'p-1.5' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
               >
-                <ChevronRight size={30} className="text-slate-400" />
+                <ChevronRight size={isCompactDisplay ? 24 : 30} className="text-slate-400" />
               </button>
             </div>
           </div>
@@ -489,7 +521,7 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
           <div className={`grid grid-cols-12 flex-1 min-h-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-2'}`}>
             {/* Boost Gauge */}
             <div className={`col-span-7 bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col justify-between relative overflow-hidden group z-10 ${isCompactDisplay ? 'p-2.5' : 'p-3'}`}>
-              {renderBoostGaugeLayer('right-[-6.25rem] top-[0.8rem] opacity-70')}
+              {renderBoostGaugeLayer(mainGaugeLayerClass, 'main')}
 
               <div className="relative z-10 flex-1 flex flex-col">
                 <div className="flex items-center gap-1">
@@ -559,7 +591,7 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
             <div className={`col-span-5 flex flex-col z-10 ${isCompactDisplay ? 'gap-1.5' : 'gap-2'}`}>
               {/* Pump Flow */}
               <div className={`flex-1 bg-slate-900/40 rounded-xl border border-slate-800 flex items-center justify-between relative overflow-hidden ${isCompactDisplay ? 'p-2.5' : 'p-3'}`}>
-                {renderBoostGaugeLayer('left-[-21.85rem] top-[-0.75rem] opacity-18')}
+                {renderBoostGaugeLayer(pumpGaugeLayerClass, 'pump')}
                 <div className="flex flex-col relative z-10">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pump Flow</span>
                   <span className={`${isCompactDisplay ? 'text-5xl' : 'text-6xl'} font-black tracking-tighter tabular-nums leading-none transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
