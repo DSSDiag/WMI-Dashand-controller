@@ -113,8 +113,8 @@ WMI-Dashand-controller/
 
 | Part | Notes |
 |---|---|
-| Raspberry Pi 3 | Current DSI test target |
-| 5 inch capacitive DSI touch display | Ribbon cable into the Pi DSI display connector, default kiosk geometry 800x480 landscape |
+| Raspberry Pi 3 / Zero 2 W / Pi 4 / Pi 5 | Current installer targets |
+| Display | Supported profiles include a 5 inch capacitive DSI ribbon display, 52Pi 3.5 inch SPI display, generic blue-board `3.5inch RPi Display` / LCDWiki-style HAT, and Waveshare 3.5inch RPi LCD (G) |
 | ESP32-S3 or ESP32-C3 DevKit | Native USB serial recommended |
 | Automotive MAP sensor | 1-bar or 2-bar, calibrate in `config.h` |
 | N-channel MOSFET module or 5V relay module | Pump/solenoid output |
@@ -123,9 +123,19 @@ WMI-Dashand-controller/
 
 ### Raspberry Pi display note
 
+The integrated installer now supports these display profiles in `setup.sh`:
+
+- `dsi5`: 5 inch capacitive DSI ribbon display, default `800x480` landscape
+- `52pi-k0403`: 52Pi 3.5 inch GPIO/SPI display, `480x320` landscape via `MHS35-show`
+- `generic-ili9486-hat`: generic blue-board `3.5inch RPi Display` / LCDWiki-style HAT, `480x320` landscape via `LCD35-show` + `fbcp`
+- `waveshare-35g`: Waveshare 3.5inch RPi LCD (G), `320x480` portrait via Bookworm SPI overlays
+- `preconfigured`: skips display driver changes and only installs the dashboard stack
+
 For the Pi 3 / 5 inch capacitive panel, use the **DSI display connector**. This is the small flat-flex connector for displays at the end of the Pi board. It is not HDMI, not GPIO SPI, and not the camera CSI connector.
 
 The installer’s DSI path does **not** install the old `LCD-show` / `MHS35-show` SPI driver. It also removes previous `waveshare35a` / `mhs35` overlay lines from `config.txt` if this SD card was used for earlier 3.5 inch display tests.
+
+For the generic and Waveshare 3.5 inch profiles, the display is designed as a GPIO HAT and normally plugs directly onto the Pi 40-pin header with no separate ribbon or jumper wiring.
 
 Default kiosk geometry:
 

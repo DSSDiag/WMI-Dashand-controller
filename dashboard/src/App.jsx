@@ -40,6 +40,19 @@ const HW_REVISION = 'MMWMI02B+';
 
 // Default minimum boost (atmospheric vacuum ~30 inHg = -14.73 PSIg)
 const DEFAULT_MIN_BOOST_PSI = -14.73;
+const DASHBOARD_WIDTH = 480;
+const DASHBOARD_HEIGHT = 320;
+const DASHBOARD_FIT_WIDTH = 500;
+const DASHBOARD_FIT_HEIGHT = 340;
+
+function getViewportScale() {
+  if (typeof window === 'undefined') return 1;
+  return Math.min(
+    1,
+    window.innerWidth / DASHBOARD_FIT_WIDTH,
+    window.innerHeight / DASHBOARD_FIT_HEIGHT,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Settings Persistence — localStorage key and helpers
@@ -133,6 +146,7 @@ function useSerialBridge({ onTelemetry }) {
 const App = () => {
   // Navigation State
   const [activeTab, setActiveTab] = useState('dash');
+  const [viewportScale, setViewportScale] = useState(() => getViewportScale());
 
   // Settings State (Internal state is ALWAYS PSI Gauge: 0 = Atmosphere)
   // Initial values are loaded from localStorage so they survive reboots.
@@ -305,6 +319,14 @@ const App = () => {
       : Math.max(0, Math.min(100, 100 - ((startInjectionAt - minBoost) / range) * 100));
   const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
+
+  useEffect(() => {
+    const handleResize = () => setViewportScale(getViewportScale());
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const renderBoostGaugeLayer = (className) => (
     <div className={`absolute w-[30rem] h-[30rem] pointer-events-none z-0 ${className}`}>
       <svg viewBox="0 0 240 240" className="w-full h-full" style={{ transform: 'rotate(135deg)' }}>
@@ -351,10 +373,20 @@ const App = () => {
   );
 
   return (
-    <div className="h-screen w-screen bg-slate-950 text-slate-100 font-sans p-2 flex flex-col gap-2 select-none overflow-hidden relative">
+    <div className="h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
+      <div className="flex h-full w-full items-center justify-center">
+        <div
+          className="relative origin-center"
+          style={{
+            width: `${DASHBOARD_WIDTH}px`,
+            height: `${DASHBOARD_HEIGHT}px`,
+            transform: `scale(${viewportScale})`,
+          }}
+        >
+          <div className="h-full w-full font-sans p-2 flex flex-col gap-2 select-none overflow-hidden relative">
 
-      <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-500/10 rounded-full blur-[60px] pointer-events-none" />
-      <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-[60px] pointer-events-none" />
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-500/10 rounded-full blur-[60px] pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-[60px] pointer-events-none" />
 
       <div
         className="flex-1 flex transition-transform duration-500 ease-out h-full"
@@ -825,6 +857,9 @@ const App = () => {
         <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'settings' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
       </div>
 
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

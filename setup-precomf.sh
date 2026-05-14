@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # setup-precomf.sh - Install WMI dashboard stack on a Pi that already has
 # a working display / touch / desktop setup. This script does NOT install
-# display drivers or touch boot config changes.
+# display drivers or touch boot config changes, which makes it a good fit for
+# already-configured panels such as DSI screens, generic ILI9486/XPT2046 HATs,
+# or other pre-wired factory display setups.
 
 set -euo pipefail
 
@@ -33,10 +35,11 @@ echo "It will only install the dashboard software stack."
 echo ""
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DASHBOARD_DIST="$REPO_DIR/dashboard/dist"
-BRIDGE_SCRIPT="$REPO_DIR/bridge/serial_bridge.py"
+DASHBOARD_BUILD_DIR="$REPO_DIR/dashboard/dist"
+NGINX_DASHBOARD_ROOT="/var/www/wmi-dashboard"
 VENV_DIR="$REPO_DIR/bridge/.venv"
 SIM_VENV_DIR="$REPO_DIR/simulation/.venv"
+KIOSK_LAUNCHER="$REPO_DIR/bridge/kiosk-launch.sh"
 
 need_cmd() {
     command -v "$1" >/dev/null 2>&1
@@ -81,7 +84,6 @@ PACKAGES=(
     curl
 )
 
-# Chromium package name differs across Pi OS / Debian variants.
 if ensure_pkg chromium; then
     :
 elif ensure_pkg chromium-browser; then
@@ -119,11 +121,17 @@ cd "$REPO_DIR"
 
 echo "[5/7] Configuring nginx..."
 ensure_nginx_installed
+sudo rm -rf "$NGINX_DASHBOARD_ROOT"
+sudo mkdir -p "$NGINX_DASHBOARD_ROOT"
+sudo cp -a "$DASHBOARD_BUILD_DIR"/. "$NGINX_DASHBOARD_ROOT"/
+sudo chown -R root:www-data "$NGINX_DASHBOARD_ROOT"
+sudo find "$NGINX_DASHBOARD_ROOT" -type d -exec chmod 755 {} \;
+sudo find "$NGINX_DASHBOARD_ROOT" -type f -exec chmod 644 {} \;
 sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 sudo tee /etc/nginx/sites-available/wmi-dashboard >/dev/null <<SERVEREOF
 server {
     listen 80 default_server;
-    root $DASHBOARD_DIST;
+    root $NGINX_DASHBOARD_ROOT;
     index index.html;
 
     location / {
@@ -157,37 +165,86 @@ WantedBy=multi-user.target
 BRIDGEEOF
 
 CHROMIUM_BIN=""
-for candidate in /usr/bin/chromium-browser /usr/bin/chromium; do
+for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/chromium; do
     if [ -x "$candidate" ]; then
         CHROMIUM_BIN="$candidate"
         break
     fi
 done
-CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/bin/chromium}"
+CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/lib/chromium/chromium}"
 
-sudo tee /etc/systemd/system/wmi-kiosk.service >/dev/null <<KIOSKEOF
-[Unit]
-Description=WMI Dashboard Kiosk (Chromium)
-Wants=graphical.target
-After=graphical.target wmi-bridge.service
+cat > "$KIOSK_LAUNCHER" <<KIOSKSCRIPTEOF
+#!/usr/bin/env bash
+set -euo pipefail
 
-[Service]
-Environment=DISPLAY=:0
-Environment=XAUTHORITY=$RUN_HOME/.Xauthority
-ExecStartPre=/bin/sleep 3
-ExecStart=$CHROMIUM_BIN \
+export DISPLAY=:0
+export XAUTHORITY="$RUN_HOME/.Xauthority"
+
+for _ in \$(seq 1 45); do
+    if [ -S /tmp/.X11-unix/X0 ] && [ -f "\$XAUTHORITY" ] && xset q >/dev/null 2>&1; then
+        break
+    fi
+    sleep 2
+done
+
+if ! xset q >/dev/null 2>&1; then
+    echo "X session on :0 never became ready" >&2
+    exit 1
+fi
+
+for _ in \$(seq 1 60); do
+    if curl -fsS http://localhost >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+xset s off
+xset -dpms
+xset s noblank
+
+XRANDR_OUTPUT=\$(xrandr --query | awk '/ connected/{print \$1; exit}')
+XRANDR_MODE=\$(xrandr --query | awk '/\*/{print \$1; exit}')
+if [ -n "\${XRANDR_OUTPUT:-}" ]; then
+    if [ -n "\${XRANDR_MODE:-}" ]; then
+        xrandr --output "\$XRANDR_OUTPUT" --mode "\$XRANDR_MODE" --primary >/dev/null 2>&1 || true
+    else
+        xrandr --output "\$XRANDR_OUTPUT" --primary >/dev/null 2>&1 || true
+    fi
+fi
+
+mkdir -p "$RUN_HOME/.config/chromium"
+rm -f "$RUN_HOME/.config/chromium/SingletonLock" \
+      "$RUN_HOME/.config/chromium/SingletonSocket" \
+      "$RUN_HOME/.config/chromium/SingletonCookie"
+
+exec "$CHROMIUM_BIN" \
     --noerrdialogs \
     --disable-infobars \
     --kiosk \
+    --start-fullscreen \
+    --window-position=0,0 \
     --no-first-run \
     --disable-translate \
     --disable-features=TranslateUI \
     --overscroll-history-navigation=0 \
     --touch-events=enabled \
     --force-device-scale-factor=1 \
-    --window-size=480,320 \
     --disable-gpu \
+    --check-for-update-interval=31536000 \
+    --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \
     http://localhost
+KIOSKSCRIPTEOF
+chmod +x "$KIOSK_LAUNCHER"
+
+sudo tee /etc/systemd/system/wmi-kiosk.service >/dev/null <<KIOSKEOF
+[Unit]
+Description=WMI Dashboard Kiosk (Chromium)
+Wants=graphical.target display-manager.service network-online.target
+After=graphical.target display-manager.service network-online.target nginx.service wmi-bridge.service
+
+[Service]
+ExecStart=$KIOSK_LAUNCHER
 Restart=on-failure
 RestartSec=5
 User=$RUN_USER
@@ -199,10 +256,11 @@ KIOSKEOF
 sudo tee /etc/systemd/system/wmi-unclutter.service >/dev/null <<UNCLUTTEREOF
 [Unit]
 Description=Unclutter (hide mouse cursor)
-After=graphical.target
+After=graphical.target display-manager.service
 
 [Service]
 Environment=DISPLAY=:0
+Environment=XAUTHORITY=$RUN_HOME/.Xauthority
 ExecStart=/usr/bin/unclutter -idle 1
 Restart=always
 User=$RUN_USER

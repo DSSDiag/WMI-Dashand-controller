@@ -1,10 +1,11 @@
 # Installation Guide
 
-This guide covers the WMI Dashboard on the current test hardware:
+This guide covers the WMI Dashboard on the current supported Raspberry Pi display paths:
 
-- Raspberry Pi 3
+- Raspberry Pi 3 / Zero 2 W / Pi 4 / Pi 5
 - Raspberry Pi OS Bookworm
 - 5 inch landscape capacitive touch display connected to the Raspberry Pi DSI ribbon connector
+- 3.5 inch GPIO/SPI displays including 52Pi, generic blue-board `3.5inch RPi Display` / LCDWiki-style HAT, and Waveshare 3.5inch RPi LCD (G)
 - ESP32-S3 or ESP32-C3 controller connected to the Pi over USB serial
 
 The Pi runs the React touch dashboard in a full-screen Chromium kiosk. A Python bridge service passes telemetry and settings between the dashboard and the ESP32 controller.
@@ -66,7 +67,17 @@ Power the Pi off before connecting the display.
 
 Connect the 5 inch capacitive screen to the Raspberry Pi **DSI display connector** using the ribbon cable. This is the small flat-flex display connector near the end of the Pi board. It is not HDMI, not GPIO SPI, and not the camera CSI connector.
 
-The `setup.sh` script on this branch includes a DSI display path. It does **not** install the old `LCD-show` / `MHS35-show` SPI display driver for this display choice.
+The integrated `setup.sh` script now includes these display choices:
+
+- `1) 5 inch capacitive DSI ribbon display, landscape, usually 800x480`
+- `2) 3.5 inch 52Pi/GPIO/SPI display, 480x320 landscape`
+- `3) Generic 3.5inch RPi Display / LCDWiki-style HAT`
+- `4) Waveshare 3.5inch RPi LCD (G) resistive touch`
+- `5) Display already configured / skip display driver changes`
+
+For the DSI choice, the installer does **not** install the old `LCD-show` / `MHS35-show` SPI display driver.
+
+For the generic and Waveshare 3.5 inch choices, the panel is normally a GPIO HAT that plugs directly onto the Pi 40-pin header.
 
 Default kiosk geometry:
 
@@ -89,8 +100,8 @@ SSH into the Pi, then run:
 ```bash
 git clone https://github.com/DSSDiag/WMI-Dashand-controller.git
 cd WMI-Dashand-controller
-git fetch origin
-git checkout rpi3-5inch-dsi-install
+git checkout main
+git pull --ff-only
 chmod +x setup.sh
 ./setup.sh
 ```
@@ -101,6 +112,14 @@ When prompted, choose:
 Pi version: 2) Pi 3
 OS type:    choose Lite or Full/Desktop to match your SD image
 Display:    1) 5 inch capacitive DSI ribbon display, landscape, usually 800x480
+```
+
+For the generic 3.5 inch HAT path that was validated on the Pi Zero 2, choose:
+
+```text
+Pi version: 1) Pi Zero 2 W
+OS type:    choose Lite or Full/Desktop to match your SD image
+Display:    3) Generic 3.5inch RPi Display / LCDWiki-style HAT
 ```
 
 Then reboot:
@@ -135,7 +154,16 @@ For the 5 inch DSI display, the installer:
 - Forces the kiosk window to the selected geometry, default `800x480`.
 - Adds an Openbox autostart command that attempts to set the connected display output to the selected mode with `xrandr` where the driver permits it.
 
-For the legacy 3.5 inch GPIO/SPI display option, the script still runs the `LCD-show` / `MHS35-show` path.
+For the 52Pi 3.5 inch GPIO/SPI display option, the script still runs the `LCD-show` / `MHS35-show` path.
+
+For the generic blue-board 3.5 inch HAT, the installer:
+
+- Runs `LCD35-show`
+- Uses `dtoverlay=tft35a:rotate=90`
+- Leaves the system on `multi-user.target`
+- Auto-logs in on `tty1`
+- Starts X with `startx`
+- Launches Chromium from `.xinitrc` on the SPI panel through `fbcp`
 
 ---
 
