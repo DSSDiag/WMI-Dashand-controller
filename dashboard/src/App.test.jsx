@@ -115,4 +115,11 @@ describe('App dashboard', () => {
     expect(screen.getByTestId('trigger-inputs').className).toContain('min-h-[54px]');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
   }, 15000);
+
+  it('can force the compact preview layout without a tiny browser window', () => {
+    render(<App initialTab="settings" forceCompact embeddedPreview />);
+
+    expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
+    expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
+  }, 15000);
 });

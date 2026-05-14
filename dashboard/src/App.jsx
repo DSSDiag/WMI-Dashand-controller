@@ -143,9 +143,9 @@ function useSerialBridge({ onTelemetry, onStatus }) {
 // ---------------------------------------------------------------------------
 // Main Application
 // ---------------------------------------------------------------------------
-const App = () => {
+const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = false }) => {
   // Navigation State
-  const [activeTab, setActiveTab] = useState('dash');
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [viewportScale, setViewportScale] = useState(() => getViewportScale());
 
   // Settings State (Internal state is ALWAYS PSI Gauge: 0 = Atmosphere)
@@ -320,7 +320,7 @@ const App = () => {
       : Math.max(0, Math.min(100, 100 - ((startInjectionAt - minBoost) / range) * 100));
   const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
-  const isCompactDisplay = viewportScale < 0.995;
+  const isCompactDisplay = forceCompact || viewportScale < 0.995;
   const compactPad = isCompactDisplay ? 'p-1.5 gap-1.5' : 'p-2 gap-2';
   const connectionIndicator = hwConnected
     ? {
@@ -396,7 +396,7 @@ const App = () => {
   );
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className={`${embeddedPreview ? 'h-full w-full' : 'h-screen w-screen'} overflow-hidden bg-slate-950 text-slate-100`}>
       <div className="flex h-full w-full items-center justify-center">
         <div
           className="relative origin-center"

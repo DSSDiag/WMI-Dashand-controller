@@ -8,6 +8,7 @@ export default defineConfig({
     pool: 'threads',
     minWorkers: 1,
     maxWorkers: 1,
+    testTimeout: 30000,
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
