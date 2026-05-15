@@ -142,6 +142,14 @@ The installer does the following:
 - Installs `wmi-unclutter.service` to hide the cursor.
 - Adds the current user to the `dialout` group for serial access.
 
+Fresh `setup.sh` installs also apply the branded Mild Modz Plymouth boot splash with the dashboard logo and a progress bar.
+
+If you need to add that boot screen to an existing Pi later, run:
+
+```bash
+./apply-boot-splash.sh
+```
+
 ---
 
 ## 4. What the DSI path changes

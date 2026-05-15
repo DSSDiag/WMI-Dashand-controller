@@ -155,6 +155,16 @@ Override the geometry if your panel is different:
 WMI_DISPLAY_WIDTH=1024 WMI_DISPLAY_HEIGHT=600 ./setup.sh
 ```
 
+### Boot splash retrofit
+
+`setup.sh` already applies the branded Mild Modz Plymouth boot splash during a fresh install. For an already-running Pi that missed that step, run:
+
+```bash
+./apply-boot-splash.sh
+```
+
+That installs the logo + progress bar theme, updates the Pi boot flags, and leaves timestamped backups of `config.txt` and `cmdline.txt` beside the originals.
+
 ### ESP32-S3 Wiring
 
 ```text
