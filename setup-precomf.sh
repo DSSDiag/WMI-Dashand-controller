@@ -110,9 +110,32 @@ deploy_dashboard_build() {
     rm -rf "$staged_root"
 }
 
+validate_kiosk_launcher_target() {
+    local target="$1"
+
+    case "$target" in
+        "$REPO_DIR"/bridge/kiosk-launch.sh) ;;
+        *)
+            echo "Refusing to overwrite unexpected kiosk launcher target: $target" >&2
+            return 1
+            ;;
+    esac
+
+    if [ -L "$target" ]; then
+        echo "Refusing to overwrite symlinked kiosk launcher target: $target" >&2
+        return 1
+    fi
+
+    if [ -e "$target" ] && [ ! -f "$target" ]; then
+        echo "Refusing to overwrite non-file kiosk launcher target: $target" >&2
+        return 1
+    fi
+}
+
 write_kiosk_launcher() {
     local launcher_tmp
     launcher_tmp="$(mktemp)"
+    validate_kiosk_launcher_target "$KIOSK_LAUNCHER"
     cat > "$launcher_tmp" <<KIOSKSCRIPTEOF
 #!/usr/bin/env bash
 set -euo pipefail

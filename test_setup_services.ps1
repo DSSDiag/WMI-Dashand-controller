@@ -37,6 +37,18 @@ foreach ($script in $scripts) {
         throw "$script does not refuse non-directory dashboard deploy targets"
     }
 
+    if ($content -notmatch 'validate_kiosk_launcher_target "\$KIOSK_LAUNCHER"') {
+        throw "$script does not validate kiosk launcher target before overwrite"
+    }
+
+    if ($content -notmatch '\[ -L "\$target" \]') {
+        throw "$script does not refuse symlinked kiosk launcher targets"
+    }
+
+    if ($content -notmatch '\[ -e "\$target" \] && \[ ! -f "\$target" \]') {
+        throw "$script does not refuse non-file kiosk launcher targets"
+    }
+
     if ($content -notmatch 'ExecStartPre=-/usr/bin/udevadm settle --timeout=10') {
         throw "$script does not wait for udev to settle before starting wmi-bridge.service"
     }
@@ -83,6 +95,14 @@ if ($setupScript -notmatch 'http://localhost/\?profile=generic-ili9486-hat') {
 
 if ($preconfiguredScript -notmatch 'WMI_DASHBOARD_URL') {
     throw 'setup-precomf.sh does not expose the dashboard URL override for preconfigured installs'
+}
+
+if ($setupScript -notmatch '\$REPO_DIR"/bridge/kiosk-launch\.sh') {
+    throw 'setup.sh does not scope kiosk launcher writes to the repo bridge launcher'
+}
+
+if ($preconfiguredScript -notmatch '\$REPO_DIR"/bridge/kiosk-launch\.sh') {
+    throw 'setup-precomf.sh does not scope kiosk launcher writes to the repo bridge launcher'
 }
 
 Write-Host 'setup service checks passed'
