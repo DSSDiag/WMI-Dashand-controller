@@ -106,6 +106,7 @@ describe('App dashboard', () => {
 
     render(<App />);
 
+    expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'true');
     expect(screen.getByTestId('dashboard-header').className).toContain('p-2');
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-cols-1');
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-rows-2');
@@ -120,6 +121,7 @@ describe('App dashboard', () => {
   it('can force the compact preview layout without a tiny browser window', () => {
     render(<App initialTab="settings" forceCompact embeddedPreview />);
 
+    expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'true');
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
   }, 15000);

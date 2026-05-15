@@ -14,6 +14,7 @@ html, body, #root {
   height: 100%;
   background: #020617; /* slate-950 */
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .preview-shell {
@@ -64,6 +65,19 @@ input,
 select {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.settings-page {
+  overscroll-behavior: contain;
+}
+
+.settings-page input[type=range] {
+  touch-action: pan-x;
 }
 
 @keyframes spray-flow {

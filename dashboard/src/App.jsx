@@ -147,6 +147,9 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
   // Navigation State
   const [activeTab, setActiveTab] = useState(initialTab);
   const [viewportScale, setViewportScale] = useState(() => getViewportScale());
+  const updateViewportScale = useCallback(() => {
+    setViewportScale(getViewportScale());
+  }, []);
 
   // Settings State (Internal state is ALWAYS PSI Gauge: 0 = Atmosphere)
   // Initial values are loaded from localStorage so they survive reboots.
@@ -373,11 +376,21 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
         };
 
   useEffect(() => {
-    const handleResize = () => setViewportScale(getViewportScale());
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    updateViewportScale();
+    window.addEventListener('resize', updateViewportScale);
+    window.addEventListener('orientationchange', updateViewportScale);
+
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('resize', updateViewportScale);
+    viewport?.addEventListener('scroll', updateViewportScale);
+
+    return () => {
+      window.removeEventListener('resize', updateViewportScale);
+      window.removeEventListener('orientationchange', updateViewportScale);
+      viewport?.removeEventListener('resize', updateViewportScale);
+      viewport?.removeEventListener('scroll', updateViewportScale);
+    };
+  }, [updateViewportScale]);
 
   const renderBoostGaugeLayer = (className, idSuffix) => (
     <div className={`absolute w-[30rem] h-[30rem] pointer-events-none z-0 ${className}`}>
@@ -435,7 +448,11 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
             transform: `scale(${viewportScale})`,
           }}
         >
-          <div className={`h-full w-full font-sans flex flex-col select-none overflow-hidden relative ${compactPad}`}>
+          <div
+            data-testid="dashboard-shell"
+            data-compact={isCompactDisplay ? 'true' : 'false'}
+            className={`h-full w-full font-sans flex flex-col select-none overflow-hidden relative ${compactPad}`}
+          >
 
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-500/10 rounded-full blur-[60px] pointer-events-none" />
             <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-[60px] pointer-events-none" />
