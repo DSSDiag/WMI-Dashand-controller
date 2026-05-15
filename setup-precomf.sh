@@ -70,111 +70,30 @@ ensure_nginx_installed() {
     sudo apt-get install -y --no-install-recommends nginx
 }
 
-echo "[1/7] Installing system packages..."
-sudo apt-get update -qq
+deploy_dashboard_build() {
+    local build_dir="$1"
+    local target_root="$2"
+    local staged_root
+    staged_root="$(mktemp -d)"
 
-PACKAGES=(
-    python3-pip
-    python3-venv
-    nginx
-    unclutter
-    x11-xserver-utils
-    xdotool
-    git
-    curl
-)
-
-if ensure_pkg chromium; then
-    :
-elif ensure_pkg chromium-browser; then
-    :
-else
-    if apt-cache show chromium >/dev/null 2>&1; then
-        PACKAGES+=(chromium)
-    else
-        PACKAGES+=(chromium-browser)
+    if [ ! -f "$build_dir/index.html" ]; then
+        echo "Dashboard build output is missing: $build_dir/index.html" >&2
+        rm -rf "$staged_root"
+        return 1
     fi
-fi
 
-sudo apt-get install -y --no-install-recommends "${PACKAGES[@]}"
-
-echo "[2/7] Setting up Python virtual environment for bridge..."
-if [ ! -d "$VENV_DIR" ]; then
-    python3 -m venv "$VENV_DIR"
-fi
-"$VENV_DIR/bin/pip" install --quiet --upgrade pip
-"$VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/bridge/requirements.txt"
-
-echo "[3/7] Setting up Python virtual environment for simulation..."
-if [ ! -d "$SIM_VENV_DIR" ]; then
-    python3 -m venv "$SIM_VENV_DIR"
-fi
-"$SIM_VENV_DIR/bin/pip" install --quiet --upgrade pip
-"$SIM_VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/simulation/requirements.txt"
-
-echo "[4/7] Building dashboard..."
-install_nodejs_if_missing
-cd "$REPO_DIR/dashboard"
-npm install --silent
-npm run build
-cd "$REPO_DIR"
-
-echo "[5/7] Configuring nginx..."
-ensure_nginx_installed
-sudo rm -rf "$NGINX_DASHBOARD_ROOT"
-sudo mkdir -p "$NGINX_DASHBOARD_ROOT"
-sudo cp -a "$DASHBOARD_BUILD_DIR"/. "$NGINX_DASHBOARD_ROOT"/
-sudo chown -R root:www-data "$NGINX_DASHBOARD_ROOT"
-sudo find "$NGINX_DASHBOARD_ROOT" -type d -exec chmod 755 {} \;
-sudo find "$NGINX_DASHBOARD_ROOT" -type f -exec chmod 644 {} \;
-sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-sudo tee /etc/nginx/sites-available/wmi-dashboard >/dev/null <<SERVEREOF
-server {
-    listen 80 default_server;
-    root $NGINX_DASHBOARD_ROOT;
-    index index.html;
-
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
+    cp -a "$build_dir"/. "$staged_root"/
+    sudo rm -rf "$target_root"
+    sudo mkdir -p "$target_root"
+    sudo cp -a "$staged_root"/. "$target_root"/
+    rm -rf "$staged_root"
 }
-SERVEREOF
 
-sudo ln -sf /etc/nginx/sites-available/wmi-dashboard /etc/nginx/sites-enabled/wmi-dashboard
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t
-sudo systemctl enable --now nginx
+write_kiosk_launcher() {
+    local launcher_tmp
+    launcher_tmp="$(mktemp)"
 
-echo "[6/7] Installing bridge and kiosk services..."
-
-sudo tee /etc/systemd/system/wmi-bridge.service >/dev/null <<BRIDGEEOF
-[Unit]
-Description=WMI Serial Bridge (ESP32 ↔ Dashboard)
-After=network.target
-
-[Service]
-WorkingDirectory=$REPO_DIR
-ExecStart=$VENV_DIR/bin/python3 -m bridge.serial_bridge
-Restart=on-failure
-RestartSec=3
-User=$RUN_USER
-Environment=PYTHONUNBUFFERED=1
-
-[Install]
-WantedBy=multi-user.target
-BRIDGEEOF
-
-CHROMIUM_BIN=""
-for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/chromium; do
-    if [ -x "$candidate" ]; then
-        CHROMIUM_BIN="$candidate"
-        break
-    fi
-done
-CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/lib/chromium/chromium}"
-DASHBOARD_URL="${WMI_DASHBOARD_URL:-http://localhost}"
-
-cat > "$KIOSK_LAUNCHER" <<KIOSKSCRIPTEOF
+    cat > "$launcher_tmp" <<KIOSKSCRIPTEOF
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -236,7 +155,117 @@ exec "$CHROMIUM_BIN" \
     --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \
     "$DASHBOARD_URL"
 KIOSKSCRIPTEOF
-chmod +x "$KIOSK_LAUNCHER"
+
+    chmod +x "$launcher_tmp"
+    if [ -f "$KIOSK_LAUNCHER" ]; then
+        cp "$KIOSK_LAUNCHER" "$KIOSK_LAUNCHER.wmi-backup.$(date +%Y%m%d-%H%M%S)"
+    fi
+    mv "$launcher_tmp" "$KIOSK_LAUNCHER"
+}
+
+echo "[1/7] Installing system packages..."
+sudo apt-get update -qq
+
+PACKAGES=(
+    python3-pip
+    python3-venv
+    nginx
+    unclutter
+    x11-xserver-utils
+    xdotool
+    git
+    curl
+)
+
+if ensure_pkg chromium; then
+    :
+elif ensure_pkg chromium-browser; then
+    :
+else
+    if apt-cache show chromium >/dev/null 2>&1; then
+        PACKAGES+=(chromium)
+    else
+        PACKAGES+=(chromium-browser)
+    fi
+fi
+
+sudo apt-get install -y --no-install-recommends "${PACKAGES[@]}"
+
+echo "[2/7] Setting up Python virtual environment for bridge..."
+if [ ! -d "$VENV_DIR" ]; then
+    python3 -m venv "$VENV_DIR"
+fi
+"$VENV_DIR/bin/pip" install --quiet --upgrade pip
+"$VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/bridge/requirements.txt"
+
+echo "[3/7] Setting up Python virtual environment for simulation..."
+if [ ! -d "$SIM_VENV_DIR" ]; then
+    python3 -m venv "$SIM_VENV_DIR"
+fi
+"$SIM_VENV_DIR/bin/pip" install --quiet --upgrade pip
+"$SIM_VENV_DIR/bin/pip" install --quiet -r "$REPO_DIR/simulation/requirements.txt"
+
+echo "[4/7] Building dashboard..."
+install_nodejs_if_missing
+cd "$REPO_DIR/dashboard"
+npm install --silent
+npm run build
+cd "$REPO_DIR"
+
+echo "[5/7] Configuring nginx..."
+ensure_nginx_installed
+deploy_dashboard_build "$DASHBOARD_BUILD_DIR" "$NGINX_DASHBOARD_ROOT"
+sudo chown -R root:www-data "$NGINX_DASHBOARD_ROOT"
+sudo find "$NGINX_DASHBOARD_ROOT" -type d -exec chmod 755 {} \;
+sudo find "$NGINX_DASHBOARD_ROOT" -type f -exec chmod 644 {} \;
+sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+sudo tee /etc/nginx/sites-available/wmi-dashboard >/dev/null <<SERVEREOF
+server {
+    listen 80 default_server;
+    root $NGINX_DASHBOARD_ROOT;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+SERVEREOF
+
+sudo ln -sf /etc/nginx/sites-available/wmi-dashboard /etc/nginx/sites-enabled/wmi-dashboard
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl enable --now nginx
+
+echo "[6/7] Installing bridge and kiosk services..."
+
+sudo tee /etc/systemd/system/wmi-bridge.service >/dev/null <<BRIDGEEOF
+[Unit]
+Description=WMI Serial Bridge (ESP32 ↔ Dashboard)
+After=network.target
+
+[Service]
+WorkingDirectory=$REPO_DIR
+ExecStart=$VENV_DIR/bin/python3 -m bridge.serial_bridge
+Restart=on-failure
+RestartSec=3
+User=$RUN_USER
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+BRIDGEEOF
+
+CHROMIUM_BIN=""
+for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/chromium; do
+    if [ -x "$candidate" ]; then
+        CHROMIUM_BIN="$candidate"
+        break
+    fi
+done
+CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/lib/chromium/chromium}"
+DASHBOARD_URL="${WMI_DASHBOARD_URL:-http://localhost}"
+
+write_kiosk_launcher
 
 sudo tee /etc/systemd/system/wmi-kiosk.service >/dev/null <<KIOSKEOF
 [Unit]

@@ -138,6 +138,101 @@ ensure_nginx_installed() {
     sudo apt-get install -y --no-install-recommends nginx
 }
 
+deploy_dashboard_build() {
+    local build_dir="$1"
+    local target_root="$2"
+    local staged_root
+    staged_root="$(mktemp -d)"
+
+    if [ ! -f "$build_dir/index.html" ]; then
+        echo "Dashboard build output is missing: $build_dir/index.html" >&2
+        rm -rf "$staged_root"
+        return 1
+    fi
+
+    cp -a "$build_dir"/. "$staged_root"/
+    sudo rm -rf "$target_root"
+    sudo mkdir -p "$target_root"
+    sudo cp -a "$staged_root"/. "$target_root"/
+    rm -rf "$staged_root"
+}
+
+write_kiosk_launcher() {
+    local chromium_bin="$1"
+    local dashboard_url="${2:-http://localhost}"
+    local launcher_tmp
+    launcher_tmp="$(mktemp)"
+
+    cat > "$launcher_tmp" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+export DISPLAY=:0
+export XAUTHORITY="$RUN_HOME/.Xauthority"
+
+for _ in \$(seq 1 45); do
+    if [ -S /tmp/.X11-unix/X0 ] && [ -f "\$XAUTHORITY" ] && xset q >/dev/null 2>&1; then
+        break
+    fi
+    sleep 2
+done
+
+if ! xset q >/dev/null 2>&1; then
+    echo "X session on :0 never became ready" >&2
+    exit 1
+fi
+
+for _ in \$(seq 1 60); do
+    if curl -fsS http://localhost >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+xset s off
+xset -dpms
+xset s noblank
+
+XRANDR_OUTPUT=\$(xrandr --query | awk '/ connected/{print \$1; exit}')
+XRANDR_MODE=\$(xrandr --query | awk '/\*/{print \$1; exit}')
+if [ -n "\${XRANDR_OUTPUT:-}" ]; then
+    if [ -n "\${XRANDR_MODE:-}" ]; then
+        xrandr --output "\$XRANDR_OUTPUT" --mode "\$XRANDR_MODE" --primary >/dev/null 2>&1 || true
+    else
+        xrandr --output "\$XRANDR_OUTPUT" --primary >/dev/null 2>&1 || true
+    fi
+fi
+
+mkdir -p "$RUN_HOME/.config/chromium"
+rm -f "$RUN_HOME/.config/chromium/SingletonLock" \\
+      "$RUN_HOME/.config/chromium/SingletonSocket" \\
+      "$RUN_HOME/.config/chromium/SingletonCookie"
+
+exec "$chromium_bin" \\
+    --noerrdialogs \\
+    --disable-infobars \\
+    --kiosk \\
+    --start-fullscreen \\
+    --window-position=0,0 \\
+    --no-first-run \\
+    --disable-translate \\
+    --disable-features=TranslateUI \\
+    --overscroll-history-navigation=0 \\
+    --touch-events=enabled \\
+    --force-device-scale-factor=1 \\
+    --disable-gpu \\
+    --check-for-update-interval=31536000 \\
+    --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \\
+    "$dashboard_url"
+EOF
+
+    chmod +x "$launcher_tmp"
+    if [ -f "$KIOSK_LAUNCHER" ]; then
+        cp "$KIOSK_LAUNCHER" "$KIOSK_LAUNCHER.wmi-backup.$(date +%Y%m%d-%H%M%S)"
+    fi
+    mv "$launcher_tmp" "$KIOSK_LAUNCHER"
+}
+
 prepare_bookworm_lcd_show_symlink() {
     if [ ! -e "/boot/config.txt" ] && [ -f "/boot/firmware/config.txt" ]; then
         echo "Bookworm detected: creating /boot/config.txt → /boot/firmware/config.txt symlink for LCD-show..."
@@ -303,70 +398,7 @@ PY
 configure_kiosk_launcher() {
     local chromium_bin="$1"
     local dashboard_url="${2:-http://localhost}"
-
-    cat > "$KIOSK_LAUNCHER" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-
-export DISPLAY=:0
-export XAUTHORITY="$RUN_HOME/.Xauthority"
-
-for _ in \$(seq 1 45); do
-    if [ -S /tmp/.X11-unix/X0 ] && [ -f "\$XAUTHORITY" ] && xset q >/dev/null 2>&1; then
-        break
-    fi
-    sleep 2
-done
-
-if ! xset q >/dev/null 2>&1; then
-    echo "X session on :0 never became ready" >&2
-    exit 1
-fi
-
-for _ in \$(seq 1 60); do
-    if curl -fsS http://localhost >/dev/null 2>&1; then
-        break
-    fi
-    sleep 1
-done
-
-xset s off
-xset -dpms
-xset s noblank
-
-XRANDR_OUTPUT=\$(xrandr --query | awk '/ connected/{print \$1; exit}')
-XRANDR_MODE=\$(xrandr --query | awk '/\*/{print \$1; exit}')
-if [ -n "\${XRANDR_OUTPUT:-}" ]; then
-    if [ -n "\${XRANDR_MODE:-}" ]; then
-        xrandr --output "\$XRANDR_OUTPUT" --mode "\$XRANDR_MODE" --primary >/dev/null 2>&1 || true
-    else
-        xrandr --output "\$XRANDR_OUTPUT" --primary >/dev/null 2>&1 || true
-    fi
-fi
-
-mkdir -p "$RUN_HOME/.config/chromium"
-rm -f "$RUN_HOME/.config/chromium/SingletonLock" \\
-      "$RUN_HOME/.config/chromium/SingletonSocket" \\
-      "$RUN_HOME/.config/chromium/SingletonCookie"
-
-exec "$chromium_bin" \\
-    --noerrdialogs \\
-    --disable-infobars \\
-    --kiosk \\
-    --start-fullscreen \\
-    --window-position=0,0 \\
-    --no-first-run \\
-    --disable-translate \\
-    --disable-features=TranslateUI \\
-    --overscroll-history-navigation=0 \\
-    --touch-events=enabled \\
-    --force-device-scale-factor=1 \\
-    --disable-gpu \\
-    --check-for-update-interval=31536000 \\
-    --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \\
-    "$dashboard_url"
-EOF
-    chmod +x "$KIOSK_LAUNCHER"
+    write_kiosk_launcher "$chromium_bin" "$dashboard_url"
 }
 
 set_boot_config_value() {
@@ -549,9 +581,7 @@ cd "$REPO_DIR"
 
 echo "[5/9] Configuring nginx..."
 ensure_nginx_installed
-sudo rm -rf "$NGINX_DASHBOARD_ROOT"
-sudo mkdir -p "$NGINX_DASHBOARD_ROOT"
-sudo cp -a "$DASHBOARD_BUILD_DIR"/. "$NGINX_DASHBOARD_ROOT"/
+deploy_dashboard_build "$DASHBOARD_BUILD_DIR" "$NGINX_DASHBOARD_ROOT"
 sudo chown -R root:www-data "$NGINX_DASHBOARD_ROOT"
 sudo find "$NGINX_DASHBOARD_ROOT" -type d -exec chmod 755 {} \;
 sudo find "$NGINX_DASHBOARD_ROOT" -type f -exec chmod 644 {} \;

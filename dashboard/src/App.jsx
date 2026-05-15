@@ -461,7 +461,7 @@ const App = ({
           <div
             data-testid="dashboard-shell"
             data-compact={isCompactDisplay ? 'true' : 'false'}
-            className={`h-full w-full font-sans flex flex-col select-none overflow-hidden relative ${compactPad}`}
+            className={`h-full w-full font-sans flex flex-col select-none overflow-hidden relative touch-manipulation ${compactPad}`}
           >
 
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-500/10 rounded-full blur-[60px] pointer-events-none" />
