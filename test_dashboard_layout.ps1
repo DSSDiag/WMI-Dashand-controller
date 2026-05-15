@@ -47,6 +47,14 @@ if ($app -notmatch 'data-testid="sensor-page-grid"' -or $app -notmatch "isCompac
     throw 'App.jsx does not stack the sensor setup page into a single column on the compact HAT profile'
 }
 
+if ($app -notmatch 'data-testid="sensor-preset-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1' : 'grid-cols-2'") {
+    throw 'App.jsx does not stack the sensor preset buttons on the compact HAT profile'
+}
+
+if ($app -notmatch 'data-testid="sensor-profile-summary-grid"' -or $app -notmatch "data-testid=`"sensor-profile-summary-grid`"[\s\S]*isCompactDisplay \? 'grid-cols-1' : 'grid-cols-2'") {
+    throw 'App.jsx does not stack the selected-profile summary cards on the compact HAT profile'
+}
+
 if ($app -notmatch 'inputMode="decimal"' -or $app -notmatch 'aria-label="Minimum gauge limit"' -or $app -notmatch 'aria-label="Maximum gauge limit"') {
     throw 'App.jsx does not expose touch-friendly numeric gauge limit inputs'
 }

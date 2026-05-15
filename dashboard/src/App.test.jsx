@@ -221,6 +221,8 @@ describe('App dashboard', () => {
     expect(screen.getByText(/connect sensors or ecu analog outputs directly only if the signal stays at or below \+5.0v/i)).toBeInTheDocument();
     expect(screen.getByText(/custom \/ ecu/i)).toBeInTheDocument();
     expect(screen.getByTestId('sensor-page-grid').className).toContain('grid-cols-1');
+    expect(screen.getByTestId('sensor-preset-grid').className).toContain('grid-cols-1');
+    expect(screen.getByTestId('sensor-profile-summary-grid').className).toContain('grid-cols-1');
     expect(screen.getByTestId('sensor-calibration-grid').className).toContain('grid-cols-1');
     expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).toHaveAttribute('inputmode', 'decimal');

@@ -1441,13 +1441,16 @@ const App = ({
             <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2 gap-1.5' : 'p-3 gap-3'}`}>
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">MAP Sensor Presets</label>
-                <div className="grid grid-cols-2 gap-1">
+                <div
+                  data-testid="sensor-preset-grid"
+                  className={`grid ${isCompactDisplay ? 'grid-cols-1' : 'grid-cols-2'} gap-1`}
+                >
                   {SENSOR_PROFILE_PRESETS.map((profile) => (
                     <button
                       key={profile.key}
                       type="button"
                       onClick={() => handleSensorProfileSelect(profile.key)}
-                      className={`rounded-xl border text-left transition-all ${sensorProfile === profile.key ? 'border-lime-400 bg-lime-500/12 text-white shadow-md shadow-lime-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
+                      className={`rounded-xl border text-left transition-all ${sensorProfile === profile.key ? 'border-lime-400 bg-lime-500/12 text-white shadow-md shadow-lime-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'min-h-[3.25rem] px-2 py-1.5' : 'px-3 py-2'}`}
                     >
                       <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-lime-400">{profile.shortName}</span>
                       <span className="mt-0.5 block text-[10px] font-bold uppercase text-slate-200">{profile.name}</span>
@@ -1459,7 +1462,7 @@ const App = ({
                   <button
                     type="button"
                     onClick={() => handleSensorProfileSelect(CUSTOM_SENSOR_PROFILE_KEY)}
-                    className={`col-span-2 rounded-xl border text-left transition-all ${sensorCalibrationEditable ? 'border-cyan-400 bg-cyan-500/12 text-white shadow-md shadow-cyan-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
+                    className={`${isCompactDisplay ? 'col-span-1 min-h-[3.25rem]' : 'col-span-2'} rounded-xl border text-left transition-all ${sensorCalibrationEditable ? 'border-cyan-400 bg-cyan-500/12 text-white shadow-md shadow-cyan-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
                   >
                     <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Custom / ECU</span>
                     <span className="mt-0.5 block text-[10px] font-bold uppercase text-slate-200">Manual signal mapping</span>
@@ -1495,7 +1498,10 @@ const App = ({
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">Selected Profile</p>
                 <p className="mt-1 text-sm font-black uppercase tracking-tight text-white">{sensorProfileName}</p>
                 <p className="mt-1 text-[9px] font-bold leading-4 text-slate-400">{sensorProfileDescription}</p>
-                <div className="mt-2 grid grid-cols-2 gap-1">
+                <div
+                  data-testid="sensor-profile-summary-grid"
+                  className={`mt-2 grid ${isCompactDisplay ? 'grid-cols-1' : 'grid-cols-2'} gap-1`}
+                >
                   <div className="rounded-lg border border-slate-800 bg-slate-900/80 px-2 py-1.5">
                     <span className="block text-[8px] font-bold uppercase tracking-widest text-slate-500">Signal Span</span>
                     <span className="mt-0.5 block text-[10px] font-black text-cyan-300">{sensorSignalMinVolts}V to {sensorSignalMaxVolts}V</span>
