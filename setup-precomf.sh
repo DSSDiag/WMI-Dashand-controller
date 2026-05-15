@@ -70,10 +70,27 @@ ensure_nginx_installed() {
     sudo apt-get install -y --no-install-recommends nginx
 }
 
+resolve_path_or_empty() {
+    local target="$1"
+
+    if command -v realpath >/dev/null 2>&1; then
+        realpath -m "$target"
+        return 0
+    fi
+
+    if command -v readlink >/dev/null 2>&1; then
+        readlink -f "$target" 2>/dev/null || true
+        return 0
+    fi
+
+    printf '%s\n' ""
+}
+
 deploy_dashboard_build() {
     local build_dir="$1"
     local target_root="$2"
     local staged_root
+    local resolved_target
     staged_root="$(mktemp -d)"
 
     if [ ! -f "$build_dir/index.html" ]; then
@@ -105,6 +122,12 @@ deploy_dashboard_build() {
 
     cp -a "$build_dir"/. "$staged_root"/
     sudo mkdir -p "$target_root"
+    resolved_target="$(resolve_path_or_empty "$target_root")"
+    if [ -n "$resolved_target" ] && [ "$resolved_target" != "/var/www/wmi-dashboard" ]; then
+        echo "Refusing to deploy dashboard into redirected target: $resolved_target" >&2
+        rm -rf "$staged_root"
+        return 1
+    fi
     sudo find "$target_root" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
     sudo cp -a "$staged_root"/. "$target_root"/
     rm -rf "$staged_root"

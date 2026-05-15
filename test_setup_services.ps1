@@ -37,6 +37,14 @@ foreach ($script in $scripts) {
         throw "$script does not refuse non-directory dashboard deploy targets"
     }
 
+    if ($content -notmatch 'resolved_target="\$\(resolve_path_or_empty "\$target_root"\)"') {
+        throw "$script does not resolve the dashboard deploy target before replacement"
+    }
+
+    if ($content -notmatch '\[ -n "\$resolved_target" \] && \[ "\$resolved_target" != "/var/www/wmi-dashboard" \]') {
+        throw "$script does not refuse redirected dashboard deploy targets"
+    }
+
     if ($content -notmatch 'validate_kiosk_launcher_target "\$KIOSK_LAUNCHER"') {
         throw "$script does not validate kiosk launcher target before overwrite"
     }
