@@ -1,304 +1,294 @@
-# H₂O CH₃OH Injection Control System
+# H2O CH3OH Injection Control System
 
-A touch-screen Water/Methanol Injection (WMI) controller for performance engines.
+A touch-screen Water/Methanol Injection controller built around a Raspberry Pi dashboard and a USB-connected ESP32 sensor module.
 
-This branch adds support for the current bench-test hardware:
-
-- **Raspberry Pi 3** dashboard computer
-- **5 inch landscape capacitive touch display** connected by the Raspberry Pi **DSI ribbon connector**
-- **ESP32-S3 / ESP32-C3** sensor and pump controller over USB serial
-
-The older 3.5 inch GPIO/SPI screen path is still available from the interactive installer, but the new target is the Pi 3 + DSI ribbon display.
+The Pi runs the dashboard and local web stack. The ESP32 handles live sensor input, pump output, and serial telemetry.
 
 ---
 
-## System Architecture
+## Branch Guide
 
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  Raspberry Pi 3 + 5 inch DSI capacitive touch display             │
-│                                                                    │
-│  ┌─────────────────┐    WebSocket      ┌──────────────────────┐  │
-│  │  Chromium Kiosk │◄─── localhost ───►│  serial_bridge.py    │  │
-│  │  React Dashboard│     port 8765     │  Python asyncio      │  │
-│  │  nginx :80      │                   └──────────┬───────────┘  │
-│  └─────────────────┘                              │ USB Serial   │
-└──────────────────────────────────────────────────┼───────────────┘
-                                                    │ 115200 baud
-                                       ┌────────────▼──────────────┐
-                                       │  ESP32-S3 / ESP32-C3       │
-                                       │  • Reads MAP sensor ADC    │
-                                       │  • PWM pump/relay output   │
-                                       │  • Tank level input        │
-                                       │  • Armed LED indicator     │
-                                       └───────────────────────────┘
-                                              │          │
-                                         MAP sensor   Pump/Solenoid
-                                         manifold     WMI nozzle
-```
+| Branch | Use it for |
+|---|---|
+| `main` | Stable/default install path. Best starting point for fresh installs. |
+| `codex/system-upgrade-pass` | Latest in-progress Pi, dashboard, and tooling work. Includes Pi-side sensor-module flashing with `sensor-module-firmware.sh`. |
+| `codex/sensor-module-awareness` | Staging branch for sensor-module detection, calibration, and boot-time awareness work. |
 
-### Data flow
-
-1. The ESP32 samples the MAP sensor, computes pump duty, drives the pump/solenoid output, and sends JSON telemetry over USB serial.
-2. `bridge/serial_bridge.py` receives those frames, converts pressure to PSI, and broadcasts them to dashboard clients over WebSocket.
-3. The React dashboard connects to `ws://localhost:8765`, displays live pressure and pump state, and sends settings changes back to the ESP32 through the bridge.
+If you are not testing a specific feature, start from `main`. If you want the newest Pi-side ESP update tooling and latest bench-test changes, use `codex/system-upgrade-pass`.
 
 ---
 
-## Repository Layout
+## System Layout
 
 ```text
-WMI-Dashand-controller/
-├── dashboard/                 ← React touch-screen UI
-│   ├── src/
-│   │   ├── App.jsx            ← Main dashboard component
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── public/
-│   │   └── logo.svg           ← Replace with your brand logo
-│   ├── package.json
-│   ├── tailwind.config.js
-│   └── vite.config.js
-├── bridge/
-│   ├── serial_bridge.py       ← Python asyncio WebSocket ↔ serial bridge
-│   └── requirements.txt
-├── esp32/
-│   └── wmi_controller/
-│       ├── wmi_controller.ino ← Arduino sketch
-│       └── config.h           ← Pin assignments and sensor calibration
-├── simulation/
-│   ├── simulator.py           ← Interactive Python simulator for local dev
-│   └── README.md
-├── setup.sh                   ← Interactive hardware setup script
-├── INSTALL.md                 ← Detailed install guide
-└── README.md
+Raspberry Pi
+  -> nginx + Chromium kiosk dashboard
+  -> Python serial bridge
+  -> USB serial @ 115200
+  -> ESP32 sensor module
+       -> MAP sensor / ECU analog input
+       -> tank level input
+       -> pump / solenoid output
 ```
 
 ---
 
-## Dashboard Features
+## Supported Hardware
 
-| Screen | Navigation | Description |
-|---|---|---|
-| **Dashboard** | Default | Live manifold pressure, pump flow %, injector animation, telemetry sparkline, peak hold, tank status |
-| **Settings** | Tap `›` | Pressure units, gauge scaling, injection mapping mode, map curve |
+- Raspberry Pi Zero 2 W, Pi 3, Pi 4, or Pi 5
+- Supported display profiles in `setup.sh`:
+  - `dsi5` for 5 inch capacitive DSI ribbon displays
+  - `52pi-k0403` for the 52Pi 3.5 inch SPI display
+  - `generic-ili9486-hat` for generic blue-board `3.5inch RPi Display` / LCDWiki-style HAT panels
+  - `waveshare-35g` for Waveshare `3.5inch RPi LCD (G)`
+  - `preconfigured` when the display is already working and you only want the dashboard stack
+- ESP32, ESP32-C3, or ESP32-S3 used as the sensor module
+- MAP sensor or ECU analog pressure output
+- Float switch for tank level
+- Pump / solenoid driver hardware
 
-### Pressure Display
+Important safety rule:
 
-- **Units:** PSI, PSI+inHg, Bar, kPa
-- **Reference:** Gauge or Absolute where applicable
-- **Auto-switching:** `psi+inhg` shows vacuum below 0 PSI as inHg and boost above 0 as PSI
-- **Out-of-range warning:** readout turns red when pressure falls outside configured Min/Max
-
-### Injection Mapping Modes
-
-| Mode | Behaviour |
-|---|---|
-| **Thresholds** | Ramp from 0% at Injection Start to 100% at 100% Flow pressure |
-| **Full Scale** | Ramp linearly from gauge Min to gauge Max |
-| **Manual** | Fixed duty cycle for bench testing |
-
-### Map Curves
-
-| Curve | Effect |
-|---|---|
-| **Linear** | Duty tracks pressure change 1:1 |
-| **Exponential** | Duty rises slowly first, then harder at high boost |
+- Only connect `0V` to `+5.0V` analog sensor or ECU outputs to the boxed sensor input.
+- Do not feed `12V` or raw automotive switched power/signals into the WMI analog input.
+- The hardware inside the box must condition the external signal safely for the ESP32 ADC.
 
 ---
 
-## Hardware
+## Dashboard Screens
 
-### Required Components
-
-| Part | Notes |
+| Screen | What it does |
 |---|---|
-| Raspberry Pi 3 / Zero 2 W / Pi 4 / Pi 5 | Current installer targets |
-| Display | Supported profiles include a 5 inch capacitive DSI ribbon display, 52Pi 3.5 inch SPI display, generic blue-board `3.5inch RPi Display` / LCDWiki-style HAT, and Waveshare 3.5inch RPi LCD (G) |
-| ESP32-S3 or ESP32-C3 DevKit | Native USB serial recommended |
-| Automotive MAP sensor | 1-bar or 2-bar, calibrate in `config.h` |
-| N-channel MOSFET module or 5V relay module | Pump/solenoid output |
-| Float switch, NC preferred | Tank level sensor, active-low |
-| 10 kΩ + 10 kΩ resistors | Voltage divider if MAP output is 5 V into ESP32 ADC |
+| `Dashboard` | Live pressure, duty, injector animation, tank state, and telemetry |
+| `Settings` | Pressure units, gauge scaling, injection mapping, and curve setup |
+| `Sensor Setup` | Available on the newer sensor-calibration branches. Lets the user choose a preset MAP sensor or enter custom / ECU scaling. |
 
-### Raspberry Pi display note
+---
 
-The integrated installer now supports these display profiles in `setup.sh`:
+## Install The Pi
 
-- `dsi5`: 5 inch capacitive DSI ribbon display, default `800x480` landscape
-- `52pi-k0403`: 52Pi 3.5 inch GPIO/SPI display, `480x320` landscape via `MHS35-show`
-- `generic-ili9486-hat`: generic blue-board `3.5inch RPi Display` / LCDWiki-style HAT, `480x320` landscape via `LCD35-show` + `fbcp`
-- `waveshare-35g`: Waveshare 3.5inch RPi LCD (G), `320x480` portrait via Bookworm SPI overlays
-- `preconfigured`: skips display driver changes and only installs the dashboard stack
+Fresh install on the stable branch:
 
-For the Pi 3 / 5 inch capacitive panel, use the **DSI display connector**. This is the small flat-flex connector for displays at the end of the Pi board. It is not HDMI, not GPIO SPI, and not the camera CSI connector.
+```bash
+git clone https://github.com/DSSDiag/WMI-Dashand-controller.git
+cd WMI-Dashand-controller
+git checkout main
+git pull --ff-only
+chmod +x setup.sh
+./setup.sh
+```
 
-The installer’s DSI path does **not** install the old `LCD-show` / `MHS35-show` SPI driver. It also removes previous `waveshare35a` / `mhs35` overlay lines from `config.txt` if this SD card was used for earlier 3.5 inch display tests.
+If you are testing newer work, replace `main` with the branch you want, for example:
 
-For the generic and Waveshare 3.5 inch profiles, the display is designed as a GPIO HAT and normally plugs directly onto the Pi 40-pin header with no separate ribbon or jumper wiring.
+```bash
+git checkout codex/system-upgrade-pass
+```
 
-The generic `ILI9486/XPT2046` HAT profile now tags the kiosk URL with `?profile=generic-ili9486-hat`, which keeps the compact `480x320` layout changes isolated to that screen path. If you install with `setup-precomf.sh`, you can opt into the same layout with:
+If the display is already configured and working, you can usually use:
+
+```bash
+chmod +x setup-precomf.sh
+./setup-precomf.sh
+```
+
+For the generic `ILI9486/XPT2046` HAT, the compact layout is enabled with:
 
 ```bash
 WMI_DASHBOARD_URL='http://localhost/?profile=generic-ili9486-hat' ./setup-precomf.sh
 ```
 
-Default kiosk geometry:
-
-```text
-800x480 landscape
-```
-
-Override the geometry if your panel is different:
-
-```bash
-WMI_DISPLAY_WIDTH=1024 WMI_DISPLAY_HEIGHT=600 ./setup.sh
-```
-
-### ESP32-S3 Wiring
-
-```text
-MAP Sensor 5V output            ESP32-S3
-  GND ────────────────────────── GND
-  Vcc ──────── 5V rail           —
-  Vout ──┬── 10kΩ ─── GPIO4 ──── ADC PIN_MAP_SENSOR
-         └── 10kΩ ─── GND        voltage divider → 2.5V max
-
-Tank Level Float Switch
-  One terminal ───────────────── GND
-  Other terminal ─────────────── GPIO6 INPUT_PULLUP PIN_TANK_LEVEL
-
-Pump/Solenoid MOSFET Gate ────── GPIO5 PWM PIN_PUMP_PWM
-Armed LED ────────────────────── GPIO48 onboard LED
-USB data ─────────────────────── Raspberry Pi USB port
-```
-
-If your MAP sensor runs on 3.3 V, omit the voltage divider and adjust these in `config.h`:
-
-```c
-#define MAP_VCC_MV    3300.0f
-#define MAP_V_MIN_MV   330.0f
-#define MAP_V_MAX_MV  2970.0f
-```
-
----
-
-## Serial Protocol
-
-All frames are newline-terminated JSON.
-
-ESP32 to Pi:
-
-```json
-{"t":"d","p":120.5,"d":75,"l":0}
-```
-
-| Key | Meaning |
-|---|---|
-| `t` | Frame type, `"d"` = data |
-| `p` | Manifold pressure in kPa absolute |
-| `d` | Pump duty cycle, 0 to 100 |
-| `l` | Tank low flag, 0 or 1 |
-
-Pi to ESP32 settings frame:
-
-```json
-{"t":"s","tm":0,"sp":137.9,"fp":275.8,"md":0,"c":0,"a":1}
-```
-
-| Key | Meaning |
-|---|---|
-| `tm` | Trigger mode: 0 thresholds, 1 full_scale, 2 manual |
-| `sp` | Injection start in kPa absolute |
-| `fp` | 100% flow in kPa absolute |
-| `md` | Manual duty, 0 to 100 |
-| `c` | Curve: 0 linear, 1 exponential |
-| `a` | Armed: 0 off, 1 armed |
-
-Pi to ESP32 purge frame:
-
-```json
-{"t":"prime"}
-```
-
----
-
-## Installation
-
-Detailed steps are in [INSTALL.md](INSTALL.md).
-
-Quick branch install on the Pi:
-
-```bash
-git clone https://github.com/DSSDiag/WMI-Dashand-controller.git
-cd WMI-Dashand-controller
-git fetch origin
-git checkout rpi3-5inch-dsi-install
-chmod +x setup.sh
-./setup.sh
-```
-
-When prompted, choose:
-
-```text
-Pi:       2) Pi 3
-OS:       your installed OS type
-Display:  1) 5 inch capacitive DSI ribbon display
-```
-
-Then reboot when the script finishes:
+After install:
 
 ```bash
 sudo reboot
 ```
 
-The script installs nginx, Chromium kiosk mode, LightDM/Openbox autologin, the Python bridge service, cursor hiding, and serial permissions.
+For full Pi setup detail, display-specific notes, and troubleshooting, see [INSTALL.md](INSTALL.md).
 
 ---
 
-## Systemd Services
+## Update An Existing Pi
 
-| Service | Description |
-|---|---|
-| `wmi-bridge.service` | Python serial bridge between ESP32 and dashboard |
-| `wmi-kiosk.service` | Chromium full-screen kiosk on display `:0` |
-| `wmi-unclutter.service` | Hides mouse cursor after 1 second |
-| `nginx` | Serves built dashboard on port 80 |
+Pull the latest code and rerun the installer from the Pi:
 
-Useful commands:
+```bash
+cd ~/WMI-Dashand-controller
+git fetch origin
+git checkout main
+git pull --ff-only
+chmod +x setup.sh setup-precomf.sh
+./setup.sh
+```
+
+If the display side is already known-good and you only want to refresh the dashboard/services:
+
+```bash
+cd ~/WMI-Dashand-controller
+git fetch origin
+git checkout main
+git pull --ff-only
+chmod +x setup-precomf.sh
+./setup-precomf.sh
+```
+
+When you are testing another branch, replace `main` with that branch name.
+
+---
+
+## Flash The Sensor Module
+
+There are two supported ways to update the ESP32 sensor module.
+
+### Option A: Flash From A Desktop IDE
+
+This works on every branch.
+
+1. Install Arduino IDE 2.x.
+2. Add the Espressif boards URL in Arduino preferences:
+
+   ```text
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+
+3. Install the `esp32` platform in Boards Manager.
+4. Install `ArduinoJson` in Library Manager.
+5. Open `esp32/wmi_controller/wmi_controller.ino`.
+6. Select the correct board:
+   - `ESP32 Dev Module`
+   - `ESP32C3 Dev Module`
+   - `ESP32S3 Dev Module`
+7. Select the correct serial port.
+8. Enable `USB CDC On Boot` when using a native-USB board.
+9. Upload the sketch.
+10. Verify newline-terminated JSON appears at `115200` baud.
+
+### Option B: Flash From The Pi Over SSH
+
+On branches that include `sensor-module-firmware.sh` such as `codex/system-upgrade-pass`, the Pi can compile and flash the sensor module itself.
+
+For an `ESP32-C3 SuperMini`, first run:
+
+```bash
+cd ~/WMI-Dashand-controller
+./sensor-module-firmware.sh status --board esp32-c3
+./sensor-module-firmware.sh flash --board esp32-c3 --remember-board
+```
+
+After the board choice has been saved, later updates are just:
+
+```bash
+cd ~/WMI-Dashand-controller
+./sensor-module-firmware.sh flash
+```
+
+Useful helper commands:
+
+```bash
+./sensor-module-firmware.sh list-boards
+./sensor-module-firmware.sh status --board esp32-c3
+./sensor-module-firmware.sh build --board esp32-s3
+./sensor-module-firmware.sh flash --board esp32-c3 --port /dev/ttyACM0
+```
+
+What the Pi-side updater does:
+
+- installs `arduino-cli` if needed
+- installs the Espressif `esp32` core
+- installs `ArduinoJson`
+- stops `wmi-bridge.service` so the USB serial port is free
+- compiles the sketch
+- uploads the firmware
+- starts `wmi-bridge.service` again
+
+Supported board keys:
+
+- `esp32`
+- `esp32-c3`
+- `esp32-s3`
+
+---
+
+## Sensor Module Wiring Overview
+
+```text
+External MAP sensor or ECU analog output
+  GND    -> sensor module GND
+  Signal -> boxed analog input (0-5V max)
+
+Tank level float switch
+  one side -> GND
+  other    -> tank-level input
+
+Pump / solenoid driver
+  control input <- ESP32 pump output
+
+USB
+  ESP32 sensor module <-> Raspberry Pi
+```
+
+Board-specific pins and default calibration live in `esp32/wmi_controller/config.h`.
+
+---
+
+## Useful Commands
+
+Check the bridge:
 
 ```bash
 sudo systemctl status wmi-bridge
 sudo journalctl -u wmi-bridge -f
+```
+
+Check dashboard serving:
+
+```bash
+curl -I http://localhost
+```
+
+Check for the sensor module serial port:
+
+```bash
+ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null
+```
+
+Restart services:
+
+```bash
+sudo systemctl restart wmi-bridge
 sudo systemctl restart wmi-kiosk
+sudo systemctl restart nginx
 ```
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Check |
+| Symptom | What to check |
 |---|---|
-| Display/backlight works but no dashboard | `sudo systemctl status lightdm wmi-kiosk` |
-| Touch not working | `libinput list-devices` |
-| Dashboard shows `OFF` badge | `sudo systemctl status wmi-bridge` and `ls /dev/ttyUSB* /dev/ttyACM*` |
-| Pressure reads nonsense values | Re-calibrate `MAP_V_MIN_MV` / `MAP_V_MAX_MV` in `config.h` |
-| Pump does not run | Dashboard must be armed, and pump output wiring must match `config.h` |
-| Serial port not found | Check ESP32 USB cable, board mode, and `/dev/ttyUSB*` / `/dev/ttyACM*` |
+| Dashboard shows hardware disconnected | `sudo systemctl status wmi-bridge` and `ls /dev/ttyACM* /dev/ttyUSB*` |
+| ESP only comes online after unplug/replug | Review `sudo journalctl -u wmi-bridge -b` and confirm the USB cable/port is stable on boot |
+| Pi-side flash says port not detected | Recheck the USB connection, then run `./sensor-module-firmware.sh status --board esp32-c3` |
+| Display works but no dashboard shows | Check `nginx`, `wmi-kiosk`, or the `tty1/startx` session depending on the selected display profile |
+| Pressure reading is wrong | Confirm the correct MAP preset or custom calibration is selected, or review `config.h` defaults |
+| Pump never ramps | Confirm the system is armed, tank level is not low, and the selected pressure calibration matches the real sensor |
 
 ---
 
-## Logo
+## Repository Layout
 
-Replace `dashboard/public/logo.svg`, then rebuild:
-
-```bash
-cd dashboard
-npm run build
+```text
+dashboard/                  React kiosk UI
+bridge/                     Python serial/WebSocket bridge
+esp32/wmi_controller/       Sensor-module firmware
+simulation/                 Local simulator tools
+setup.sh                    Interactive Pi installer
+setup-precomf.sh            Installer for already-configured displays
+INSTALL.md                  Full installation guide
+README.md                   Quick operator/developer guide
 ```
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
