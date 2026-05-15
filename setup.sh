@@ -150,9 +150,18 @@ deploy_dashboard_build() {
         return 1
     fi
 
+    case "$target_root" in
+        /var/www/wmi-dashboard) ;;
+        *)
+            echo "Refusing to deploy dashboard into unexpected target: $target_root" >&2
+            rm -rf "$staged_root"
+            return 1
+            ;;
+    esac
+
     cp -a "$build_dir"/. "$staged_root"/
-    sudo rm -rf "$target_root"
     sudo mkdir -p "$target_root"
+    sudo find "$target_root" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
     sudo cp -a "$staged_root"/. "$target_root"/
     rm -rf "$staged_root"
 }

@@ -116,8 +116,10 @@ describe('App dashboard', () => {
 
     expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'true');
     expect(screen.getByTestId('dashboard-header').className).toContain('p-2');
+    expect(screen.getByTestId('dashboard-actions').className).toContain('grid-cols-3');
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-cols-1');
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-rows-2');
+    expect(screen.getByTestId('hardware-status').className).toContain('col-span-3');
 
     fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
 
@@ -131,6 +133,7 @@ describe('App dashboard', () => {
 
     expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'true');
     expect(screen.getByTestId('dashboard-shell').className).toContain('touch-manipulation');
+    expect(screen.getByTestId('dashboard-actions').className).toContain('grid-cols-3');
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
   }, 15000);

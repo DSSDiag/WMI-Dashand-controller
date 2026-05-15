@@ -364,6 +364,9 @@ const App = ({
   const pumpGaugeLayerClass = isCompactDisplay
     ? 'left-[-22.5rem] top-[-1rem] opacity-12'
     : 'left-[-21.85rem] top-[-0.75rem] opacity-18';
+  const compactHeaderControlsClass = isCompactDisplay
+    ? 'grid grid-cols-3 gap-1.5'
+    : 'flex items-center gap-3';
   const connectionIndicator = hwConnected
     ? {
         label: 'HW',
@@ -504,12 +507,15 @@ const App = ({
               </div>
             </div>
 
-            <div className={`flex items-center flex-shrink-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
+            <div
+              data-testid="dashboard-actions"
+              className={`${compactHeaderControlsClass} flex-shrink-0`}
+            >
               {/* Hardware connection indicator */}
               <div
                 data-testid="hardware-status"
                 title={connectionIndicator.title}
-                className={`flex items-center rounded-lg border font-bold uppercase tracking-wider ${isCompactDisplay ? 'gap-1 px-1.5 py-0.5 text-[10px]' : 'gap-1.5 px-2 py-1 text-xs'} ${connectionIndicator.tone}`}
+                className={`flex items-center rounded-lg border font-bold uppercase tracking-wider ${isCompactDisplay ? 'col-span-3 min-h-[2.35rem] justify-center gap-1.5 px-2 py-1 text-[10px]' : 'gap-1.5 px-2 py-1 text-xs'} ${connectionIndicator.tone}`}
               >
                 <connectionIndicator.Icon size={isCompactDisplay ? 12 : 15} />
                 <span className="inline">{connectionIndicator.label}</span>
@@ -528,7 +534,7 @@ const App = ({
               <button
                 onClick={() => setSystemActive(!systemActive)}
                 aria-label={systemActive ? 'Kill system' : 'Arm system'}
-                className={`flex items-center rounded-lg font-bold uppercase tracking-wider transition-all shadow-md ${isCompactDisplay ? 'gap-1 px-2.5 py-1.5 text-sm' : 'gap-1.5 px-4 py-2 text-base'} ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
+                className={`flex items-center rounded-lg font-bold uppercase tracking-wider transition-all shadow-md justify-center ${isCompactDisplay ? 'gap-1 px-2 py-1.5 text-sm' : 'gap-1.5 px-4 py-2 text-base'} ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
               >
                 <Power size={isCompactDisplay ? 16 : 21} />
                 {systemActive ? 'Kill' : 'Arm'}
@@ -537,7 +543,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('settings')}
                 aria-label="Open settings"
-                className={`${isCompactDisplay ? 'p-1.5' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] px-2 py-1.5 flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
               >
                 <ChevronRight size={isCompactDisplay ? 24 : 30} className="text-slate-400" />
               </button>
