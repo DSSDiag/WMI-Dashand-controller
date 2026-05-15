@@ -14,7 +14,7 @@ def parse_esp32_frame(line: str) -> Optional[dict]:
             return None
         kpa_abs = float(raw["p"])
         psi_gauge = (kpa_abs - ATM_KPA) * KPA_ABS_TO_PSI_GAUGE
-        return {
+        telemetry = {
             "type": "telemetry",
             "pressure_kpa": round(kpa_abs, 2),
             "pressure_psi": round(psi_gauge, 2),
@@ -22,6 +22,11 @@ def parse_esp32_frame(line: str) -> Optional[dict]:
             "tank_low": bool(raw.get("l", 0)),
             "pump_active": int(raw.get("d", 0)) > 0,
         }
+        if isinstance(raw.get("b"), str):
+            telemetry["sensor_module_key"] = raw["b"]
+        if isinstance(raw.get("m"), str):
+            telemetry["sensor_module_label"] = raw["m"]
+        return telemetry
     except (KeyError, ValueError, TypeError, json.JSONDecodeError):
         return None
 

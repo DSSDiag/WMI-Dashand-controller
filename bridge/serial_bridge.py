@@ -30,13 +30,17 @@ pending_settings: Optional[dict] = None
 pending_prime: bool = False
 
 serial_connected = False
+sensor_module_key: Optional[str] = None
+sensor_module_label: Optional[str] = None
 
 
 def find_esp32_port():
     ports = list(serial.tools.list_ports.comports())
     for port in ports:
+        if getattr(port, "vid", None) == 0x303A:
+            return port.device
         name = (port.device + (port.description or "")).lower()
-        if any(token in name for token in ("usb", "acm", "ch340", "cp210")):
+        if any(token in name for token in ("usb", "acm", "ch340", "cp210", "usb jtag")):
             return port.device
     return None
 
@@ -52,6 +56,8 @@ async def send_status() -> None:
     await broadcast({
         "type": "status",
         "serial_connected": serial_connected,
+        "sensor_module_key": sensor_module_key,
+        "sensor_module_label": sensor_module_label,
     })
 
 
@@ -75,7 +81,7 @@ async def ws_handler(ws: ServerConnection):
 
 
 async def handle_serial(ser):
-    global pending_settings, pending_prime, latest_telemetry, serial_connected
+    global pending_settings, pending_prime, latest_telemetry, serial_connected, sensor_module_key, sensor_module_label
 
     serial_connected = True
     await send_status()
@@ -98,19 +104,31 @@ async def handle_serial(ser):
 
         data = parse_esp32_frame(line)
         if data:
+            new_sensor_module_key = data.get("sensor_module_key")
+            new_sensor_module_label = data.get("sensor_module_label")
+            if (
+                new_sensor_module_key != sensor_module_key
+                or new_sensor_module_label != sensor_module_label
+            ):
+                sensor_module_key = new_sensor_module_key
+                sensor_module_label = new_sensor_module_label
+                log.info("Sensor module identified as %s", sensor_module_label or sensor_module_key)
+                await send_status()
             latest_telemetry = data
             last_data = time.monotonic()
             await broadcast(data)
 
 
 async def serial_loop():
-    global serial_connected
+    global serial_connected, sensor_module_key, sensor_module_label
 
     while True:
         port = find_esp32_port()
         if not port:
             if serial_connected:
                 serial_connected = False
+                sensor_module_key = None
+                sensor_module_label = None
                 await send_status()
             await asyncio.sleep(RECONNECT_DELAY)
             continue
@@ -122,6 +140,8 @@ async def serial_loop():
         except Exception as exc:
             log.warning("Serial lost: %s", exc)
             serial_connected = False
+            sensor_module_key = None
+            sensor_module_label = None
             await send_status()
 
         await asyncio.sleep(RECONNECT_DELAY)

@@ -1,7 +1,13 @@
 /**
- * config.h — WMI Controller (ESP32-S3)
- * =====================================
+ * config.h — WMI Sensor Module
+ * ============================
  * Edit this file to match your wiring and sensor.
+ *
+ * The Pi-facing software refers to the ESP board as the "sensor module".
+ * This file now provides target-aware defaults for:
+ *   - ESP32
+ *   - ESP32-C3 (including SuperMini / Mini-style boards)
+ *   - ESP32-S3
  */
 
 #pragma once
@@ -13,15 +19,45 @@
 // Watchdog: if no settings received from Pi in this many ms, use safe defaults
 #define SETTINGS_WATCHDOG_MS  10000UL
 
-// ── GPIO Pin Assignments ───────────────────────────────────────────────────────
+// ── Sensor module target detection ────────────────────────────────────────────
+#if defined(CONFIG_IDF_TARGET_ESP32C3)
+  #define SENSOR_MODULE_BOARD_KEY   "esp32-c3"
+  #define SENSOR_MODULE_BOARD_NAME  "ESP32-C3"
+  #define SENSOR_MODULE_LED_PIN_DEFAULT 8
+#elif defined(CONFIG_IDF_TARGET_ESP32S3)
+  #define SENSOR_MODULE_BOARD_KEY   "esp32-s3"
+  #define SENSOR_MODULE_BOARD_NAME  "ESP32-S3"
+  #define SENSOR_MODULE_LED_PIN_DEFAULT 48
+#elif defined(CONFIG_IDF_TARGET_ESP32)
+  #define SENSOR_MODULE_BOARD_KEY   "esp32"
+  #define SENSOR_MODULE_BOARD_NAME  "ESP32"
+  #define SENSOR_MODULE_LED_PIN_DEFAULT 2
+#else
+  #define SENSOR_MODULE_BOARD_KEY   "esp32"
+  #define SENSOR_MODULE_BOARD_NAME  "ESP32"
+  #define SENSOR_MODULE_LED_PIN_DEFAULT 2
+#endif
+
+#define SENSOR_MODULE_LABEL SENSOR_MODULE_BOARD_NAME " Sensor Module"
+
+// ── GPIO Pin Assignments ──────────────────────────────────────────────────────
+// Override any of these in a board-specific header if your wiring differs.
 // MAP sensor analog input — use a 10kΩ + 10kΩ voltage divider if sensor outputs 5V
-#define PIN_MAP_SENSOR      4   // GPIO4 (ADC1_CH3 on ESP32-S3)
+#ifndef PIN_MAP_SENSOR
+  #define PIN_MAP_SENSOR      4
+#endif
 // Pump / solenoid relay output — drives a MOSFET gate or relay module
-#define PIN_PUMP_PWM        5   // GPIO5  (LEDC capable)
+#ifndef PIN_PUMP_PWM
+  #define PIN_PUMP_PWM        5
+#endif
 // Tank level sensor — active LOW (float switch pulls to GND when fluid is present)
-#define PIN_TANK_LEVEL      6   // GPIO6  (INPUT_PULLUP)
+#ifndef PIN_TANK_LEVEL
+  #define PIN_TANK_LEVEL      6
+#endif
 // Optional armed LED indicator
-#define PIN_LED_ARMED       48  // ESP32-S3-DevKitC onboard LED (GPIO48)
+#ifndef PIN_LED_ARMED
+  #define PIN_LED_ARMED       SENSOR_MODULE_LED_PIN_DEFAULT
+#endif
 
 // ── MAP Sensor Parameters ──────────────────────────────────────────────────────
 // Sensor: any automotive 1-bar or 2-bar MAP sensor (e.g. Bosch 0261230050,

@@ -4,7 +4,7 @@ from bridge.logic import parse_esp32_frame, ATM_KPA, KPA_ABS_TO_PSI_GAUGE, build
 
 def test_parse_esp32_frame_happy_path():
     """Test with valid telemetry data."""
-    line = '{"t":"d", "p":120.5, "d":75, "l":0}'
+    line = '{"t":"d", "p":120.5, "d":75, "l":0, "b":"esp32-c3", "m":"ESP32-C3 Sensor Module"}'
     result = parse_esp32_frame(line)
 
     assert result is not None
@@ -16,6 +16,8 @@ def test_parse_esp32_frame_happy_path():
     assert result["pump_duty"] == 75
     assert result["tank_low"] is False
     assert result["pump_active"] is True
+    assert result["sensor_module_key"] == "esp32-c3"
+    assert result["sensor_module_label"] == "ESP32-C3 Sensor Module"
 
 def test_parse_esp32_frame_invalid_type():
     """Test with non-data frame types."""
@@ -54,6 +56,8 @@ def test_parse_esp32_frame_default_values():
     assert result["pump_duty"] == 0
     assert result["tank_low"] is False
     assert result["pump_active"] is False
+    assert "sensor_module_key" not in result
+    assert "sensor_module_label" not in result
 
 def test_parse_esp32_frame_tank_low():
     """Test tank_low flag parsing."""
@@ -138,6 +142,17 @@ def test_find_esp32_port_match_usb():
         mock_comports.return_value = [port1]
 
         assert find_esp32_port() == '/dev/ttyUSB0'
+
+def test_find_esp32_port_match_espressif_vid():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyACM1'
+        port1.description = 'debug port'
+        port1.vid = 0x303A
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() == '/dev/ttyACM1'
 
 def test_find_esp32_port_match_acm():
     with patch('serial.tools.list_ports.comports') as mock_comports:

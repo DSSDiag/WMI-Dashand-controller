@@ -25,8 +25,9 @@ import {
 
 // ---------------------------------------------------------------------------
 // WebSocket hook — connects to the Python serial bridge on the Pi.
-// Provides live telemetry and forwards settings changes to the ESP32.
-// Falls back silently if the bridge is not running (simulation mode active).
+// Provides live telemetry and forwards settings changes to the sensor module.
+// If the module is missing at boot, the UI can stay in wait mode or switch to
+// an on-device simulation mode.
 // ---------------------------------------------------------------------------
 const WS_URL = 'ws://localhost:8765';
 const WS_RECONNECT_MS = 3000;
@@ -71,6 +72,55 @@ const DEFAULT_SETTINGS = {
   manualDuty: 0,
 };
 
+const SENSOR_MODULE_PROMPT_DELAY_MS = 3500;
+const SIMULATION_TICK_MS = 100;
+const DEFAULT_SENSOR_MODULE_LABEL = 'Sensor Module';
+const SENSOR_MODULE_BADGE_LABELS = {
+  esp32: 'ESP',
+  'esp32-c3': 'C3',
+  'esp32-s3': 'S3',
+};
+
+function resolveSensorModuleLabel(sensorModuleKey, sensorModuleLabel) {
+  if (sensorModuleLabel) return sensorModuleLabel;
+  if (sensorModuleKey === 'esp32-c3') return 'ESP32-C3 Sensor Module';
+  if (sensorModuleKey === 'esp32-s3') return 'ESP32-S3 Sensor Module';
+  if (sensorModuleKey === 'esp32') return 'ESP32 Sensor Module';
+  return DEFAULT_SENSOR_MODULE_LABEL;
+}
+
+function calculateSimulationDuty({
+  pressurePsi,
+  systemActive,
+  triggerMode,
+  minBoost,
+  maxBoost,
+  startInjectionAt,
+  fullInjectionAt,
+  manualDuty,
+  curve,
+}) {
+  if (!systemActive) return 0;
+
+  if (triggerMode === 'manual') {
+    return manualDuty;
+  }
+
+  if (triggerMode === 'full_scale') {
+    const rangeValue = Math.max(0.1, maxBoost - minBoost);
+    let progress = Math.max(0, Math.min(1, (pressurePsi - minBoost) / rangeValue));
+    if (curve === 'exponential') progress *= progress;
+    return progress * 100;
+  }
+
+  if (pressurePsi <= startInjectionAt) return 0;
+
+  const thresholdRange = Math.max(0.1, fullInjectionAt - startInjectionAt);
+  let progress = Math.max(0, Math.min(1, (pressurePsi - startInjectionAt) / thresholdRange));
+  if (curve === 'exponential') progress *= progress;
+  return progress * 100;
+}
+
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -104,7 +154,7 @@ function useSerialBridge({ onTelemetry, onStatus }) {
           onTelemetry(msg);
         }
         if (msg.type === 'status' && onStatus) {
-          onStatus(Boolean(msg.serial_connected));
+          onStatus(msg);
         }
       } catch {
         /* ignore malformed frames */
@@ -114,7 +164,11 @@ function useSerialBridge({ onTelemetry, onStatus }) {
     ws.onclose = () => {
       setConnected(false);
       wsRef.current = null;
-      onStatus?.(false);
+      onStatus?.({
+        serial_connected: false,
+        sensor_module_key: null,
+        sensor_module_label: null,
+      });
       reconnectTimer.current = setTimeout(_connect, WS_RECONNECT_MS);
     };
 
@@ -189,6 +243,14 @@ const App = ({
 
   // Hardware bridge state
   const [serialConnected, setSerialConnected] = useState(false);
+  const [sensorModuleKey, setSensorModuleKey] = useState(null);
+  const [sensorModuleLabel, setSensorModuleLabel] = useState(DEFAULT_SENSOR_MODULE_LABEL);
+  const [simulationMode, setSimulationMode] = useState(false);
+  const [hasBootDecision, setHasBootDecision] = useState(false);
+  const [sensorPromptArmed, setSensorPromptArmed] = useState(false);
+  const rawBoostRef = useRef(rawBoost);
+  const simulationPhaseRef = useRef(0);
+  const simulationPrimeUntilRef = useRef(0);
 
   // --- UNIT CONVERSION LOGIC ---
   const formatBoost = (psiGauge) => formatBoostUtil(psiGauge, units, pressureRef);
@@ -256,7 +318,8 @@ const App = ({
 
   // ---------------------------------------------------------------------------
   // WebSocket / Hardware Bridge
-  // Telemetry from ESP32 overrides simulation when bridge is connected.
+  // Telemetry from the sensor module overrides simulation when hardware is
+  // connected.
   // ---------------------------------------------------------------------------
   const handleTelemetry = useCallback((msg) => {
     // msg: { type, pressure_psi, pump_duty, tank_low }
@@ -268,13 +331,23 @@ const App = ({
     }
     if (typeof msg.pump_duty === 'number') setDutyCycle(msg.pump_duty);
     if (typeof msg.tank_low === 'boolean') setTankIsLow(msg.tank_low);
+    if (msg.sensor_module_key || msg.sensor_module_label) {
+      setSensorModuleKey(msg.sensor_module_key ?? null);
+      setSensorModuleLabel(resolveSensorModuleLabel(msg.sensor_module_key, msg.sensor_module_label));
+    }
     if (typeof msg.pump_active === 'boolean') {
       setStatus(msg.pump_active ? 'Injecting' : 'Monitoring');
     }
   }, []);
 
-  const handleBridgeStatus = useCallback((isSerialConnected) => {
+  const handleBridgeStatus = useCallback((bridgeStatus) => {
+    const isSerialConnected = Boolean(bridgeStatus?.serial_connected);
     setSerialConnected(isSerialConnected);
+    setSensorModuleKey(bridgeStatus?.sensor_module_key ?? null);
+    setSensorModuleLabel(resolveSensorModuleLabel(
+      bridgeStatus?.sensor_module_key,
+      bridgeStatus?.sensor_module_label,
+    ));
   }, []);
 
   const { connected: bridgeConnected, send: wsSend } = useSerialBridge({
@@ -282,6 +355,8 @@ const App = ({
     onStatus: handleBridgeStatus,
   });
   const hwConnected = bridgeConnected && serialConnected;
+  const simulationActive = simulationMode && !hwConnected;
+  const sensorModuleDisplayLabel = resolveSensorModuleLabel(sensorModuleKey, sensorModuleLabel);
 
   // Send settings to ESP32 whenever they change (only when hardware is connected)
   useEffect(() => {
@@ -310,10 +385,106 @@ const App = ({
     } catch { /* ignore quota / security errors */ }
   }, [units, pressureRef, minBoost, maxBoost, triggerMode, curve, startInjectionAt, fullInjectionAt, manualDuty]);
 
+  useEffect(() => {
+    rawBoostRef.current = rawBoost;
+  }, [rawBoost]);
+
+  useEffect(() => {
+    if (!hwConnected) return;
+    setHasBootDecision(true);
+    if (simulationMode) {
+      setSimulationMode(false);
+      simulationPrimeUntilRef.current = 0;
+    }
+  }, [hwConnected, simulationMode]);
+
+  useEffect(() => {
+    if (hasBootDecision || hwConnected || simulationMode) return undefined;
+    const timer = window.setTimeout(() => {
+      setSensorPromptArmed(true);
+    }, SENSOR_MODULE_PROMPT_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [hasBootDecision, hwConnected, simulationMode]);
+
+  useEffect(() => {
+    if (!simulationActive) return;
+    rawBoostRef.current = DEFAULT_MIN_BOOST_PSI;
+    simulationPhaseRef.current = 0;
+    simulationPrimeUntilRef.current = 0;
+    setRawBoost(DEFAULT_MIN_BOOST_PSI);
+    setPeakBoost(DEFAULT_MIN_BOOST_PSI);
+    setBoostHistory(Array(50).fill(DEFAULT_MIN_BOOST_PSI));
+    setDutyCycle(0);
+    setTankIsLow(false);
+    setStatus('Simulation Ready');
+  }, [simulationActive]);
+
+  useEffect(() => {
+    if (!simulationActive) return undefined;
+
+    const timer = window.setInterval(() => {
+      simulationPhaseRef.current += 0.34;
+      const primeActive = simulationPrimeUntilRef.current > Date.now();
+      const noise = Math.sin(simulationPhaseRef.current) * 0.55;
+      const targetPressure = systemActive
+        ? Math.min(maxBoost, fullInjectionAt + 3 + noise)
+        : DEFAULT_MIN_BOOST_PSI;
+      const nextPressure = rawBoostRef.current + (((targetPressure + noise) - rawBoostRef.current) * (systemActive ? 0.16 : 0.24));
+      const clampedPressure = Math.max(DEFAULT_MIN_BOOST_PSI, Math.min(maxBoost + 5, nextPressure));
+      const calculatedDuty = primeActive
+        ? 100
+        : calculateSimulationDuty({
+            pressurePsi: clampedPressure,
+            systemActive,
+            triggerMode,
+            minBoost,
+            maxBoost,
+            startInjectionAt,
+            fullInjectionAt,
+            manualDuty,
+            curve,
+          });
+
+      rawBoostRef.current = clampedPressure;
+      setRawBoost(clampedPressure);
+      setPeakBoost((prev) => (systemActive ? Math.max(prev, clampedPressure) : DEFAULT_MIN_BOOST_PSI));
+      setBoostHistory((prev) => [...prev.slice(1), clampedPressure]);
+      setDutyCycle(Math.round(calculatedDuty));
+      setTankIsLow(false);
+      setStatus(primeActive ? 'Priming Simulation' : calculatedDuty > 0 ? 'Simulating Flow' : systemActive ? 'Simulation Ready' : 'Standby');
+    }, SIMULATION_TICK_MS);
+
+    return () => window.clearInterval(timer);
+  }, [simulationActive, systemActive, triggerMode, minBoost, maxBoost, startInjectionAt, fullInjectionAt, manualDuty, curve]);
+
+  const resetSensorModuleWaitingState = useCallback(() => {
+    simulationPrimeUntilRef.current = 0;
+    rawBoostRef.current = DEFAULT_MIN_BOOST_PSI;
+    setRawBoost(DEFAULT_MIN_BOOST_PSI);
+    setPeakBoost(DEFAULT_MIN_BOOST_PSI);
+    setBoostHistory(Array(50).fill(DEFAULT_MIN_BOOST_PSI));
+    setDutyCycle(0);
+    setTankIsLow(false);
+    setStatus('Waiting for sensor module');
+  }, []);
+
+  const handleWaitForSensorModule = useCallback(() => {
+    setHasBootDecision(true);
+    resetSensorModuleWaitingState();
+  }, [resetSensorModuleWaitingState]);
+
+  const handleLoadSimulation = useCallback(() => {
+    setHasBootDecision(true);
+    setSimulationMode(true);
+  }, []);
+
 
   const handlePrime = () => {
     setIsPriming(true);
     if (hwConnected) wsSend({ type: 'prime' });
+    if (simulationActive) {
+      simulationPrimeUntilRef.current = Date.now() + 2000;
+    }
     setTimeout(() => setIsPriming(false), 2000);
   };
 
@@ -334,6 +505,7 @@ const App = ({
       : Math.max(0, Math.min(100, 100 - ((startInjectionAt - minBoost) / range) * 100));
   const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
+  const showSensorModuleOverlay = sensorPromptArmed && !hasBootDecision && !hwConnected && !simulationActive;
   const compactPad = isCompactDisplay ? 'p-1.5 gap-1.5' : 'p-2 gap-2';
   const compactGaugeTheme = isCompactDisplay
     ? {
@@ -364,26 +536,47 @@ const App = ({
   const pumpGaugeLayerClass = isCompactDisplay
     ? 'left-[-22.5rem] top-[-1rem] opacity-12'
     : 'left-[-21.85rem] top-[-0.75rem] opacity-18';
-  const connectionIndicator = hwConnected
+  const connectionIndicator = simulationActive
     ? {
-        label: 'HW',
-        title: 'Hardware connected',
-        tone: 'bg-lime-500/10 border-lime-500/30 text-lime-400',
-        Icon: Wifi,
+        label: 'SIM',
+        title: 'Simulation active',
+        tone: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
+        Icon: Gauge,
       }
-    : bridgeConnected
+    : hwConnected
       ? {
-          label: 'LINK',
-          title: 'Bridge online, waiting for controller',
-          tone: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+          label: SENSOR_MODULE_BADGE_LABELS[sensorModuleKey] ?? 'HW',
+          title: `${sensorModuleDisplayLabel} connected`,
+          tone: 'bg-lime-500/10 border-lime-500/30 text-lime-400',
           Icon: Wifi,
         }
-      : {
-          label: 'OFF',
-          title: 'Bridge disconnected',
-          tone: 'bg-red-500/10 border-red-500/30 text-red-500',
-          Icon: WifiOff,
-        };
+      : bridgeConnected
+        ? {
+            label: 'WAIT',
+            title: 'Bridge online, waiting for sensor module',
+            tone: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+            Icon: Wifi,
+          }
+        : {
+            label: 'OFF',
+            title: 'Sensor bridge disconnected',
+            tone: 'bg-red-500/10 border-red-500/30 text-red-500',
+            Icon: WifiOff,
+          };
+  const sensorModuleSummary = simulationActive
+    ? 'Simulation'
+    : hwConnected
+      ? sensorModuleDisplayLabel
+      : bridgeConnected
+        ? 'Waiting'
+        : 'Offline';
+  const sensorModuleSummaryTone = simulationActive
+    ? 'text-cyan-300'
+    : hwConnected
+      ? 'text-lime-400'
+      : bridgeConnected
+        ? 'text-amber-400'
+        : 'text-red-400';
 
   useEffect(() => {
     updateViewportScale();
@@ -466,6 +659,45 @@ const App = ({
 
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-500/10 rounded-full blur-[60px] pointer-events-none" />
             <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-[60px] pointer-events-none" />
+
+            {showSensorModuleOverlay && (
+              <div
+                data-testid="sensor-module-overlay"
+                className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/82 px-4 backdrop-blur-sm"
+              >
+                <div className={`w-full max-w-[23rem] rounded-2xl border border-slate-700 bg-slate-900/95 shadow-[0_20px_60px_rgba(2,6,23,0.75)] ${isCompactDisplay ? 'p-4' : 'p-5'}`}>
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400">
+                      <AlertTriangle size={20} />
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-black uppercase tracking-[0.28em] text-amber-400">Sensor Module</span>
+                      <h2 className="mt-1 text-lg font-black leading-none text-white">Module Not Found</h2>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold leading-5 text-slate-200">
+                    Sensor module not found, continue waiting or load simulation?
+                  </p>
+                  <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                    The Pi finished booting without a live USB sensor module.
+                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleLoadSimulation}
+                      className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-sm font-black uppercase tracking-[0.18em] text-cyan-300 transition-all active:scale-95"
+                    >
+                      Simulation
+                    </button>
+                    <button
+                      onClick={handleWaitForSensorModule}
+                      className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-black uppercase tracking-[0.18em] text-slate-100 transition-all active:scale-95"
+                    >
+                      Wait
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
       <div
         className="flex-1 flex transition-transform duration-200 ease-out h-full"
@@ -724,6 +956,8 @@ const App = ({
                 <h2 className={`${isCompactDisplay ? 'text-base' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>System Configuration</h2>
                 <span className={`${isCompactDisplay ? 'text-[9px] mt-0' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
                   HW REV: <span className="text-lime-400">{HW_REVISION}</span>
+                  <span className="mx-1.5 text-slate-600">·</span>
+                  MOD: <span className={sensorModuleSummaryTone}>{sensorModuleSummary}</span>
                 </span>
               </div>
             </div>
