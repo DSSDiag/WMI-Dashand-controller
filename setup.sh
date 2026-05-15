@@ -209,6 +209,32 @@ EOF
     chmod 755 "$xinitrc"
 }
 
+configure_openbox_autostart() {
+    local openbox_dir="$RUN_HOME/.config/openbox"
+    local openbox_autostart="$openbox_dir/autostart"
+    local openbox_temp
+
+    mkdir -p "$openbox_dir"
+    openbox_temp="$(mktemp)"
+    trap 'rm -f "$openbox_temp"' RETURN
+
+    cat > "$openbox_temp" <<EOF
+#!/usr/bin/env bash
+# >>> WMI openbox autostart >>>
+xset s off
+xset -dpms
+xset s noblank
+OUTPUT="\$(xrandr --query | awk '/ connected/{print \$1; exit}')"
+if [ -n "\$OUTPUT" ]; then
+    xrandr --output "\$OUTPUT" --mode ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} 2>/dev/null || true
+fi
+# <<< WMI openbox autostart <<<
+EOF
+
+    write_managed_file "$openbox_autostart" "# >>> WMI openbox autostart >>>" "# <<< WMI openbox autostart <<<" "$openbox_temp"
+    chmod 755 "$openbox_autostart"
+}
+
 boot_config_path() {
     if [ -f /boot/firmware/config.txt ]; then
         echo /boot/firmware/config.txt
@@ -600,18 +626,7 @@ user-session=openbox
 xserver-command=X -s 0 -dpms
 AUTOLOGINEOF
 
-    mkdir -p "$RUN_HOME/.config/openbox"
-    cat > "$RUN_HOME/.config/openbox/autostart" << AUTOEOF
-#!/usr/bin/env bash
-xset s off
-xset -dpms
-xset s noblank
-OUTPUT="\$(xrandr --query | awk '/ connected/{print \$1; exit}')"
-if [ -n "\$OUTPUT" ]; then
-    xrandr --output "\$OUTPUT" --mode ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} 2>/dev/null || true
-fi
-AUTOEOF
-    chmod +x "$RUN_HOME/.config/openbox/autostart"
+    configure_openbox_autostart
     sudo chown -R "$RUN_USER:$RUN_USER" "$RUN_HOME/.config"
 fi
 

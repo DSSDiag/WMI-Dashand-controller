@@ -40,12 +40,20 @@ if ($setupScript -notmatch 'write_managed_file "\$xinitrc"') {
     throw 'setup.sh does not preserve existing .xinitrc content'
 }
 
+if ($setupScript -notmatch 'write_managed_file "\$openbox_autostart"') {
+    throw 'setup.sh does not preserve existing openbox autostart content'
+}
+
 if ($setupScript -match 'cat > "\$RUN_HOME/\.bash_profile"') {
     throw 'setup.sh still overwrites .bash_profile directly'
 }
 
 if ($setupScript -match 'cat > "\$RUN_HOME/\.xinitrc"') {
     throw 'setup.sh still overwrites .xinitrc directly'
+}
+
+if ($setupScript -match 'cat > "\$RUN_HOME/\.config/openbox/autostart"') {
+    throw 'setup.sh still overwrites openbox autostart directly'
 }
 
 Write-Host 'setup service checks passed'
