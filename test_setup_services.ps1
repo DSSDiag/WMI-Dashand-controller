@@ -41,6 +41,10 @@ if ($setupScript -notmatch 'write_managed_file "\$xinitrc"') {
     throw 'setup.sh does not preserve existing .xinitrc content'
 }
 
+if ($setupScript -notmatch 'unclutter -idle 0\.2 -root &') {
+    throw 'setup.sh does not hide the mouse cursor in the tty1 startx kiosk path'
+}
+
 if ($setupScript -notmatch 'write_managed_file "\$openbox_autostart"') {
     throw 'setup.sh does not preserve existing openbox autostart content'
 }

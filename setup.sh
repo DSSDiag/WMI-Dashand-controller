@@ -197,6 +197,10 @@ xset s off
 xset -dpms
 xset s noblank
 
+if command -v unclutter >/dev/null 2>&1; then
+    unclutter -idle 0.2 -root &
+fi
+
 openbox-session &
 exec "$KIOSK_LAUNCHER"
 # <<< WMI kiosk xinit <<<
