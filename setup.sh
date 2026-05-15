@@ -138,6 +138,21 @@ ensure_nginx_installed() {
     sudo apt-get install -y --no-install-recommends nginx
 }
 
+resolve_chromium_bin() {
+    local candidate
+
+    for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/chromium; do
+        if [ -x "$candidate" ]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+
+    echo "Chromium executable not found after package installation." >&2
+    echo "Checked: /usr/lib/chromium/chromium, /usr/bin/chromium-browser, /usr/bin/chromium" >&2
+    return 1
+}
+
 resolve_path_or_empty() {
     local target="$1"
 
@@ -246,6 +261,11 @@ done
 
 if ! xset q >/dev/null 2>&1; then
     echo "X session on :0 never became ready" >&2
+    exit 1
+fi
+
+if [ ! -x "$chromium_bin" ]; then
+    echo "Chromium executable is missing or not executable: $chromium_bin" >&2
     exit 1
 fi
 
@@ -751,14 +771,7 @@ Environment=PYTHONUNBUFFERED=1
 WantedBy=multi-user.target
 BRIDGEEOF
 
-CHROMIUM_BIN=""
-for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/chromium; do
-    if [ -x "$candidate" ]; then
-        CHROMIUM_BIN="$candidate"
-        break
-    fi
-done
-CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/lib/chromium/chromium}"
+CHROMIUM_BIN="$(resolve_chromium_bin)"
 DASHBOARD_URL="${WMI_DASHBOARD_URL:-http://localhost}"
 if [ "$DISPLAY_PROFILE" == "generic-ili9486-hat" ] && [ -z "${WMI_DASHBOARD_URL:-}" ]; then
     DASHBOARD_URL="http://localhost/?profile=generic-ili9486-hat"

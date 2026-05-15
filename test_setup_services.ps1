@@ -64,6 +64,21 @@ foreach ($script in $scripts) {
     if ($content -notmatch 'SupplementaryGroups=dialout') {
         throw "$script does not grant wmi-bridge.service explicit dialout access"
     }
+
+    if ($content -notmatch 'resolve_chromium_bin\(\)') {
+        throw "$script does not define a Chromium resolver helper"
+    }
+
+    if ($content -notmatch 'CHROMIUM_BIN="\$\(resolve_chromium_bin\)"') {
+        throw "$script does not fail fast when Chromium is missing"
+    }
+
+    if (
+        $content -notmatch '\[ ! -x "\$chromium_bin" \]' -and
+        $content -notmatch '\[ ! -x "\$CHROMIUM_BIN" \]'
+    ) {
+        throw "$script does not verify the Chromium executable inside the kiosk launcher"
+    }
 }
 
 $setupScript = Get-Content -Path (Join-Path $repoRoot 'setup.sh') -Raw -Encoding UTF8
