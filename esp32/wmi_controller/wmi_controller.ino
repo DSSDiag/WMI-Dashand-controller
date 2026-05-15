@@ -1,14 +1,14 @@
 /**
  * wmi_controller.ino — Water/Methanol Injection Controller
  * ==========================================================
- * ESP32-S3 firmware that:
+ * Sensor module firmware that:
  *   • Reads manifold absolute pressure from an automotive MAP sensor
  *   • Calculates pump duty cycle (linear or exponential curve)
  *   • Controls a PWM pump/solenoid relay output
  *   • Communicates with the Raspberry Pi dashboard via USB serial (JSON)
  *
  * Hardware requirements:
- *   - ESP32-S3 development board
+ *   - ESP32 / ESP32-C3 / ESP32-S3 development board
  *   - Automotive MAP sensor (1-bar or 2-bar, see config.h)
  *   - MOSFET or relay module on PIN_PUMP_PWM
  *   - Tank level float switch on PIN_TANK_LEVEL
@@ -18,7 +18,7 @@
  *
  * Serial protocol:
  *   ESP32 → Pi  (100 ms interval):
- *     {"t":"d","p":120.5,"d":75,"l":0}
+ *     {"t":"d","p":120.5,"d":75,"l":0,"b":"esp32-c3","m":"ESP32-C3 Sensor Module"}
  *       p = kPa absolute, d = duty 0–100, l = 1 if tank low
  *
  *   Pi → ESP32  (on settings change):
@@ -104,6 +104,8 @@ void sendTelemetry() {
   doc["p"] = serialized(String(pressureKpa, 1));
   doc["d"] = pumpDuty;
   doc["l"] = tankLow ? 1 : 0;
+  doc["b"] = SENSOR_MODULE_BOARD_KEY;
+  doc["m"] = SENSOR_MODULE_LABEL;
   serializeJson(doc, Serial);
   Serial.println();
 }

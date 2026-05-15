@@ -69,6 +69,7 @@ WMI-Dashand-controller/
 ├── simulation/
 │   ├── simulator.py           ← Interactive Python simulator for local dev
 │   └── README.md
+├── sensor-module-firmware.sh  ← Pi-side Arduino CLI build/flash helper
 ├── setup.sh                   ← Interactive hardware setup script
 ├── INSTALL.md                 ← Detailed install guide
 └── README.md
@@ -226,6 +227,32 @@ Pi to ESP32 purge frame:
 ## Installation
 
 Detailed steps are in [INSTALL.md](INSTALL.md).
+
+### Sensor Module firmware updates from the Pi
+
+The Pi can build and flash the sensor module itself over SSH. This uses `Arduino CLI` on the Pi instead of the full Arduino IDE, which is lighter and better suited to a permanent headless install.
+
+First-time flash for an `ESP32-C3` sensor module:
+
+```bash
+./sensor-module-firmware.sh flash --board esp32-c3 --remember-board
+```
+
+After the board choice has been saved, future updates are just:
+
+```bash
+./sensor-module-firmware.sh flash
+```
+
+Useful helper commands:
+
+```bash
+./sensor-module-firmware.sh status
+./sensor-module-firmware.sh list-boards
+./sensor-module-firmware.sh build --board esp32-s3
+```
+
+During a flash, the script temporarily stops `wmi-bridge.service`, frees the USB serial port, uploads the new firmware, and starts the bridge again.
 
 Quick branch install on the Pi:
 

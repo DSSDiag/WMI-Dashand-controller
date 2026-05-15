@@ -176,6 +176,7 @@ echo "[1/7] Installing system packages..."
 sudo apt-get update -qq
 
 PACKAGES=(
+    ca-certificates
     python3-pip
     python3-venv
     nginx
