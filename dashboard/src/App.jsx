@@ -38,15 +38,17 @@ const HW_REVISION = 'MMWMI02B+';
 const DEFAULT_MIN_BOOST_PSI = -14.73;
 const DASHBOARD_WIDTH = 480;
 const DASHBOARD_HEIGHT = 320;
-const DASHBOARD_FIT_WIDTH = 520;
-const DASHBOARD_FIT_HEIGHT = 356;
+const DEFAULT_DASHBOARD_FIT_WIDTH = 500;
+const DEFAULT_DASHBOARD_FIT_HEIGHT = 340;
+const COMPACT_DASHBOARD_FIT_WIDTH = 520;
+const COMPACT_DASHBOARD_FIT_HEIGHT = 356;
 
-function getViewportScale() {
+function getViewportScale(fitWidth, fitHeight) {
   if (typeof window === 'undefined') return 1;
   return Math.min(
     1,
-    window.innerWidth / DASHBOARD_FIT_WIDTH,
-    window.innerHeight / DASHBOARD_FIT_HEIGHT,
+    window.innerWidth / fitWidth,
+    window.innerHeight / fitHeight,
   );
 }
 
@@ -143,13 +145,22 @@ function useSerialBridge({ onTelemetry, onStatus }) {
 // ---------------------------------------------------------------------------
 // Main Application
 // ---------------------------------------------------------------------------
-const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = false }) => {
+const App = ({
+  initialTab = 'dash',
+  forceCompact = false,
+  embeddedPreview = false,
+  displayProfile = 'default',
+}) => {
+  const isCompactDisplay = forceCompact || displayProfile === 'generic-ili9486-hat';
+  const dashboardFitWidth = isCompactDisplay ? COMPACT_DASHBOARD_FIT_WIDTH : DEFAULT_DASHBOARD_FIT_WIDTH;
+  const dashboardFitHeight = isCompactDisplay ? COMPACT_DASHBOARD_FIT_HEIGHT : DEFAULT_DASHBOARD_FIT_HEIGHT;
+
   // Navigation State
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [viewportScale, setViewportScale] = useState(() => getViewportScale());
+  const [viewportScale, setViewportScale] = useState(() => getViewportScale(dashboardFitWidth, dashboardFitHeight));
   const updateViewportScale = useCallback(() => {
-    setViewportScale(getViewportScale());
-  }, []);
+    setViewportScale(getViewportScale(dashboardFitWidth, dashboardFitHeight));
+  }, [dashboardFitHeight, dashboardFitWidth]);
 
   // Settings State (Internal state is ALWAYS PSI Gauge: 0 = Atmosphere)
   // Initial values are loaded from localStorage so they survive reboots.
@@ -323,7 +334,6 @@ const App = ({ initialTab = 'dash', forceCompact = false, embeddedPreview = fals
       : Math.max(0, Math.min(100, 100 - ((startInjectionAt - minBoost) / range) * 100));
   const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
-  const isCompactDisplay = forceCompact || viewportScale < 0.995;
   const compactPad = isCompactDisplay ? 'p-1.5 gap-1.5' : 'p-2 gap-2';
   const compactGaugeTheme = isCompactDisplay
     ? {

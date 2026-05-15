@@ -302,6 +302,7 @@ PY
 
 configure_kiosk_launcher() {
     local chromium_bin="$1"
+    local dashboard_url="${2:-http://localhost}"
 
     cat > "$KIOSK_LAUNCHER" <<EOF
 #!/usr/bin/env bash
@@ -363,7 +364,7 @@ exec "$chromium_bin" \\
     --disable-gpu \\
     --check-for-update-interval=31536000 \\
     --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \\
-    http://localhost
+    "$dashboard_url"
 EOF
     chmod +x "$KIOSK_LAUNCHER"
 }
@@ -655,7 +656,11 @@ for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/c
     fi
 done
 CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/lib/chromium/chromium}"
-configure_kiosk_launcher "$CHROMIUM_BIN"
+DASHBOARD_URL="${WMI_DASHBOARD_URL:-http://localhost}"
+if [ "$DISPLAY_PROFILE" == "generic-ili9486-hat" ] && [ -z "${WMI_DASHBOARD_URL:-}" ]; then
+    DASHBOARD_URL="http://localhost/?profile=generic-ili9486-hat"
+fi
+configure_kiosk_launcher "$CHROMIUM_BIN" "$DASHBOARD_URL"
 
 sudo tee /etc/systemd/system/wmi-kiosk.service > /dev/null << KIOSKEOF
 [Unit]

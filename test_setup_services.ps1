@@ -31,6 +31,7 @@ foreach ($script in $scripts) {
 }
 
 $setupScript = Get-Content -Path (Join-Path $repoRoot 'setup.sh') -Raw -Encoding UTF8
+$preconfiguredScript = Get-Content -Path (Join-Path $repoRoot 'setup-precomf.sh') -Raw -Encoding UTF8
 
 if ($setupScript -notmatch 'write_managed_file "\$bash_profile"') {
     throw 'setup.sh does not preserve existing .bash_profile content'
@@ -54,6 +55,14 @@ if ($setupScript -match 'cat > "\$RUN_HOME/\.xinitrc"') {
 
 if ($setupScript -match 'cat > "\$RUN_HOME/\.config/openbox/autostart"') {
     throw 'setup.sh still overwrites openbox autostart directly'
+}
+
+if ($setupScript -notmatch 'http://localhost/\?profile=generic-ili9486-hat') {
+    throw 'setup.sh does not scope the compact kiosk layout to the generic ILI9486 HAT profile'
+}
+
+if ($preconfiguredScript -notmatch 'WMI_DASHBOARD_URL') {
+    throw 'setup-precomf.sh does not expose the dashboard URL override for preconfigured installs'
 }
 
 Write-Host 'setup service checks passed'

@@ -137,6 +137,12 @@ The installer’s DSI path does **not** install the old `LCD-show` / `MHS35-show
 
 For the generic and Waveshare 3.5 inch profiles, the display is designed as a GPIO HAT and normally plugs directly onto the Pi 40-pin header with no separate ribbon or jumper wiring.
 
+The generic `ILI9486/XPT2046` HAT profile now tags the kiosk URL with `?profile=generic-ili9486-hat`, which keeps the compact `480x320` layout changes isolated to that screen path. If you install with `setup-precomf.sh`, you can opt into the same layout with:
+
+```bash
+WMI_DASHBOARD_URL='http://localhost/?profile=generic-ili9486-hat' ./setup-precomf.sh
+```
+
 Default kiosk geometry:
 
 ```text

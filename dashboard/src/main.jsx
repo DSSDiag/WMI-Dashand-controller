@@ -7,6 +7,7 @@ function getPreviewConfig() {
   if (typeof window === 'undefined') {
     return {
       embeddedPreview: false,
+      displayProfile: 'default',
       forceCompact: false,
       initialTab: 'dash',
       label: '',
@@ -16,10 +17,14 @@ function getPreviewConfig() {
   const params = new URLSearchParams(window.location.search)
   const preview = params.get('preview')
   const tab = params.get('tab') === 'settings' ? 'settings' : 'dash'
+  const displayProfile = params.get('profile') === 'generic-ili9486-hat'
+    ? 'generic-ili9486-hat'
+    : 'default'
 
   if (preview === 'compact-480x320') {
     return {
       embeddedPreview: true,
+      displayProfile: 'generic-ili9486-hat',
       forceCompact: true,
       initialTab: tab,
       label: '480x320 Compact Preview',
@@ -28,6 +33,7 @@ function getPreviewConfig() {
 
   return {
     embeddedPreview: false,
+    displayProfile,
     forceCompact: params.get('compact') === '1',
     initialTab: tab,
     label: '',
@@ -40,6 +46,7 @@ const app = (
     initialTab={previewConfig.initialTab}
     forceCompact={previewConfig.forceCompact}
     embeddedPreview={previewConfig.embeddedPreview}
+    displayProfile={previewConfig.displayProfile}
   />
 )
 

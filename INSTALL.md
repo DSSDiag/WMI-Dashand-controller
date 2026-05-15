@@ -136,6 +136,7 @@ The installer does the following:
 - Serves the dashboard through nginx on port `80`.
 - Configures graphical autologin where needed.
 - Starts Chromium in full-screen kiosk mode at `http://localhost`.
+- For the generic blue-board `ILI9486/XPT2046` HAT profile, the kiosk URL is tagged with `?profile=generic-ili9486-hat` so the compact `480x320` layout only applies to that screen path.
 - Installs `wmi-bridge.service` for ESP32 serial communication.
 - Installs `wmi-kiosk.service` for the dashboard browser.
 - Installs `wmi-unclutter.service` to hide the cursor.
@@ -164,6 +165,13 @@ For the generic blue-board 3.5 inch HAT, the installer:
 - Auto-logs in on `tty1`
 - Starts X with `startx`
 - Launches Chromium from `.xinitrc` on the SPI panel through `fbcp`
+- Opens the dashboard with the generic HAT profile enabled so the small-screen layout stays isolated to this panel
+
+If your display is already configured and you use `setup-precomf.sh`, you can opt into the same compact layout with:
+
+```bash
+WMI_DASHBOARD_URL='http://localhost/?profile=generic-ili9486-hat' ./setup-precomf.sh
+```
 
 ---
 

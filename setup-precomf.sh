@@ -172,6 +172,7 @@ for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/c
     fi
 done
 CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/lib/chromium/chromium}"
+DASHBOARD_URL="${WMI_DASHBOARD_URL:-http://localhost}"
 
 cat > "$KIOSK_LAUNCHER" <<KIOSKSCRIPTEOF
 #!/usr/bin/env bash
@@ -233,7 +234,7 @@ exec "$CHROMIUM_BIN" \
     --disable-gpu \
     --check-for-update-interval=31536000 \
     --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \
-    http://localhost
+    "$DASHBOARD_URL"
 KIOSKSCRIPTEOF
 chmod +x "$KIOSK_LAUNCHER"
 

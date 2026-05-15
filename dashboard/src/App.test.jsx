@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from './App';
@@ -61,6 +61,7 @@ describe('App dashboard', () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.clearAllTimers();
     vi.useRealTimers();
   });
@@ -101,10 +102,16 @@ describe('App dashboard', () => {
     expect(badge).toHaveTextContent('OFF');
   }, 15000);
 
-  it('uses the compact layout on smaller displays', () => {
+  it('keeps the default layout on smaller displays unless the compact HAT profile is selected', () => {
     setViewport(470, 320);
 
     render(<App />);
+
+    expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'false');
+
+    cleanup();
+
+    render(<App displayProfile="generic-ili9486-hat" />);
 
     expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'true');
     expect(screen.getByTestId('dashboard-header').className).toContain('p-2');
