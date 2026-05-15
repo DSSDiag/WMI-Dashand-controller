@@ -136,5 +136,7 @@ describe('App dashboard', () => {
     expect(screen.getByTestId('dashboard-actions').className).toContain('grid-cols-3');
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
+    expect(screen.getByRole('spinbutton', { name: /minimum gauge limit/i })).toHaveAttribute('inputmode', 'decimal');
+    expect(screen.getByRole('spinbutton', { name: /maximum gauge limit/i })).toHaveAttribute('inputmode', 'decimal');
   }, 15000);
 });

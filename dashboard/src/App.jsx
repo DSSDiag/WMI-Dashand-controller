@@ -804,6 +804,8 @@ const App = ({
                       </button>
                       <input
                         type="number"
+                        inputMode="decimal"
+                        aria-label="Minimum gauge limit"
                         value={toInputVal(minBoost)}
                         onChange={(e) => {
                           let val = fromInputVal(e.target.value, true);
@@ -838,6 +840,8 @@ const App = ({
                       </button>
                       <input
                         type="number"
+                        inputMode="decimal"
+                        aria-label="Maximum gauge limit"
                         value={toInputVal(maxBoost)}
                         onChange={(e) => {
                           let val = fromInputVal(e.target.value, false);

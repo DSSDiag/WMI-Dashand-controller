@@ -43,4 +43,8 @@ if ($tests -notmatch 'displayProfile="generic-ili9486-hat"') {
     throw 'App.test.jsx does not cover the generic HAT compact layout path'
 }
 
+if ($app -notmatch 'inputMode="decimal"' -or $app -notmatch 'aria-label="Minimum gauge limit"' -or $app -notmatch 'aria-label="Maximum gauge limit"') {
+    throw 'App.jsx does not expose touch-friendly numeric gauge limit inputs'
+}
+
 Write-Host 'dashboard layout checks passed'

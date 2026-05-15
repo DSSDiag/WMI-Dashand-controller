@@ -28,6 +28,14 @@ foreach ($script in $scripts) {
     if ($content -match 'ExecStart=\$VENV_DIR/bin/python3 \$BRIDGE_SCRIPT') {
         throw "$script still launches bridge/serial_bridge.py directly"
     }
+
+    if ($content -notmatch '\[ -L "\$target_root" \]') {
+        throw "$script does not refuse symlinked dashboard deploy targets"
+    }
+
+    if ($content -notmatch '\[ -e "\$target_root" \] && \[ ! -d "\$target_root" \]') {
+        throw "$script does not refuse non-directory dashboard deploy targets"
+    }
 }
 
 $setupScript = Get-Content -Path (Join-Path $repoRoot 'setup.sh') -Raw -Encoding UTF8

@@ -91,6 +91,18 @@ deploy_dashboard_build() {
             ;;
     esac
 
+    if [ -L "$target_root" ]; then
+        echo "Refusing to deploy dashboard through symlinked target: $target_root" >&2
+        rm -rf "$staged_root"
+        return 1
+    fi
+
+    if [ -e "$target_root" ] && [ ! -d "$target_root" ]; then
+        echo "Refusing to deploy dashboard into non-directory target: $target_root" >&2
+        rm -rf "$staged_root"
+        return 1
+    fi
+
     cp -a "$build_dir"/. "$staged_root"/
     sudo mkdir -p "$target_root"
     sudo find "$target_root" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
