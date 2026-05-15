@@ -79,6 +79,10 @@ foreach ($script in $scripts) {
     ) {
         throw "$script does not verify the Chromium executable inside the kiosk launcher"
     }
+
+    if ($content -notmatch 'curl -fsS "\$dashboard_ready_url"') {
+        throw "$script does not wait on the configured dashboard URL before launching Chromium"
+    }
 }
 
 $setupScript = Get-Content -Path (Join-Path $repoRoot 'setup.sh') -Raw -Encoding UTF8

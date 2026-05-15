@@ -241,6 +241,7 @@ validate_kiosk_launcher_target() {
 write_kiosk_launcher() {
     local chromium_bin="$1"
     local dashboard_url="${2:-http://localhost}"
+    local dashboard_ready_url="$dashboard_url"
     local launcher_tmp
     launcher_tmp="$(mktemp)"
     validate_kiosk_launcher_target "$KIOSK_LAUNCHER"
@@ -270,7 +271,7 @@ if [ ! -x "$chromium_bin" ]; then
 fi
 
 for _ in \$(seq 1 60); do
-    if curl -fsS http://localhost >/dev/null 2>&1; then
+    if curl -fsS "$dashboard_ready_url" >/dev/null 2>&1; then
         break
     fi
     sleep 1

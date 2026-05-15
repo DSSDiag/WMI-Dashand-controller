@@ -1520,6 +1520,8 @@ const App = ({
                       min="0"
                       max="5"
                       step="0.01"
+                      inputMode="decimal"
+                      enterKeyHint="done"
                       value={sensorSignalMinVolts}
                       disabled={!sensorCalibrationEditable}
                       onChange={(e) => handleSensorSignalChange(e.target.value, true)}
@@ -1533,6 +1535,8 @@ const App = ({
                       min="0"
                       max="5"
                       step="0.01"
+                      inputMode="decimal"
+                      enterKeyHint="done"
                       value={sensorSignalMaxVolts}
                       disabled={!sensorCalibrationEditable}
                       onChange={(e) => handleSensorSignalChange(e.target.value, false)}
@@ -1546,6 +1550,8 @@ const App = ({
                       min="0"
                       max="600"
                       step="1"
+                      inputMode="numeric"
+                      enterKeyHint="done"
                       value={formatTrimmedNumber(sensorKpaMin, 1)}
                       disabled={!sensorCalibrationEditable}
                       onChange={(e) => handleSensorKpaChange(e.target.value, true)}
@@ -1559,6 +1565,8 @@ const App = ({
                       min="0"
                       max="600"
                       step="1"
+                      inputMode="numeric"
+                      enterKeyHint="done"
                       value={formatTrimmedNumber(sensorKpaMax, 1)}
                       disabled={!sensorCalibrationEditable}
                       onChange={(e) => handleSensorKpaChange(e.target.value, false)}
