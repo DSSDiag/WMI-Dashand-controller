@@ -113,7 +113,6 @@ deploy_dashboard_build() {
 write_kiosk_launcher() {
     local launcher_tmp
     launcher_tmp="$(mktemp)"
-
     cat > "$launcher_tmp" <<KIOSKSCRIPTEOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -267,10 +266,12 @@ After=network.target
 
 [Service]
 WorkingDirectory=$REPO_DIR
+ExecStartPre=-/usr/bin/udevadm settle --timeout=10
 ExecStart=$VENV_DIR/bin/python3 -m bridge.serial_bridge
 Restart=on-failure
 RestartSec=3
 User=$RUN_USER
+SupplementaryGroups=dialout
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

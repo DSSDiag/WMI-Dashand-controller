@@ -22,9 +22,10 @@
  *       p = kPa absolute, d = duty 0–100, l = 1 if tank low
  *
  *   Pi → ESP32  (on settings change):
- *     {"t":"s","tm":0,"sp":137.9,"fp":275.8,"md":0,"c":0,"a":1}
+ *     {"t":"s","tm":0,"sp":137.9,"fp":275.8,"md":0,"c":0,"a":1,"vmn":165.0,"vmx":2970.0,"kmn":10.0,"kmx":315.0}
  *       tm = trigger mode, sp/fp = start/full kPa abs,
- *       md = manual duty, c = curve, a = armed
+ *       md = manual duty, c = curve, a = armed,
+ *       vmn/vmx = calibrated ADC-side millivolt span, kmn/kmx = calibrated kPa span
  *
  *   Pi → ESP32  (on purge button):
  *     {"t":"prime"}   → runs pump at 100% for 2 seconds
@@ -63,10 +64,16 @@ float readMapKpa() {
   float vMv = (adcCounts / 4095.0f) * MAP_VCC_MV;
 
   // Convert millivolts → kPa absolute (linear interpolation)
-  float kpa = MAP_KPA_MIN + (vMv - MAP_V_MIN_MV) / (MAP_V_MAX_MV - MAP_V_MIN_MV)
-              * (MAP_KPA_MAX - MAP_KPA_MIN);
+  float voltageRangeMv = settings.mapVoltageMaxMv - settings.mapVoltageMinMv;
+  float kpaRange = settings.mapKpaMax - settings.mapKpaMin;
+  if (voltageRangeMv < 1.0f || kpaRange <= 0.0f) {
+    return constrain(settings.mapKpaMin, 0.0f, settings.mapKpaMax);
+  }
 
-  return constrain(kpa, 0.0f, MAP_KPA_MAX * 1.1f);
+  float kpa = settings.mapKpaMin + (vMv - settings.mapVoltageMinMv) / voltageRangeMv * kpaRange;
+  float highClamp = settings.mapKpaMax > settings.fullKpa ? settings.mapKpaMax : settings.fullKpa;
+
+  return constrain(kpa, 0.0f, highClamp * 1.1f);
 }
 
 // ── Apply duty to LEDC PWM ────────────────────────────────────────────────────
@@ -90,6 +97,16 @@ void parseIncoming(const String& line) {
     settings.manualDuty  = doc["md"]  | settings.manualDuty;
     settings.curve       = doc["c"]   | settings.curve;
     settings.armed       = (doc["a"]  | (settings.armed ? 1 : 0)) != 0;
+    settings.mapVoltageMinMv = doc["vmn"] | settings.mapVoltageMinMv;
+    settings.mapVoltageMaxMv = doc["vmx"] | settings.mapVoltageMaxMv;
+    settings.mapKpaMin       = doc["kmn"] | settings.mapKpaMin;
+    settings.mapKpaMax       = doc["kmx"] | settings.mapKpaMax;
+    if (settings.mapVoltageMaxMv <= settings.mapVoltageMinMv) {
+      settings.mapVoltageMaxMv = settings.mapVoltageMinMv + 1.0f;
+    }
+    if (settings.mapKpaMax <= settings.mapKpaMin) {
+      settings.mapKpaMax = settings.mapKpaMin + 1.0f;
+    }
     lastSettingsMs       = millis();
   } else if (strcmp(t, "prime") == 0) {
     isPriming   = true;

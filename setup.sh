@@ -313,6 +313,10 @@ xset s off
 xset -dpms
 xset s noblank
 
+if command -v unclutter >/dev/null 2>&1; then
+    unclutter -idle 0.2 -root &
+fi
+
 openbox-session &
 exec "$KIOSK_LAUNCHER"
 # <<< WMI kiosk xinit <<<
@@ -689,10 +693,12 @@ After=network.target
 
 [Service]
 WorkingDirectory=$REPO_DIR
+ExecStartPre=-/usr/bin/udevadm settle --timeout=10
 ExecStart=$VENV_DIR/bin/python3 -m $BRIDGE_MODULE
 Restart=on-failure
 RestartSec=3
 User=$RUN_USER
+SupplementaryGroups=dialout
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

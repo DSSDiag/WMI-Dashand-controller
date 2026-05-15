@@ -36,6 +36,14 @@ foreach ($script in $scripts) {
     if ($content -notmatch '\[ -e "\$target_root" \] && \[ ! -d "\$target_root" \]') {
         throw "$script does not refuse non-directory dashboard deploy targets"
     }
+
+    if ($content -notmatch 'ExecStartPre=-/usr/bin/udevadm settle --timeout=10') {
+        throw "$script does not wait for udev to settle before starting wmi-bridge.service"
+    }
+
+    if ($content -notmatch 'SupplementaryGroups=dialout') {
+        throw "$script does not grant wmi-bridge.service explicit dialout access"
+    }
 }
 
 $setupScript = Get-Content -Path (Join-Path $repoRoot 'setup.sh') -Raw -Encoding UTF8
@@ -47,6 +55,10 @@ if ($setupScript -notmatch 'write_managed_file "\$bash_profile"') {
 
 if ($setupScript -notmatch 'write_managed_file "\$xinitrc"') {
     throw 'setup.sh does not preserve existing .xinitrc content'
+}
+
+if ($setupScript -notmatch 'unclutter -idle 0\.2 -root &') {
+    throw 'setup.sh does not hide the mouse cursor in the tty1 startx kiosk path'
 }
 
 if ($setupScript -notmatch 'write_managed_file "\$openbox_autostart"') {
