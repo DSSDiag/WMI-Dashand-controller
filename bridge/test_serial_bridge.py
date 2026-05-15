@@ -94,6 +94,10 @@ def test_build_settings_frame_defaults():
     assert decoded["md"] == 0
     assert decoded["c"] == 0
     assert decoded["a"] == 0
+    assert decoded["vmn"] == 165.0
+    assert decoded["vmx"] == 2970.0
+    assert decoded["kmn"] == 10.0
+    assert decoded["kmx"] == 105.0
 
     # Ensure it ends with a newline
     assert result.endswith(b"\n")
@@ -106,7 +110,11 @@ def test_build_settings_frame_custom_values():
         "full_psi": 30,
         "manual_duty": 50,
         "curve": "exponential",
-        "system_active": True
+        "system_active": True,
+        "sensor_signal_min_mv": 500,
+        "sensor_signal_max_mv": 4500,
+        "sensor_kpa_min": 10,
+        "sensor_kpa_max": 315,
     }
     result = build_settings_frame(settings)
     decoded = json.loads(result.decode().strip())
@@ -120,6 +128,10 @@ def test_build_settings_frame_custom_values():
     assert decoded["md"] == 50
     assert decoded["c"] == 1
     assert decoded["a"] == 1
+    assert decoded["vmn"] == 330.0
+    assert decoded["vmx"] == 2970.0
+    assert decoded["kmn"] == 10.0
+    assert decoded["kmx"] == 315.0
 
     # Ensure it ends with a newline
     assert result.endswith(b"\n")

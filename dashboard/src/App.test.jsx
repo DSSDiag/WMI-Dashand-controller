@@ -202,4 +202,16 @@ describe('App dashboard', () => {
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
   }, 15000);
+
+  it('adds a sensor setup screen with direct-connect guidance for 5V signals', () => {
+    render(<App displayProfile="generic-ili9486-hat" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /open sensor setup/i }));
+
+    expect(screen.getByText(/sensor setup & calibration/i)).toBeInTheDocument();
+    expect(screen.getByText(/select a preset or map a custom 0-5v sensor \/ ecu output/i)).toBeInTheDocument();
+    expect(screen.getByText(/connect sensors or ecu analog outputs directly only if the signal stays at or below \+5.0v/i)).toBeInTheDocument();
+    expect(screen.getByText(/custom \/ ecu/i)).toBeInTheDocument();
+  }, 15000);
 });

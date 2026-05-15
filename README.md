@@ -82,6 +82,7 @@ WMI-Dashand-controller/
 |---|---|---|
 | **Dashboard** | Default | Live manifold pressure, pump flow %, injector animation, telemetry sparkline, peak hold, tank status |
 | **Settings** | Tap `›` | Pressure units, gauge scaling, injection mapping mode, map curve |
+| **Sensor Setup** | Tap `›` again from Settings | Choose a 1/2/3/4 bar preset or enter Custom / ECU calibration, with direct-connect `+5V max` guidance |
 
 ### Pressure Display
 
@@ -116,10 +117,10 @@ WMI-Dashand-controller/
 | Raspberry Pi 3 / Zero 2 W / Pi 4 / Pi 5 | Current installer targets |
 | Display | Supported profiles include a 5 inch capacitive DSI ribbon display, 52Pi 3.5 inch SPI display, generic blue-board `3.5inch RPi Display` / LCDWiki-style HAT, and Waveshare 3.5inch RPi LCD (G) |
 | ESP32-S3 or ESP32-C3 DevKit | Native USB serial recommended |
-| Automotive MAP sensor | 1-bar or 2-bar, calibrate in `config.h` |
+| Automotive MAP sensor or ECU analog output | Direct-connect only if the signal stays between `0V` and `+5V`; select the profile in Sensor Setup |
 | N-channel MOSFET module or 5V relay module | Pump/solenoid output |
 | Float switch, NC preferred | Tank level sensor, active-low |
-| 10 kΩ + 10 kΩ resistors | Voltage divider if MAP output is 5 V into ESP32 ADC |
+| Sensor input conditioning inside the box | The boxed sensor module should scale the external `0-5V` signal safely down to the ESP32 ADC |
 
 ### Raspberry Pi display note
 
@@ -165,25 +166,27 @@ WMI_DISPLAY_WIDTH=1024 WMI_DISPLAY_HEIGHT=600 ./setup.sh
 
 That installs the logo + progress bar theme, updates the Pi boot flags, and leaves timestamped backups of `config.txt` and `cmdline.txt` beside the originals.
 
-### ESP32-S3 Wiring
+### Sensor Module Wiring
 
 ```text
-MAP Sensor 5V output            ESP32-S3
-  GND ────────────────────────── GND
-  Vcc ──────── 5V rail           —
-  Vout ──┬── 10kΩ ─── GPIO4 ──── ADC PIN_MAP_SENSOR
-         └── 10kΩ ─── GND        voltage divider → 2.5V max
+MAP Sensor / ECU analog output    Sensor module box
+  GND ──────────────────────────── GND
+  Signal ───────────────────────── boxed 0-5V analog input
+
+Inside the box:
+  analog input conditioning ───── GPIO4 ADC PIN_MAP_SENSOR
+  never exceed +5.0V at the boxed analog input
 
 Tank Level Float Switch
   One terminal ───────────────── GND
   Other terminal ─────────────── GPIO6 INPUT_PULLUP PIN_TANK_LEVEL
 
 Pump/Solenoid MOSFET Gate ────── GPIO5 PWM PIN_PUMP_PWM
-Armed LED ────────────────────── GPIO48 onboard LED
+Armed LED ────────────────────── board-default armed LED pin
 USB data ─────────────────────── Raspberry Pi USB port
 ```
 
-If your MAP sensor runs on 3.3 V, omit the voltage divider and adjust these in `config.h`:
+The Pi dashboard now exposes a Sensor Setup screen with 1/2/3/4 bar presets plus Custom / ECU calibration. The compile-time values in `config.h` remain as safe defaults if the Pi has not yet pushed a live calibration profile:
 
 ```c
 #define MAP_VCC_MV    3300.0f
@@ -213,7 +216,7 @@ ESP32 to Pi:
 Pi to ESP32 settings frame:
 
 ```json
-{"t":"s","tm":0,"sp":137.9,"fp":275.8,"md":0,"c":0,"a":1}
+{"t":"s","tm":0,"sp":137.9,"fp":275.8,"md":0,"c":0,"a":1,"vmn":165.0,"vmx":2970.0,"kmn":10.0,"kmx":315.0}
 ```
 
 | Key | Meaning |
@@ -224,6 +227,8 @@ Pi to ESP32 settings frame:
 | `md` | Manual duty, 0 to 100 |
 | `c` | Curve: 0 linear, 1 exponential |
 | `a` | Armed: 0 off, 1 armed |
+| `vmn` / `vmx` | Calibrated ADC-side millivolt span for the selected sensor profile |
+| `kmn` / `kmx` | Calibrated pressure span in kPa absolute |
 
 Pi to ESP32 purge frame:
 

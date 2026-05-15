@@ -34,9 +34,13 @@ The ESP32 reads the MAP sensor, calculates pump duty cycle, controls the pump, a
 3. Select the correct board, for example **ESP32S3 Dev Module** or **ESP32C3 Dev Module**.
 4. Select the ESP32 serial port.
 5. Set **USB CDC On Boot** to **Enabled** when using native USB serial.
-6. Adjust `esp32/wmi_controller/config.h` if your pinout or MAP calibration differs.
+6. Adjust `esp32/wmi_controller/config.h` if your pinout differs. Everyday MAP calibration can now be selected later from the Pi Sensor Setup screen.
 7. Upload the sketch.
 8. Open Serial Monitor at `115200` baud and confirm the controller emits newline-terminated JSON frames.
+
+Important:
+- The boxed sensor module should only accept `0-5V` MAP sensor or ECU analog-output signals.
+- Do not connect any signal above `+5.0V`, or the WMI system can be damaged.
 
 ---
 

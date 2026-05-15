@@ -42,7 +42,8 @@
 
 // ── GPIO Pin Assignments ──────────────────────────────────────────────────────
 // Override any of these in a board-specific header if your wiring differs.
-// MAP sensor analog input — use a 10kΩ + 10kΩ voltage divider if sensor outputs 5V
+// MAP / ECU analog signal input — the boxed module is intended for direct 0–5V
+// analog sources. Do not exceed +5.0V on this input.
 #ifndef PIN_MAP_SENSOR
   #define PIN_MAP_SENSOR      4
 #endif
@@ -66,13 +67,13 @@
 // Calibration formula:  kPa_abs = (Vout - V_at_0kPa) / (V_at_100kPa - V_at_0kPa) * 100
 // Override these with measured values for your specific sensor if needed.
 //
-// For a sensor running on 5V with a 1:2 voltage divider into the 3.3V ADC:
-//   effective Vcc seen by formula = 3.3V
-#define MAP_VCC_MV          3300.0f   // Millivolts at sensor Vcc as seen by ADC input
-#define MAP_V_MIN_MV         165.0f   // Vout at ~10 kPa absolute (vacuum, engine off)
-#define MAP_V_MAX_MV        2970.0f   // Vout at ~105 kPa absolute (WOT / max boost)
-#define MAP_KPA_MIN          10.0f   // kPa absolute at MAP_V_MIN_MV
-#define MAP_KPA_MAX         105.0f   // kPa absolute at MAP_V_MAX_MV  (adjust for 2-bar sensor)
+// The ESP ADC itself is 3.3V, so the boxed module should condition any external
+// 0–5V signal down to the 0–3.3V ADC range before it reaches PIN_MAP_SENSOR.
+#define MAP_VCC_MV          3300.0f   // ADC-side full scale after input conditioning
+#define MAP_V_MIN_MV         165.0f   // ADC-side voltage at MAP_KPA_MIN
+#define MAP_V_MAX_MV        2970.0f   // ADC-side voltage at MAP_KPA_MAX
+#define MAP_KPA_MIN          10.0f    // Absolute pressure at MAP_V_MIN_MV
+#define MAP_KPA_MAX         105.0f    // Absolute pressure at MAP_V_MAX_MV
 #define MAP_ADC_SAMPLES        16   // Oversampling count for noise reduction
 
 // ── Pump PWM Parameters ────────────────────────────────────────────────────────
@@ -98,4 +99,8 @@ struct Settings {
   uint8_t  manualDuty   = DEFAULT_MANUAL_DUTY;
   uint8_t  curve        = DEFAULT_CURVE;
   bool     armed        = DEFAULT_ARMED;
+  float    mapVoltageMinMv = MAP_V_MIN_MV;
+  float    mapVoltageMaxMv = MAP_V_MAX_MV;
+  float    mapKpaMin       = MAP_KPA_MIN;
+  float    mapKpaMax       = MAP_KPA_MAX;
 };

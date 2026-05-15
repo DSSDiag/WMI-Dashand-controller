@@ -16,7 +16,8 @@ function getPreviewConfig() {
 
   const params = new URLSearchParams(window.location.search)
   const preview = params.get('preview')
-  const tab = params.get('tab') === 'settings' ? 'settings' : 'dash'
+  const requestedTab = params.get('tab')
+  const tab = requestedTab === 'settings' || requestedTab === 'sensor' ? requestedTab : 'dash'
   const displayProfile = params.get('profile') === 'generic-ili9486-hat'
     ? 'generic-ili9486-hat'
     : 'default'
