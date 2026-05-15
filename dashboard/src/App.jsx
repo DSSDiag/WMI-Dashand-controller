@@ -1512,7 +1512,10 @@ const App = ({
 
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Calibration</label>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div
+                  data-testid="sensor-calibration-grid"
+                  className={`grid ${isCompactDisplay ? 'grid-cols-1 gap-1' : 'grid-cols-2 gap-1.5'}`}
+                >
                   <div>
                     <span className="text-[8px] text-slate-500 block font-bold mb-0.5">Signal Min (V)</span>
                     <input
@@ -1521,6 +1524,7 @@ const App = ({
                       max="5"
                       step="0.01"
                       inputMode="decimal"
+                      aria-label="Signal minimum voltage"
                       enterKeyHint="done"
                       value={sensorSignalMinVolts}
                       disabled={!sensorCalibrationEditable}
@@ -1536,6 +1540,7 @@ const App = ({
                       max="5"
                       step="0.01"
                       inputMode="decimal"
+                      aria-label="Signal maximum voltage"
                       enterKeyHint="done"
                       value={sensorSignalMaxVolts}
                       disabled={!sensorCalibrationEditable}
@@ -1551,6 +1556,7 @@ const App = ({
                       max="600"
                       step="1"
                       inputMode="numeric"
+                      aria-label="Pressure minimum absolute"
                       enterKeyHint="done"
                       value={formatTrimmedNumber(sensorKpaMin, 1)}
                       disabled={!sensorCalibrationEditable}
@@ -1566,6 +1572,7 @@ const App = ({
                       max="600"
                       step="1"
                       inputMode="numeric"
+                      aria-label="Pressure maximum absolute"
                       enterKeyHint="done"
                       value={formatTrimmedNumber(sensorKpaMax, 1)}
                       disabled={!sensorCalibrationEditable}
