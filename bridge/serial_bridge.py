@@ -20,6 +20,8 @@ SERIAL_BAUD = 115200
 SERIAL_TIMEOUT = 1.0
 RECONNECT_DELAY = 3.0
 WATCHDOG_TIMEOUT = 5.0
+FIRST_FRAME_TIMEOUT = 12.0
+PORT_STABILIZE_DELAY = 2.5
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("wmi-bridge")
@@ -86,6 +88,8 @@ async def handle_serial(ser):
     serial_connected = True
     await send_status()
     last_data = time.monotonic()
+    first_frame_deadline = time.monotonic() + FIRST_FRAME_TIMEOUT
+    received_frame = False
 
     while True:
         if pending_prime:
@@ -98,12 +102,15 @@ async def handle_serial(ser):
 
         line = ser.readline().decode(errors="ignore").strip()
         if not line:
-            if time.monotonic() - last_data > WATCHDOG_TIMEOUT:
+            if not received_frame and time.monotonic() > first_frame_deadline:
+                raise TimeoutError("serial first-frame timeout")
+            if received_frame and time.monotonic() - last_data > WATCHDOG_TIMEOUT:
                 raise TimeoutError("serial watchdog timeout")
             continue
 
         data = parse_esp32_frame(line)
         if data:
+            received_frame = True
             new_sensor_module_key = data.get("sensor_module_key")
             new_sensor_module_label = data.get("sensor_module_label")
             if (
@@ -121,15 +128,30 @@ async def handle_serial(ser):
 
 async def serial_loop():
     global serial_connected, sensor_module_key, sensor_module_label
+    current_port: Optional[str] = None
+    port_seen_at: Optional[float] = None
 
     while True:
         port = find_esp32_port()
         if not port:
+            current_port = None
+            port_seen_at = None
             if serial_connected:
                 serial_connected = False
                 sensor_module_key = None
                 sensor_module_label = None
                 await send_status()
+            await asyncio.sleep(RECONNECT_DELAY)
+            continue
+
+        if port != current_port:
+            current_port = port
+            port_seen_at = time.monotonic()
+            log.info("Detected sensor module serial port %s, waiting for it to stabilise", port)
+            await asyncio.sleep(RECONNECT_DELAY)
+            continue
+
+        if port_seen_at is not None and (time.monotonic() - port_seen_at) < PORT_STABILIZE_DELAY:
             await asyncio.sleep(RECONNECT_DELAY)
             continue
 
@@ -142,6 +164,8 @@ async def serial_loop():
             serial_connected = False
             sensor_module_key = None
             sensor_module_label = None
+            current_port = None
+            port_seen_at = None
             await send_status()
 
         await asyncio.sleep(RECONNECT_DELAY)

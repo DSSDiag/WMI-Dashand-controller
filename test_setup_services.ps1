@@ -28,6 +28,14 @@ foreach ($script in $scripts) {
     if ($content -match 'ExecStart=\$VENV_DIR/bin/python3 \$BRIDGE_SCRIPT') {
         throw "$script still launches bridge/serial_bridge.py directly"
     }
+
+    if ($content -notmatch 'ExecStartPre=-/usr/bin/udevadm settle --timeout=10') {
+        throw "$script does not wait for udev to settle before starting wmi-bridge.service"
+    }
+
+    if ($content -notmatch 'SupplementaryGroups=dialout') {
+        throw "$script does not grant wmi-bridge.service explicit dialout access"
+    }
 }
 
 $setupScript = Get-Content -Path (Join-Path $repoRoot 'setup.sh') -Raw -Encoding UTF8

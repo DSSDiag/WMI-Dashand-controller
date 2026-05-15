@@ -154,10 +154,12 @@ After=network.target
 
 [Service]
 WorkingDirectory=$REPO_DIR
+ExecStartPre=-/usr/bin/udevadm settle --timeout=10
 ExecStart=$VENV_DIR/bin/python3 -m bridge.serial_bridge
 Restart=on-failure
 RestartSec=3
 User=$RUN_USER
+SupplementaryGroups=dialout
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
