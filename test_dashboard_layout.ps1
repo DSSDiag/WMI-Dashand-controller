@@ -43,6 +43,10 @@ if ($tests -notmatch 'displayProfile="generic-ili9486-hat"') {
     throw 'App.test.jsx does not cover the generic HAT compact layout path'
 }
 
+if ($app -notmatch 'data-testid="sensor-page-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'") {
+    throw 'App.jsx does not stack the sensor setup page into a single column on the compact HAT profile'
+}
+
 if ($app -notmatch 'inputMode="decimal"' -or $app -notmatch 'aria-label="Minimum gauge limit"' -or $app -notmatch 'aria-label="Maximum gauge limit"') {
     throw 'App.jsx does not expose touch-friendly numeric gauge limit inputs'
 }

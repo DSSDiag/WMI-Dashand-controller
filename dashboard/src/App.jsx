@@ -1184,7 +1184,10 @@ const App = ({
             </div>
           </div>
 
-          <div className={`grid grid-cols-2 flex-1 overflow-y-auto custom-scrollbar ${isCompactDisplay ? 'gap-1 pr-0' : 'gap-2 pr-1'}`}>
+          <div
+            data-testid="sensor-page-grid"
+            className={`grid flex-1 overflow-y-auto custom-scrollbar ${isCompactDisplay ? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'}`}
+          >
             {/* Column 1: Display & Units */}
             <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2 gap-1.5' : 'p-3 gap-3'}`}>
               <div>
