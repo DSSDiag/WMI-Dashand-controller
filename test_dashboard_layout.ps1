@@ -35,6 +35,10 @@ if ($css -notmatch '\.settings-page\s*\{\s*overscroll-behavior:\s*contain;') {
     throw 'index.css does not contain settings-page overscroll behavior'
 }
 
+if ($css -notmatch '\.settings-page \.custom-scrollbar\s*\{\s*touch-action:\s*pan-y;\s*-webkit-overflow-scrolling:\s*touch;') {
+    throw 'index.css does not preserve vertical touch scrolling on compact settings grids'
+}
+
 if ($css -notmatch '\.settings-page\.compact-settings\.sensor-page input\[type="number"\]\s*\{') {
     throw 'index.css does not apply compact sensor-page number input sizing to the actual sensor page element'
 }
@@ -45,6 +49,10 @@ if ($css -notmatch '\.settings-page input\[type=range\]\s*\{\s*touch-action:\s*p
 
 if ($tests -notmatch 'displayProfile="generic-ili9486-hat"') {
     throw 'App.test.jsx does not cover the generic HAT compact layout path'
+}
+
+if ($tests -notmatch 'loads preset calibration values and re-enables editing in custom mode') {
+    throw 'App.test.jsx does not guard sensor preset calibration and custom editability'
 }
 
 if ($app -notmatch 'data-testid="sensor-page-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'") {

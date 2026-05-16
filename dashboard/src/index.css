@@ -76,6 +76,11 @@ button {
   overscroll-behavior: contain;
 }
 
+.settings-page .custom-scrollbar {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
 .settings-page input[type=range] {
   touch-action: pan-x;
 }

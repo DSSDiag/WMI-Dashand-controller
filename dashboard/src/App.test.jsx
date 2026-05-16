@@ -230,4 +230,26 @@ describe('App dashboard', () => {
     expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).toHaveAttribute('inputmode', 'numeric');
     expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toHaveAttribute('inputmode', 'numeric');
   }, 15000);
+
+  it('loads preset calibration values and re-enables editing in custom mode', () => {
+    render(<App displayProfile="generic-ili9486-hat" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /open sensor setup/i }));
+    fireEvent.click(screen.getByRole('button', { name: /2 bar map/i }));
+
+    expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).toHaveValue(0.5);
+    expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).toHaveValue(4.5);
+    expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).toHaveValue(10);
+    expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toHaveValue(205);
+    expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).toBeDisabled();
+    expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /manual signal mapping/i }));
+
+    expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).not.toBeDisabled();
+    expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).not.toBeDisabled();
+    expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).not.toBeDisabled();
+    expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).not.toBeDisabled();
+  }, 15000);
 });
