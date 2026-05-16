@@ -357,6 +357,10 @@ Wants=graphical.target display-manager.service network-online.target
 After=graphical.target display-manager.service network-online.target nginx.service wmi-bridge.service
 
 [Service]
+WorkingDirectory=$REPO_DIR
+Environment=HOME=$RUN_HOME
+Environment=XAUTHORITY=$RUN_HOME/.Xauthority
+ExecStartPre=/usr/bin/test -x $KIOSK_LAUNCHER
 ExecStart=$KIOSK_LAUNCHER
 Restart=on-failure
 RestartSec=5

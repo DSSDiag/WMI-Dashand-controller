@@ -49,6 +49,10 @@ foreach ($script in $scripts) {
         throw "$script does not validate kiosk launcher target before overwrite"
     }
 
+    if ($content -notmatch 'WorkingDirectory=\$REPO_DIR\s+Environment=HOME=\$RUN_HOME\s+Environment=XAUTHORITY=\$RUN_HOME/\.Xauthority\s+ExecStartPre=/usr/bin/test -x \$KIOSK_LAUNCHER\s+ExecStart=\$KIOSK_LAUNCHER') {
+        throw "$script does not harden wmi-kiosk.service with repo-scoped execution context and launcher verification"
+    }
+
     if ($content -notmatch '\[ -L "\$target" \]') {
         throw "$script does not refuse symlinked kiosk launcher targets"
     }
