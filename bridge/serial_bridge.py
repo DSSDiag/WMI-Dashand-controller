@@ -36,6 +36,15 @@ sensor_module_key: Optional[str] = None
 sensor_module_label: Optional[str] = None
 
 
+async def serial_write(ser, payload: bytes) -> None:
+    await asyncio.to_thread(ser.write, payload)
+
+
+async def serial_readline(ser) -> str:
+    raw = await asyncio.to_thread(ser.readline)
+    return raw.decode(errors="ignore").strip()
+
+
 def find_esp32_port():
     ports = list(serial.tools.list_ports.comports())
     for port in ports:
@@ -94,18 +103,19 @@ async def handle_serial(ser):
     while True:
         if pending_prime:
             pending_prime = False
-            ser.write(b'{"t":"prime"}\n')
+            await serial_write(ser, b'{"t":"prime"}\n')
 
         if pending_settings:
-            ser.write(build_settings_frame(pending_settings))
+            await serial_write(ser, build_settings_frame(pending_settings))
             pending_settings = None
 
-        line = ser.readline().decode(errors="ignore").strip()
+        line = await serial_readline(ser)
         if not line:
             if not received_frame and time.monotonic() > first_frame_deadline:
                 raise TimeoutError("serial first-frame timeout")
             if received_frame and time.monotonic() - last_data > WATCHDOG_TIMEOUT:
                 raise TimeoutError("serial watchdog timeout")
+            await asyncio.sleep(0.05)
             continue
 
         data = parse_esp32_frame(line)
@@ -124,6 +134,8 @@ async def handle_serial(ser):
             latest_telemetry = data
             last_data = time.monotonic()
             await broadcast(data)
+
+        await asyncio.sleep(0)
 
 
 async def serial_loop():
