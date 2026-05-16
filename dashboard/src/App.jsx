@@ -1513,7 +1513,10 @@ const App = ({
                     <span className="block text-[8px] font-bold uppercase tracking-widest text-slate-500">Pressure Span</span>
                     <span className="mt-0.5 block text-[10px] font-black text-lime-400">{formatTrimmedNumber(sensorKpaMin, 0)} to {formatTrimmedNumber(sensorKpaMax, 0)} kPa abs</span>
                   </div>
-                  <div className="col-span-2 rounded-lg border border-slate-800 bg-slate-900/80 px-2 py-1.5">
+                  <div
+                    data-testid="sensor-boost-window-card"
+                    className={`${isCompactDisplay ? 'col-span-1' : 'col-span-2'} rounded-lg border border-slate-800 bg-slate-900/80 px-2 py-1.5`}
+                  >
                     <span className="block text-[8px] font-bold uppercase tracking-widest text-slate-500">Approx Boost Window</span>
                     <span className="mt-0.5 block text-[10px] font-black text-slate-100">
                       {formatTrimmedNumber(sensorGaugeMinPsi, 1)} to {formatTrimmedNumber(sensorGaugeMaxPsi, 1)} PSI gauge

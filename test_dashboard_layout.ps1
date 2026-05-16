@@ -63,6 +63,10 @@ if ($app -notmatch 'data-testid="sensor-profile-summary-grid"' -or $app -notmatc
     throw 'App.jsx does not stack the selected-profile summary cards on the compact HAT profile'
 }
 
+if ($app -notmatch 'data-testid="sensor-boost-window-card"' -or $app -notmatch "data-testid=`"sensor-boost-window-card`"[\s\S]*isCompactDisplay \? 'col-span-1' : 'col-span-2'") {
+    throw 'App.jsx does not keep the compact boost-window summary card inside the single-column sensor summary grid'
+}
+
 if ($app -notmatch 'inputMode="decimal"' -or $app -notmatch 'aria-label="Minimum gauge limit"' -or $app -notmatch 'aria-label="Maximum gauge limit"') {
     throw 'App.jsx does not expose touch-friendly numeric gauge limit inputs'
 }
