@@ -35,6 +35,10 @@ if ($css -notmatch '\.settings-page\s*\{\s*overscroll-behavior:\s*contain;') {
     throw 'index.css does not contain settings-page overscroll behavior'
 }
 
+if ($css -notmatch '\.settings-page\.compact-settings\.sensor-page input\[type="number"\]\s*\{') {
+    throw 'index.css does not apply compact sensor-page number input sizing to the actual sensor page element'
+}
+
 if ($css -notmatch '\.settings-page input\[type=range\]\s*\{\s*touch-action:\s*pan-x;') {
     throw 'index.css does not preserve horizontal range dragging on touch screens'
 }
@@ -45,6 +49,10 @@ if ($tests -notmatch 'displayProfile="generic-ili9486-hat"') {
 
 if ($app -notmatch 'data-testid="sensor-page-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'") {
     throw 'App.jsx does not stack the sensor setup page into a single column on the compact HAT profile'
+}
+
+if ($app -notmatch 'data-testid="sensor-setup-grid"' -or $app -notmatch "data-testid=`"sensor-setup-grid`"[\s\S]*isCompactDisplay \? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'") {
+    throw 'App.jsx does not stack the dedicated sensor setup grid into a single column on the compact HAT profile'
 }
 
 if ($app -notmatch 'data-testid="sensor-preset-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1' : 'grid-cols-2'") {
