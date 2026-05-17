@@ -43,6 +43,12 @@ if ($css -notmatch '\.settings-page\.compact-settings\.sensor-page input\[type="
     throw 'index.css does not apply compact sensor-page number input sizing to the actual sensor page element'
 }
 
+if (
+    $css -notmatch '\.settings-page\.compact-settings input\[type="number"\]\s*\{\s*font-size:\s*1rem\s*!important;\s*line-height:\s*1\.1rem\s*!important;'
+) {
+    throw 'index.css does not keep compact number inputs large enough to avoid touch-browser zoom'
+}
+
 if ($css -notmatch '\.settings-page input\[type=range\]\s*\{\s*touch-action:\s*pan-x;') {
     throw 'index.css does not preserve horizontal range dragging on touch screens'
 }
