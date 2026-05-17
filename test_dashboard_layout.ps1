@@ -56,6 +56,15 @@ if ($tests -notmatch 'loads preset calibration values and re-enables editing in 
 }
 
 if (
+    $app -notmatch "HW REV:" -or
+    $app -notmatch "flex flex-wrap items-center gap-x-1 gap-y-0.5 text-\[9px\] leading-tight" -or
+    $app -notmatch "Select a preset or map a custom 0-5V sensor / ECU output" -or
+    $app -notmatch "whitespace-normal"
+) {
+    throw 'App.jsx does not let compact setup headers wrap cleanly on the 480x320 profile'
+}
+
+if (
     $app -notmatch 'aria-label="Return to dashboard"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center' -or
     $app -notmatch 'aria-label="Open sensor setup"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center' -or
     $app -notmatch 'aria-label="Return to settings"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center'
@@ -80,6 +89,14 @@ if ($app -notmatch 'data-testid="sensor-setup-grid"' -or $app -notmatch "data-te
 
 if ($app -notmatch 'data-testid="sensor-preset-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1' : 'grid-cols-2'") {
     throw 'App.jsx does not stack the sensor preset buttons on the compact HAT profile'
+}
+
+if (
+    $app -notmatch "Manual signal mapping" -or
+    $app -notmatch "flex min-h-\[3\.25rem\] min-w-0 flex-col justify-between" -or
+    $tests -notmatch "className\)\.toContain\('flex-col'\)"
+) {
+    throw 'Compact sensor preset cards are not guarded as stacked flex layouts'
 }
 
 if ($app -notmatch 'data-testid="sensor-profile-summary-grid"' -or $app -notmatch "data-testid=`"sensor-profile-summary-grid`"[\s\S]*isCompactDisplay \? 'grid-cols-1' : 'grid-cols-2'") {

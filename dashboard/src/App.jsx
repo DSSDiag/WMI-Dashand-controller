@@ -1162,10 +1162,10 @@ const App = ({
               </button>
               <div className="flex flex-col min-w-0">
                 <h2 className={`${isCompactDisplay ? 'text-base' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>System Configuration</h2>
-                <span className={`${isCompactDisplay ? 'text-[9px] mt-0' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
-                  HW REV: <span className="text-lime-400">{HW_REVISION}</span>
-                  <span className="mx-1.5 text-slate-600">·</span>
-                  MOD: <span className={sensorModuleSummaryTone}>{sensorModuleSummary}</span>
+                <span className={`${isCompactDisplay ? 'mt-0 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[9px] leading-tight' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
+                  <span>HW REV: <span className="text-lime-400">{HW_REVISION}</span></span>
+                  <span className={`${isCompactDisplay ? 'hidden' : 'mx-1.5'} text-slate-600`}>·</span>
+                  <span>MOD: <span className={sensorModuleSummaryTone}>{sensorModuleSummary}</span></span>
                 </span>
               </div>
             </div>
@@ -1434,7 +1434,7 @@ const App = ({
               </button>
               <div className="flex flex-col min-w-0">
                 <h2 className={`${isCompactDisplay ? 'text-base' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>Sensor Setup & Calibration</h2>
-                <span className={`${isCompactDisplay ? 'text-[9px] mt-0' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
+                <span className={`${isCompactDisplay ? 'mt-0 block max-w-full text-[9px] leading-tight whitespace-normal' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
                   Select a preset or map a custom 0-5V sensor / ECU output
                 </span>
               </div>
@@ -1464,11 +1464,11 @@ const App = ({
                       key={profile.key}
                       type="button"
                       onClick={() => handleSensorProfileSelect(profile.key)}
-                      className={`rounded-xl border text-left transition-all ${sensorProfile === profile.key ? 'border-lime-400 bg-lime-500/12 text-white shadow-md shadow-lime-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'min-h-[3.25rem] px-2 py-1.5' : 'px-3 py-2'}`}
+                      className={`rounded-xl border text-left transition-all ${sensorProfile === profile.key ? 'border-lime-400 bg-lime-500/12 text-white shadow-md shadow-lime-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'flex min-h-[3.25rem] min-w-0 flex-col justify-between px-2 py-1.5' : 'px-3 py-2'}`}
                     >
                       <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-lime-400">{profile.shortName}</span>
-                      <span className="mt-0.5 block text-[10px] font-bold uppercase text-slate-200">{profile.name}</span>
-                      <span className="mt-1 block text-[8px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className={`${isCompactDisplay ? 'mt-0.5 block text-[10px] font-bold uppercase leading-tight text-slate-200 whitespace-normal break-words' : 'mt-0.5 block text-[10px] font-bold uppercase text-slate-200'}`}>{profile.name}</span>
+                      <span className={`${isCompactDisplay ? 'mt-1 block text-[8px] font-bold uppercase leading-tight tracking-widest text-slate-500 whitespace-normal' : 'mt-1 block text-[8px] font-bold uppercase tracking-widest text-slate-500'}`}>
                         {formatTrimmedNumber(profile.kpaMin, 0)}-{formatTrimmedNumber(profile.kpaMax, 0)} kPa abs
                       </span>
                     </button>
@@ -1476,11 +1476,11 @@ const App = ({
                   <button
                     type="button"
                     onClick={() => handleSensorProfileSelect(CUSTOM_SENSOR_PROFILE_KEY)}
-                    className={`${isCompactDisplay ? 'col-span-1 min-h-[3.25rem]' : 'col-span-2'} rounded-xl border text-left transition-all ${sensorCalibrationEditable ? 'border-cyan-400 bg-cyan-500/12 text-white shadow-md shadow-cyan-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
+                    className={`${isCompactDisplay ? 'col-span-1 flex min-h-[3.25rem] min-w-0 flex-col justify-between' : 'col-span-2'} rounded-xl border text-left transition-all ${sensorCalibrationEditable ? 'border-cyan-400 bg-cyan-500/12 text-white shadow-md shadow-cyan-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
                   >
                     <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Custom / ECU</span>
-                    <span className="mt-0.5 block text-[10px] font-bold uppercase text-slate-200">Manual signal mapping</span>
-                    <span className="mt-1 block text-[8px] font-bold uppercase tracking-widest text-slate-500">
+                    <span className={`${isCompactDisplay ? 'mt-0.5 block text-[10px] font-bold uppercase leading-tight text-slate-200 whitespace-normal break-words' : 'mt-0.5 block text-[10px] font-bold uppercase text-slate-200'}`}>Manual signal mapping</span>
+                    <span className={`${isCompactDisplay ? 'mt-1 block text-[8px] font-bold uppercase leading-tight tracking-widest text-slate-500 whitespace-normal' : 'mt-1 block text-[8px] font-bold uppercase tracking-widest text-slate-500'}`}>
                       Use the datasheet or ECU analog-output table
                     </span>
                   </button>

@@ -195,6 +195,7 @@ describe('App dashboard', () => {
 
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('settings-header').className).toContain('space-y-1.5');
+    expect(screen.getByText(/hw rev:/i).className).toContain('flex-wrap');
     expect(screen.getByTestId('settings-header-actions').className).toContain('w-full');
     expect(screen.getByRole('button', { name: /return to dashboard/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByRole('button', { name: /open sensor setup/i }).className).toContain('min-h-[2.35rem]');
@@ -230,6 +231,7 @@ describe('App dashboard', () => {
     expect(screen.getByText(/connect sensors or ecu analog outputs directly only if the signal stays at or below \+5.0v/i)).toBeInTheDocument();
     expect(screen.getByText(/custom \/ ecu/i)).toBeInTheDocument();
     expect(screen.getByTestId('sensor-header').className).toContain('space-y-1.5');
+    expect(screen.getByText(/select a preset or map a custom 0-5v sensor \/ ecu output/i).className).toContain('whitespace-normal');
     expect(screen.getByRole('button', { name: /return to settings/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('w-full');
@@ -255,11 +257,13 @@ describe('App dashboard', () => {
     expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).toHaveValue(4.5);
     expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).toHaveValue(10);
     expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toHaveValue(205);
+    expect(screen.getByRole('button', { name: /2 bar map/i }).className).toContain('flex-col');
     expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: /manual signal mapping/i }));
 
+    expect(screen.getByRole('button', { name: /manual signal mapping/i }).className).toContain('flex-col');
     expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).not.toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).not.toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).not.toBeDisabled();
