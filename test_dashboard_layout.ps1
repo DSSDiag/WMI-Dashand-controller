@@ -109,6 +109,15 @@ if ($app -notmatch 'data-testid="sensor-profile-summary-grid"' -or $app -notmatc
     throw 'App.jsx does not stack the selected-profile summary cards on the compact HAT profile'
 }
 
+if (
+    $app -notmatch 'data-testid="sensor-profile-name"' -or
+    $app -notmatch "data-testid=`"sensor-profile-name`"[\s\S]*isCompactDisplay \? 'mt-1 text-\[11px\] leading-tight whitespace-normal break-words' : 'mt-1 text-sm'" -or
+    $app -notmatch 'data-testid="sensor-profile-description"' -or
+    $app -notmatch "data-testid=`"sensor-profile-description`"[\s\S]*isCompactDisplay \? 'mt-1 text-\[8px\] leading-tight whitespace-normal' : 'mt-1 text-\[9px\] leading-4'"
+) {
+    throw 'App.jsx does not keep the selected-profile summary text compact and wrapped on the HAT layout'
+}
+
 if ($app -notmatch 'data-testid="sensor-boost-window-card"' -or $app -notmatch "data-testid=`"sensor-boost-window-card`"[\s\S]*isCompactDisplay \? 'col-span-1' : 'col-span-2'") {
     throw 'App.jsx does not keep the compact boost-window summary card inside the single-column sensor summary grid'
 }

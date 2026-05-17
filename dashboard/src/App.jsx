@@ -1510,8 +1510,18 @@ const App = ({
             <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2 gap-1.5' : 'p-3 gap-3'}`}>
               <div className="rounded-xl border border-slate-700 bg-black/30 p-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">Selected Profile</p>
-                <p className="mt-1 text-sm font-black uppercase tracking-tight text-white">{sensorProfileName}</p>
-                <p className="mt-1 text-[9px] font-bold leading-4 text-slate-400">{sensorProfileDescription}</p>
+                <p
+                  data-testid="sensor-profile-name"
+                  className={`${isCompactDisplay ? 'mt-1 text-[11px] leading-tight whitespace-normal break-words' : 'mt-1 text-sm'} font-black uppercase tracking-tight text-white`}
+                >
+                  {sensorProfileName}
+                </p>
+                <p
+                  data-testid="sensor-profile-description"
+                  className={`${isCompactDisplay ? 'mt-1 text-[8px] leading-tight whitespace-normal' : 'mt-1 text-[9px] leading-4'} font-bold text-slate-400`}
+                >
+                  {sensorProfileDescription}
+                </p>
                 <div
                   data-testid="sensor-profile-summary-grid"
                   className={`mt-2 grid ${isCompactDisplay ? 'grid-cols-1' : 'grid-cols-2'} gap-1`}

@@ -237,6 +237,10 @@ describe('App dashboard', () => {
     expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('w-full');
     expect(screen.getByTestId('sensor-setup-grid').className).toContain('grid-cols-1');
     expect(screen.getByTestId('sensor-preset-grid').className).toContain('grid-cols-1');
+    expect(screen.getByTestId('sensor-profile-name').className).toContain('text-[11px]');
+    expect(screen.getByTestId('sensor-profile-name').className).toContain('whitespace-normal');
+    expect(screen.getByTestId('sensor-profile-description').className).toContain('text-[8px]');
+    expect(screen.getByTestId('sensor-profile-description').className).toContain('whitespace-normal');
     expect(screen.getByTestId('sensor-profile-summary-grid').className).toContain('grid-cols-1');
     expect(screen.getByTestId('sensor-boost-window-card').className).toContain('col-span-1');
     expect(screen.getByTestId('sensor-calibration-grid').className).toContain('grid-cols-1');
