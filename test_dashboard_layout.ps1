@@ -63,6 +63,13 @@ if (
     throw 'App.jsx does not keep compact header navigation buttons at an explicit touch-friendly minimum size'
 }
 
+if (
+    $app -notmatch 'aria-label="Save settings and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*whitespace-nowrap' -or
+    $app -notmatch 'aria-label="Save sensor setup and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*whitespace-nowrap'
+) {
+    throw 'App.jsx does not keep compact save-and-exit buttons at an explicit touch-friendly minimum size'
+}
+
 if ($app -notmatch 'data-testid="sensor-page-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'") {
     throw 'App.jsx does not stack the sensor setup page into a single column on the compact HAT profile'
 }

@@ -1177,7 +1177,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('dash')}
                 aria-label="Save settings and return to dashboard"
-                className={`flex items-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'px-2.5 py-1 text-[11px]' : 'px-4 py-2 text-sm'}`}
+                className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
               >
                 <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
               </button>
@@ -1431,7 +1431,7 @@ const App = ({
             <button
               onClick={() => setActiveTab('dash')}
               aria-label="Save sensor setup and return to dashboard"
-              className={`flex items-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'px-2.5 py-1 text-[11px]' : 'px-4 py-2 text-sm'}`}
+              className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
             >
               <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
             </button>

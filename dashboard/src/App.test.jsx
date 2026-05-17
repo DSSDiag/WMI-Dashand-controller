@@ -196,6 +196,7 @@ describe('App dashboard', () => {
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByRole('button', { name: /return to dashboard/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByRole('button', { name: /open sensor setup/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /save settings and return to dashboard/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByTestId('trigger-inputs').className).toContain('min-h-[54px]');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
   }, 15000);
@@ -223,6 +224,7 @@ describe('App dashboard', () => {
     expect(screen.getByText(/connect sensors or ecu analog outputs directly only if the signal stays at or below \+5.0v/i)).toBeInTheDocument();
     expect(screen.getByText(/custom \/ ecu/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /return to settings/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByTestId('sensor-setup-grid').className).toContain('grid-cols-1');
     expect(screen.getByTestId('sensor-preset-grid').className).toContain('grid-cols-1');
     expect(screen.getByTestId('sensor-profile-summary-grid').className).toContain('grid-cols-1');
