@@ -1148,8 +1148,11 @@ const App = ({
             SETTINGS PAGE
             ================================================================ */}
         <div className={`settings-page min-w-full flex flex-col ${isCompactDisplay ? 'compact-settings gap-1' : 'gap-2'}`}>
-            <div className={`flex justify-between items-center bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-1.5' : 'p-3'}`}>
-              <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
+          <div
+            data-testid="settings-header"
+            className={`bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-1.5 space-y-1.5' : 'p-3 flex justify-between items-center'}`}
+          >
+            <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
               <button
                 onClick={() => setActiveTab('dash')}
                 aria-label="Return to dashboard"
@@ -1166,7 +1169,10 @@ const App = ({
                 </span>
               </div>
             </div>
-            <div className={`flex items-center ${isCompactDisplay ? 'gap-1' : 'gap-2'}`}>
+            <div
+              data-testid="settings-header-actions"
+              className={`flex items-center ${isCompactDisplay ? 'gap-1 w-full' : 'gap-2'}`}
+            >
               <button
                 onClick={() => setActiveTab('sensor')}
                 aria-label="Open sensor setup"
@@ -1177,7 +1183,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('dash')}
                 aria-label="Save settings and return to dashboard"
-                className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
+                className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] flex-1 px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
               >
                 <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
               </button>
@@ -1414,7 +1420,10 @@ const App = ({
             SENSOR SETUP PAGE
             ================================================================ */}
         <div className={`settings-page sensor-page min-w-full flex flex-col ${isCompactDisplay ? 'compact-settings gap-1' : 'gap-2'}`}>
-          <div className={`flex justify-between items-center bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-1.5' : 'p-3'}`}>
+          <div
+            data-testid="sensor-header"
+            className={`bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-1.5 space-y-1.5' : 'p-3 flex justify-between items-center'}`}
+          >
             <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -1433,7 +1442,7 @@ const App = ({
             <button
               onClick={() => setActiveTab('dash')}
               aria-label="Save sensor setup and return to dashboard"
-              className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
+              className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] w-full px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
             >
               <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
             </button>
