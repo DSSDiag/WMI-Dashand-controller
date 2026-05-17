@@ -138,6 +138,17 @@ ensure_nginx_installed() {
     sudo apt-get install -y --no-install-recommends nginx
 }
 
+install_dashboard_dependencies() {
+    local dashboard_dir="$1"
+
+    if [ -f "$dashboard_dir/package-lock.json" ]; then
+        npm ci --silent
+        return 0
+    fi
+
+    npm install --silent
+}
+
 resolve_chromium_bin() {
     local candidate
 
@@ -668,7 +679,9 @@ if ! need_cmd node; then
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
 fi
-cd "$REPO_DIR/dashboard" && npm install --silent && npm run build
+cd "$REPO_DIR/dashboard"
+install_dashboard_dependencies "$REPO_DIR/dashboard"
+npm run build
 cd "$REPO_DIR"
 
 echo "[5/9] Configuring nginx..."

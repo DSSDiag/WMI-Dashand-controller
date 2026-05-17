@@ -73,6 +73,18 @@ foreach ($script in $scripts) {
         throw "$script does not define a Chromium resolver helper"
     }
 
+    if ($content -notmatch 'install_dashboard_dependencies\(\)') {
+        throw "$script does not define a dashboard dependency installer helper"
+    }
+
+    if (
+        $content -notmatch '\[ -f "\$dashboard_dir/package-lock\.json" \]' -or
+        $content -notmatch 'npm ci --silent' -or
+        $content -notmatch 'npm install --silent'
+    ) {
+        throw "$script does not prefer npm ci with a fallback npm install path for dashboard dependencies"
+    }
+
     if ($content -notmatch 'CHROMIUM_BIN="\$\(resolve_chromium_bin\)"') {
         throw "$script does not fail fast when Chromium is missing"
     }
