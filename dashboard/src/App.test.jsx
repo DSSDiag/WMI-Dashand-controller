@@ -211,6 +211,8 @@ describe('App dashboard', () => {
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
     expect(screen.getByRole('spinbutton', { name: /minimum gauge limit/i })).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByRole('spinbutton', { name: /maximum gauge limit/i })).toHaveAttribute('inputmode', 'decimal');
+    expect(screen.getByRole('spinbutton', { name: /minimum gauge limit/i })).toHaveAttribute('enterkeyhint', 'done');
+    expect(screen.getByRole('spinbutton', { name: /maximum gauge limit/i })).toHaveAttribute('enterkeyhint', 'done');
   }, 15000);
 
   it('adds a sensor setup screen with direct-connect guidance for 5V signals', () => {

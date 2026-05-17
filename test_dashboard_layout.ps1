@@ -90,8 +90,13 @@ if ($app -notmatch 'data-testid="sensor-boost-window-card"' -or $app -notmatch "
     throw 'App.jsx does not keep the compact boost-window summary card inside the single-column sensor summary grid'
 }
 
-if ($app -notmatch 'inputMode="decimal"' -or $app -notmatch 'aria-label="Minimum gauge limit"' -or $app -notmatch 'aria-label="Maximum gauge limit"') {
-    throw 'App.jsx does not expose touch-friendly numeric gauge limit inputs'
+if (
+    $app -notmatch 'inputMode="decimal"' -or
+    $app -notmatch 'enterKeyHint="done"' -or
+    $app -notmatch 'aria-label="Minimum gauge limit"' -or
+    $app -notmatch 'aria-label="Maximum gauge limit"'
+) {
+    throw 'App.jsx does not expose touch-friendly gauge limit inputs with a done action hint'
 }
 
 Write-Host 'dashboard layout checks passed'

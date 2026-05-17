@@ -1250,6 +1250,7 @@ const App = ({
                       <input
                         type="number"
                         inputMode="decimal"
+                        enterKeyHint="done"
                         aria-label="Minimum gauge limit"
                         value={toInputVal(minBoost)}
                         onChange={(e) => {
@@ -1286,6 +1287,7 @@ const App = ({
                       <input
                         type="number"
                         inputMode="decimal"
+                        enterKeyHint="done"
                         aria-label="Maximum gauge limit"
                         value={toInputVal(maxBoost)}
                         onChange={(e) => {
