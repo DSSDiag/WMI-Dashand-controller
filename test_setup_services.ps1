@@ -78,11 +78,26 @@ foreach ($script in $scripts) {
     }
 
     if (
+        $content -notmatch '\[ ! -d "\$dashboard_dir" \]' -or
+        $content -notmatch 'Dashboard directory is missing: \$dashboard_dir'
+    ) {
+        throw "$script does not fail fast when the dashboard directory is missing"
+    }
+
+    if (
+        $content -notmatch 'command -v npm >/dev/null 2>&1' -or
+        $content -notmatch 'npm is required to install dashboard dependencies\. Please install Node\.js first\.'
+    ) {
+        throw "$script does not fail fast with a clear message when npm is unavailable"
+    }
+
+    if (
         $content -notmatch '\[ -f "\$dashboard_dir/package-lock\.json" \]' -or
+        $content -notmatch 'cd "\$dashboard_dir"' -or
         $content -notmatch 'npm ci --silent' -or
         $content -notmatch 'npm install --silent'
     ) {
-        throw "$script does not prefer npm ci with a fallback npm install path for dashboard dependencies"
+        throw "$script does not prefer npm ci with a fallback npm install path from the dashboard directory"
     }
 
     if ($content -notmatch 'CHROMIUM_BIN="\$\(resolve_chromium_bin\)"') {

@@ -190,6 +190,10 @@ describe('App dashboard', () => {
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-cols-1');
     expect(screen.getByTestId('dash-secondary-cards').className).toContain('grid-rows-2');
     expect(screen.getByTestId('hardware-status').className).toContain('col-span-3');
+    expect(screen.getByRole('button', { name: /prime system/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /prime system/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /kill system/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /kill system/i }).className).toContain('touch-manipulation');
 
     fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
 
@@ -211,6 +215,10 @@ describe('App dashboard', () => {
     expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'true');
     expect(screen.getByTestId('dashboard-shell').className).toContain('touch-manipulation');
     expect(screen.getByTestId('dashboard-actions').className).toContain('grid-cols-3');
+    expect(screen.getByRole('button', { name: /prime system/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /prime system/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /kill system/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /kill system/i }).className).toContain('touch-manipulation');
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('settings-header').className).toContain('space-y-1.5');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');

@@ -956,7 +956,7 @@ const App = ({
                 onClick={handlePrime}
                 disabled={isPriming || !systemActive}
                 aria-label="Prime system"
-                className={`flex items-center rounded-lg border transition-all ${isCompactDisplay ? 'gap-1 px-2 py-1.5 text-[11px]' : 'gap-1.5 px-3 py-2'} ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
+                className={`flex items-center rounded-lg border transition-all ${isCompactDisplay ? 'min-h-[2.35rem] min-w-0 touch-manipulation justify-center gap-1 px-2 py-1.5 text-[11px]' : 'gap-1.5 px-3 py-2'} ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
               >
                 <RefreshCw size={isCompactDisplay ? 14 : 18} className={isPriming ? 'animate-spin' : ''} />
                 <span className={`${isCompactDisplay ? 'text-[11px]' : 'text-sm'} font-bold uppercase inline`}>Purge</span>
@@ -965,7 +965,7 @@ const App = ({
               <button
                 onClick={() => setSystemActive(!systemActive)}
                 aria-label={systemActive ? 'Kill system' : 'Arm system'}
-                className={`flex items-center rounded-lg font-bold uppercase tracking-wider transition-all shadow-md justify-center ${isCompactDisplay ? 'gap-1 px-2 py-1.5 text-sm' : 'gap-1.5 px-4 py-2 text-base'} ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
+                className={`flex items-center rounded-lg font-bold uppercase tracking-wider transition-all shadow-md justify-center ${isCompactDisplay ? 'min-h-[2.35rem] min-w-0 touch-manipulation gap-1 px-2 py-1.5 text-sm' : 'gap-1.5 px-4 py-2 text-base'} ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
               >
                 <Power size={isCompactDisplay ? 16 : 21} />
                 {systemActive ? 'Kill' : 'Arm'}

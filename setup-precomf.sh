@@ -73,12 +73,28 @@ ensure_nginx_installed() {
 install_dashboard_dependencies() {
     local dashboard_dir="$1"
 
+    if [ ! -d "$dashboard_dir" ]; then
+        echo "Dashboard directory is missing: $dashboard_dir" >&2
+        return 1
+    fi
+
+    if ! command -v npm >/dev/null 2>&1; then
+        echo "npm is required to install dashboard dependencies. Please install Node.js first." >&2
+        return 1
+    fi
+
     if [ -f "$dashboard_dir/package-lock.json" ]; then
-        npm ci --silent
+        (
+            cd "$dashboard_dir"
+            npm ci --silent
+        )
         return 0
     fi
 
-    npm install --silent
+    (
+        cd "$dashboard_dir"
+        npm install --silent
+    )
 }
 
 resolve_chromium_bin() {
