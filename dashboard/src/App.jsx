@@ -37,6 +37,7 @@ const HW_REVISION = 'MMWMI02B+';
 
 // Default minimum boost (atmospheric vacuum ~30 inHg = -14.73 PSIg)
 const DEFAULT_MIN_BOOST_PSI = -14.73;
+const ATM_KPA = ATM_PSI * PSI_TO_KPA;
 const DASHBOARD_WIDTH = 480;
 const DASHBOARD_HEIGHT = 320;
 const DEFAULT_DASHBOARD_FIT_WIDTH = 500;
@@ -50,46 +51,50 @@ const DEFAULT_SENSOR_SIGNAL_MIN_MV = 250;
 const DEFAULT_SENSOR_SIGNAL_MAX_MV = 4500;
 const DEFAULT_SENSOR_KPA_MIN = 10;
 const DEFAULT_SENSOR_KPA_MAX = 105;
+const LEGACY_SENSOR_PROFILE_MIGRATIONS = {
+  'map-1bar': 'gm-1bar',
+  'map-3bar': 'gm-3bar',
+};
 const SENSOR_PROFILE_PRESETS = [
   {
-    key: 'map-1bar',
-    name: '1 Bar MAP',
-    shortName: '1 BAR',
-    description: 'Common 5V linear MAP sensor',
-    sourceMinMv: 500,
-    sourceMaxMv: 4500,
-    kpaMin: 10,
-    kpaMax: 105,
+    key: 'gm-1bar',
+    name: 'GM / Delphi 1 Bar',
+    shortName: 'GM 1 BAR',
+    description: 'Naturally aspirated GM-style MAP preset using the Delco 1 bar calibration.',
+    sourceMinMv: 247,
+    sourceMaxMv: 4853,
+    kpaMin: 15,
+    kpaMax: 102,
   },
   {
-    key: 'map-2bar',
-    name: '2 Bar MAP',
-    shortName: '2 BAR',
-    description: 'Common 5V linear MAP sensor',
-    sourceMinMv: 500,
-    sourceMaxMv: 4500,
-    kpaMin: 10,
-    kpaMax: 205,
+    key: 'gm-3bar',
+    name: 'GM / Delphi 3 Bar',
+    shortName: 'GM 3 BAR',
+    description: 'Common turbo GM-style MAP preset using the Delphi 3 bar calibration.',
+    sourceMinMv: 300,
+    sourceMaxMv: 4900,
+    kpaMin: 20,
+    kpaMax: 300,
   },
   {
-    key: 'map-3bar',
-    name: '3 Bar MAP',
-    shortName: '3 BAR',
-    description: 'Common 5V linear MAP sensor',
+    key: 'aem-35bar',
+    name: 'AEM 3.5 Bar Stainless',
+    shortName: 'AEM 3.5',
+    description: 'Popular aftermarket stainless MAP preset using AEM 30-2130-50 data.',
     sourceMinMv: 500,
     sourceMaxMv: 4500,
-    kpaMin: 10,
-    kpaMax: 315,
+    kpaMin: 0,
+    kpaMax: 343.385,
   },
   {
-    key: 'map-4bar',
-    name: '4 Bar MAP',
-    shortName: '4 BAR',
-    description: 'Common 5V linear MAP sensor',
-    sourceMinMv: 500,
+    key: 'bosch-pst4',
+    name: 'Bosch Motorsport PST 4',
+    shortName: 'BOSCH 4',
+    description: 'Motorsport 4 bar MAP preset using the Bosch PST 4 transfer data.',
+    sourceMinMv: 386,
     sourceMaxMv: 4500,
-    kpaMin: 10,
-    kpaMax: 405,
+    kpaMin: 40,
+    kpaMax: 400,
   },
 ];
 
@@ -118,8 +123,8 @@ function getSensorProfileDefinition(profileKey) {
 }
 
 function getSensorProfileName(profileKey) {
-  if (profileKey === CUSTOM_SENSOR_PROFILE_KEY) return 'Custom / ECU Analog';
-  return getSensorProfileDefinition(profileKey)?.name ?? 'Custom / ECU Analog';
+  if (profileKey === CUSTOM_SENSOR_PROFILE_KEY) return 'Custom ECU / Haltech Analog';
+  return getSensorProfileDefinition(profileKey)?.name ?? 'Custom ECU / Haltech Analog';
 }
 
 function formatTrimmedNumber(value, digits = 1) {
@@ -141,13 +146,25 @@ function normalizeSettings(candidate) {
   const kpaMaxRaw = Number(candidate.sensorKpaMax ?? DEFAULT_SENSOR_KPA_MAX);
   const kpaMin = Math.max(0, Number.isFinite(kpaMinRaw) ? kpaMinRaw : DEFAULT_SENSOR_KPA_MIN);
   const kpaMax = Math.max(kpaMin + 1, Number.isFinite(kpaMaxRaw) ? kpaMaxRaw : DEFAULT_SENSOR_KPA_MAX);
-  const sensorProfile = typeof candidate.sensorProfile === 'string'
-    ? candidate.sensorProfile
+  const requestedSensorProfile = typeof candidate.sensorProfile === 'string'
+    ? (LEGACY_SENSOR_PROFILE_MIGRATIONS[candidate.sensorProfile] ?? candidate.sensorProfile)
     : CUSTOM_SENSOR_PROFILE_KEY;
+  const presetProfile = getSensorProfileDefinition(requestedSensorProfile);
+
+  if (presetProfile) {
+    return {
+      ...candidate,
+      sensorProfile: presetProfile.key,
+      sensorSignalMinMv: presetProfile.sourceMinMv,
+      sensorSignalMaxMv: presetProfile.sourceMaxMv,
+      sensorKpaMin: presetProfile.kpaMin,
+      sensorKpaMax: presetProfile.kpaMax,
+    };
+  }
 
   return {
     ...candidate,
-    sensorProfile,
+    sensorProfile: CUSTOM_SENSOR_PROFILE_KEY,
     sensorSignalMinMv: signalMinMv,
     sensorSignalMaxMv: signalMaxMv,
     sensorKpaMin: kpaMin,
@@ -774,7 +791,7 @@ const App = ({
   const sensorCalibrationEditable = sensorProfile === CUSTOM_SENSOR_PROFILE_KEY;
   const selectedSensorProfile = getSensorProfileDefinition(sensorProfile);
   const sensorProfileName = getSensorProfileName(sensorProfile);
-  const sensorProfileDescription = selectedSensorProfile?.description ?? 'Custom 0-5V analog calibration for a MAP sensor or ECU output';
+  const sensorProfileDescription = selectedSensorProfile?.description ?? 'Manual 0-5V mapping for a Haltech or other ECU analog-output channel.';
   const sensorSignalMinVolts = (sensorSignalMinMv / 1000).toFixed(2);
   const sensorSignalMaxVolts = (sensorSignalMaxMv / 1000).toFixed(2);
   const sensorGaugeMinPsi = (sensorKpaMin - ATM_KPA) / PSI_TO_KPA;
@@ -1175,7 +1192,7 @@ const App = ({
             >
               <button
                 onClick={() => setActiveTab('sensor')}
-                aria-label="Open sensor setup"
+                aria-label="Open MAP sensor mapping"
                 className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] touch-manipulation flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
               >
                 <ChevronRight size={isCompactDisplay ? 22 : 28} className="text-slate-400" />
@@ -1312,7 +1329,7 @@ const App = ({
                 {maxBoost > 30 && (
                   <div className="mt-2 p-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-1.5 text-amber-500 animate-in fade-in zoom-in-95 duration-300">
                     <AlertTriangle size={12} className="flex-shrink-0" />
-                    <span className="text-[8px] font-bold uppercase leading-tight">For high-boost ranges, select the sensor profile on the next screen</span>
+                    <span className="text-[8px] font-bold uppercase leading-tight">For high-boost ranges, open the MAP sensor mapping page on the next screen</span>
                   </div>
                 )}
               </div>
@@ -1417,7 +1434,7 @@ const App = ({
         </div>
 
         {/* ================================================================
-            SENSOR SETUP PAGE
+            MAP SENSOR MAPPING PAGE
             ================================================================ */}
         <div className={`settings-page sensor-page min-w-full flex flex-col ${isCompactDisplay ? 'compact-settings gap-1' : 'gap-2'}`}>
           <div
@@ -1433,15 +1450,15 @@ const App = ({
                 <ChevronLeft size={isCompactDisplay ? 24 : 30} />
               </button>
               <div className="flex flex-col min-w-0">
-                <h2 className={`${isCompactDisplay ? 'text-base' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>Sensor Setup & Calibration</h2>
+                <h2 className={`${isCompactDisplay ? 'text-base' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>MAP Sensor Mapping</h2>
                 <span className={`${isCompactDisplay ? 'mt-0 block max-w-full text-[9px] leading-tight whitespace-normal' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
-                  Select a preset or map a custom 0-5V sensor / ECU output
+                  Four verified presets plus a custom ECU / Haltech 0-5V analog map
                 </span>
               </div>
             </div>
             <button
               onClick={() => setActiveTab('dash')}
-              aria-label="Save sensor setup and return to dashboard"
+              aria-label="Save MAP sensor mapping and return to dashboard"
               className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] w-full touch-manipulation px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
             >
               <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
@@ -1478,10 +1495,10 @@ const App = ({
                     onClick={() => handleSensorProfileSelect(CUSTOM_SENSOR_PROFILE_KEY)}
                     className={`${isCompactDisplay ? 'col-span-1 flex min-h-[3.25rem] min-w-0 touch-manipulation flex-col justify-between' : 'col-span-2'} rounded-xl border text-left transition-all ${sensorCalibrationEditable ? 'border-cyan-400 bg-cyan-500/12 text-white shadow-md shadow-cyan-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
                   >
-                    <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Custom / ECU</span>
-                    <span className={`${isCompactDisplay ? 'mt-0.5 block text-[10px] font-bold uppercase leading-tight text-slate-200 whitespace-normal break-words' : 'mt-0.5 block text-[10px] font-bold uppercase text-slate-200'}`}>Manual signal mapping</span>
+                    <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Custom ECU / Haltech</span>
+                    <span className={`${isCompactDisplay ? 'mt-0.5 block text-[10px] font-bold uppercase leading-tight text-slate-200 whitespace-normal break-words' : 'mt-0.5 block text-[10px] font-bold uppercase text-slate-200'}`}>Manual 0-5V mapping</span>
                     <span className={`${isCompactDisplay ? 'mt-1 block text-[8px] font-bold uppercase leading-tight tracking-widest text-slate-500 whitespace-normal' : 'mt-1 block text-[8px] font-bold uppercase tracking-widest text-slate-500'}`}>
-                      Use the datasheet or ECU analog-output table
+                      Enter the exact ECU or datasheet endpoints
                     </span>
                   </button>
                 </div>
@@ -1502,7 +1519,7 @@ const App = ({
               <div className="rounded-xl border border-slate-700 bg-black/30 p-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">Direct-Connect Input</p>
                 <p className="mt-1 text-[9px] font-bold leading-4 text-slate-400">
-                  The boxed sensor module is intended to accept standard 0-5V MAP sensors or a 0-5V ECU analog output without extra setup beyond selecting the correct calibration.
+                  Four presets are loaded here: GM 1 Bar, GM 3 Bar, AEM 3.5 Bar Stainless, and Bosch Motorsport PST 4. You can also feed in a 0-5V Haltech or other ECU analog output by matching its calibration table below.
                 </p>
               </div>
             </div>
@@ -1619,7 +1636,7 @@ const App = ({
                 </div>
 
                 <p className="mt-2 text-[8px] font-bold uppercase leading-tight text-slate-500">
-                  Custom mode is for exact sensor datasheets or ECU analog outputs. Enter the voltage endpoints and the matching absolute-pressure values.
+                  Custom mode is for exact sensor datasheets or ECU analog outputs. For a Haltech analog channel, enter the same low/high voltage and absolute-pressure endpoints used in the Haltech calibration table.
                 </p>
               </div>
             </div>

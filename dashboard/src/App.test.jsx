@@ -303,27 +303,27 @@ describe('App dashboard', () => {
     expect(viewport.removeEventListener).toHaveBeenCalledWith('scroll', scrollHandler);
   }, 15000);
 
-  it('adds a sensor setup screen with direct-connect guidance for 5V signals', () => {
+  it('adds a dedicated MAP sensor mapping screen with direct-connect guidance for 5V signals', () => {
     render(<App displayProfile="generic-ili9486-hat" />);
 
     fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
-    fireEvent.click(screen.getByRole('button', { name: /open sensor setup/i }));
+    fireEvent.click(screen.getByRole('button', { name: /open map sensor mapping/i }));
 
-    expect(screen.getByText(/sensor setup & calibration/i)).toBeInTheDocument();
-    expect(screen.getByText(/select a preset or map a custom 0-5v sensor \/ ecu output/i)).toBeInTheDocument();
+    expect(screen.getByText(/map sensor mapping/i)).toBeInTheDocument();
+    expect(screen.getByText(/four verified presets plus a custom ecu \/ haltech 0-5v analog map/i)).toBeInTheDocument();
     expect(screen.getByText(/connect sensors or ecu analog outputs directly only if the signal stays at or below \+5.0v/i)).toBeInTheDocument();
-    expect(screen.getByText(/custom \/ ecu/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /custom ecu \/ haltech/i })).toBeInTheDocument();
     expect(screen.getByTestId('sensor-header').className).toContain('space-y-1.5');
-    expect(screen.getByText(/select a preset or map a custom 0-5v sensor \/ ecu output/i).className).toContain('whitespace-normal');
+    expect(screen.getByText(/four verified presets plus a custom ecu \/ haltech 0-5v analog map/i).className).toContain('whitespace-normal');
     expect(screen.getByRole('button', { name: /return to settings/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByRole('button', { name: /return to settings/i }).className).toContain('touch-manipulation');
-    expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('min-h-[2.35rem]');
-    expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('touch-manipulation');
-    expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('w-full');
+    expect(screen.getByRole('button', { name: /save map sensor mapping and return to dashboard/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /save map sensor mapping and return to dashboard/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /save map sensor mapping and return to dashboard/i }).className).toContain('w-full');
     expect(screen.getByTestId('sensor-setup-grid').className).toContain('grid-cols-1');
     expect(screen.getByTestId('sensor-preset-grid').className).toContain('grid-cols-1');
-    expect(screen.getByRole('button', { name: /2 bar map/i }).className).toContain('touch-manipulation');
-    expect(screen.getByRole('button', { name: /custom \/ ecu/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /gm \/ delphi 3 bar/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /custom ecu \/ haltech/i }).className).toContain('touch-manipulation');
     expect(screen.getByTestId('sensor-profile-name').className).toContain('text-[11px]');
     expect(screen.getByTestId('sensor-profile-name').className).toContain('whitespace-normal');
     expect(screen.getByTestId('sensor-profile-description').className).toContain('text-[8px]');
@@ -345,23 +345,41 @@ describe('App dashboard', () => {
     render(<App displayProfile="generic-ili9486-hat" />);
 
     fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
-    fireEvent.click(screen.getByRole('button', { name: /open sensor setup/i }));
-    fireEvent.click(screen.getByRole('button', { name: /2 bar map/i }));
+    fireEvent.click(screen.getByRole('button', { name: /open map sensor mapping/i }));
+    fireEvent.click(screen.getByRole('button', { name: /gm \/ delphi 3 bar/i }));
 
-    expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).toHaveValue(0.5);
-    expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).toHaveValue(4.5);
-    expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).toHaveValue(10);
-    expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toHaveValue(205);
-    expect(screen.getByRole('button', { name: /2 bar map/i }).className).toContain('flex-col');
+    expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).toHaveValue(0.3);
+    expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).toHaveValue(4.9);
+    expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).toHaveValue(20);
+    expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toHaveValue(300);
+    expect(screen.getByRole('button', { name: /gm \/ delphi 3 bar/i }).className).toContain('flex-col');
     expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: /manual signal mapping/i }));
+    fireEvent.click(screen.getByRole('button', { name: /custom ecu \/ haltech/i }));
 
-    expect(screen.getByRole('button', { name: /manual signal mapping/i }).className).toContain('flex-col');
+    expect(screen.getByRole('button', { name: /custom ecu \/ haltech/i }).className).toContain('flex-col');
     expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).not.toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).not.toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).not.toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).not.toBeDisabled();
+  }, 15000);
+
+  it('migrates legacy generic 3 bar settings into the named GM preset', () => {
+    localStorage.setItem('wmi_settings', JSON.stringify({
+      sensorProfile: 'map-3bar',
+      sensorSignalMinMv: 500,
+      sensorSignalMaxMv: 4500,
+      sensorKpaMin: 10,
+      sensorKpaMax: 315,
+    }));
+
+    render(<App initialTab="sensor" displayProfile="generic-ili9486-hat" />);
+
+    expect(screen.getByRole('button', { name: /gm \/ delphi 3 bar/i })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i })).toHaveValue(0.3);
+    expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).toHaveValue(4.9);
+    expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).toHaveValue(20);
+    expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toHaveValue(300);
   }, 15000);
 });
