@@ -1464,7 +1464,7 @@ const App = ({
                       key={profile.key}
                       type="button"
                       onClick={() => handleSensorProfileSelect(profile.key)}
-                      className={`rounded-xl border text-left transition-all ${sensorProfile === profile.key ? 'border-lime-400 bg-lime-500/12 text-white shadow-md shadow-lime-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'flex min-h-[3.25rem] min-w-0 flex-col justify-between px-2 py-1.5' : 'px-3 py-2'}`}
+                      className={`rounded-xl border text-left transition-all ${sensorProfile === profile.key ? 'border-lime-400 bg-lime-500/12 text-white shadow-md shadow-lime-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'flex min-h-[3.25rem] min-w-0 touch-manipulation flex-col justify-between px-2 py-1.5' : 'px-3 py-2'}`}
                     >
                       <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-lime-400">{profile.shortName}</span>
                       <span className={`${isCompactDisplay ? 'mt-0.5 block text-[10px] font-bold uppercase leading-tight text-slate-200 whitespace-normal break-words' : 'mt-0.5 block text-[10px] font-bold uppercase text-slate-200'}`}>{profile.name}</span>
@@ -1476,7 +1476,7 @@ const App = ({
                   <button
                     type="button"
                     onClick={() => handleSensorProfileSelect(CUSTOM_SENSOR_PROFILE_KEY)}
-                    className={`${isCompactDisplay ? 'col-span-1 flex min-h-[3.25rem] min-w-0 flex-col justify-between' : 'col-span-2'} rounded-xl border text-left transition-all ${sensorCalibrationEditable ? 'border-cyan-400 bg-cyan-500/12 text-white shadow-md shadow-cyan-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
+                    className={`${isCompactDisplay ? 'col-span-1 flex min-h-[3.25rem] min-w-0 touch-manipulation flex-col justify-between' : 'col-span-2'} rounded-xl border text-left transition-all ${sensorCalibrationEditable ? 'border-cyan-400 bg-cyan-500/12 text-white shadow-md shadow-cyan-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
                   >
                     <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Custom / ECU</span>
                     <span className={`${isCompactDisplay ? 'mt-0.5 block text-[10px] font-bold uppercase leading-tight text-slate-200 whitespace-normal break-words' : 'mt-0.5 block text-[10px] font-bold uppercase text-slate-200'}`}>Manual signal mapping</span>

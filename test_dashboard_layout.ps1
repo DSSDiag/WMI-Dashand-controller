@@ -99,10 +99,18 @@ if ($app -notmatch 'data-testid="sensor-preset-grid"' -or $app -notmatch "isComp
 
 if (
     $app -notmatch "Manual signal mapping" -or
-    $app -notmatch "flex min-h-\[3\.25rem\] min-w-0 flex-col justify-between" -or
+    $app -notmatch "flex min-h-\[3\.25rem\] min-w-0 touch-manipulation flex-col justify-between" -or
     $tests -notmatch "className\)\.toContain\('flex-col'\)"
 ) {
     throw 'Compact sensor preset cards are not guarded as stacked flex layouts'
+}
+
+if (
+    $tests -notmatch "name: /2 bar map/i" -or
+    $tests -notmatch "name: /custom \\\/ ecu/i" -or
+    $tests -notmatch "className\)\.toContain\('touch-manipulation'\)"
+) {
+    throw 'App.test.jsx does not guard touch-manipulation on compact sensor preset cards'
 }
 
 if ($app -notmatch 'data-testid="sensor-profile-summary-grid"' -or $app -notmatch "data-testid=`"sensor-profile-summary-grid`"[\s\S]*isCompactDisplay \? 'grid-cols-1' : 'grid-cols-2'") {

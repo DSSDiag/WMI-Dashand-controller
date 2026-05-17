@@ -237,6 +237,8 @@ describe('App dashboard', () => {
     expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('w-full');
     expect(screen.getByTestId('sensor-setup-grid').className).toContain('grid-cols-1');
     expect(screen.getByTestId('sensor-preset-grid').className).toContain('grid-cols-1');
+    expect(screen.getByRole('button', { name: /2 bar map/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /custom \/ ecu/i }).className).toContain('touch-manipulation');
     expect(screen.getByTestId('sensor-profile-name').className).toContain('text-[11px]');
     expect(screen.getByTestId('sensor-profile-name').className).toContain('whitespace-normal');
     expect(screen.getByTestId('sensor-profile-description').className).toContain('text-[8px]');
