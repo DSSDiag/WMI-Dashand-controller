@@ -1153,7 +1153,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('dash')}
                 aria-label="Return to dashboard"
-                className={`${isCompactDisplay ? 'p-1' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] flex items-center justify-center' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
               >
                 <ChevronLeft size={isCompactDisplay ? 24 : 30} />
               </button>
@@ -1170,7 +1170,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('sensor')}
                 aria-label="Open sensor setup"
-                className={`${isCompactDisplay ? 'p-1.5' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
               >
                 <ChevronRight size={isCompactDisplay ? 22 : 28} className="text-slate-400" />
               </button>
@@ -1417,7 +1417,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('settings')}
                 aria-label="Return to settings"
-                className={`${isCompactDisplay ? 'p-1' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] flex items-center justify-center' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
               >
                 <ChevronLeft size={isCompactDisplay ? 24 : 30} />
               </button>

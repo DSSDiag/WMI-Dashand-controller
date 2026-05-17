@@ -55,6 +55,14 @@ if ($tests -notmatch 'loads preset calibration values and re-enables editing in 
     throw 'App.test.jsx does not guard sensor preset calibration and custom editability'
 }
 
+if (
+    $app -notmatch 'aria-label="Return to dashboard"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center' -or
+    $app -notmatch 'aria-label="Open sensor setup"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center' -or
+    $app -notmatch 'aria-label="Return to settings"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center'
+) {
+    throw 'App.jsx does not keep compact header navigation buttons at an explicit touch-friendly minimum size'
+}
+
 if ($app -notmatch 'data-testid="sensor-page-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'") {
     throw 'App.jsx does not stack the sensor setup page into a single column on the compact HAT profile'
 }
