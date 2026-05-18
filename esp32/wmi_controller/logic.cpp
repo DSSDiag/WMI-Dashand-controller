@@ -14,8 +14,9 @@ uint8_t calcDuty(float kpa, bool tankLow, const Settings& settings) {
 
     case 1: // Full scale — ramp across entire sensor range
       {
-        float range = MAP_KPA_MAX - MAP_KPA_MIN;
-        float progress = constrain((kpa - MAP_KPA_MIN) / range, 0.0f, 1.0f);
+        float range = settings.mapKpaMax - settings.mapKpaMin;
+        if (range <= 0.0f) return 0;
+        float progress = constrain((kpa - settings.mapKpaMin) / range, 0.0f, 1.0f);
         if (settings.curve == 1) progress = progress * progress;
         return (uint8_t)(progress * 100.0f);
       }

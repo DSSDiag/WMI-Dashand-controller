@@ -25,8 +25,9 @@ import {
 
 // ---------------------------------------------------------------------------
 // WebSocket hook — connects to the Python serial bridge on the Pi.
-// Provides live telemetry and forwards settings changes to the ESP32.
-// Falls back silently if the bridge is not running (simulation mode active).
+// Provides live telemetry and forwards settings changes to the sensor module.
+// If the module is missing at boot, the UI can stay in wait mode or switch to
+// an on-device simulation mode.
 // ---------------------------------------------------------------------------
 const WS_URL = 'ws://localhost:8765';
 const WS_RECONNECT_MS = 3000;
@@ -36,12 +37,66 @@ const HW_REVISION = 'MMWMI02B+';
 
 // Default minimum boost (atmospheric vacuum ~30 inHg = -14.73 PSIg)
 const DEFAULT_MIN_BOOST_PSI = -14.73;
+const ATM_KPA = ATM_PSI * PSI_TO_KPA;
 const DASHBOARD_WIDTH = 480;
 const DASHBOARD_HEIGHT = 320;
 const DEFAULT_DASHBOARD_FIT_WIDTH = 500;
 const DEFAULT_DASHBOARD_FIT_HEIGHT = 340;
 const COMPACT_DASHBOARD_FIT_WIDTH = 520;
 const COMPACT_DASHBOARD_FIT_HEIGHT = 356;
+const TAB_ORDER = ['dash', 'settings', 'sensor'];
+const CUSTOM_SENSOR_PROFILE_KEY = 'custom';
+const SENSOR_INPUT_MAX_MV = 5000;
+const DEFAULT_SENSOR_SIGNAL_MIN_MV = 250;
+const DEFAULT_SENSOR_SIGNAL_MAX_MV = 4500;
+const DEFAULT_SENSOR_KPA_MIN = 10;
+const DEFAULT_SENSOR_KPA_MAX = 105;
+const LEGACY_SENSOR_PROFILE_MIGRATIONS = {
+  'map-1bar': 'gm-1bar',
+  'map-3bar': 'gm-3bar',
+};
+const SENSOR_PROFILE_PRESETS = [
+  {
+    key: 'gm-1bar',
+    name: 'GM / Delphi 1 Bar',
+    shortName: 'GM 1 BAR',
+    description: 'Naturally aspirated GM-style MAP preset using the Delco 1 bar calibration.',
+    sourceMinMv: 247,
+    sourceMaxMv: 4853,
+    kpaMin: 15,
+    kpaMax: 102,
+  },
+  {
+    key: 'gm-3bar',
+    name: 'GM / Delphi 3 Bar',
+    shortName: 'GM 3 BAR',
+    description: 'Common turbo GM-style MAP preset using the Delphi 3 bar calibration.',
+    sourceMinMv: 300,
+    sourceMaxMv: 4900,
+    kpaMin: 20,
+    kpaMax: 300,
+  },
+  {
+    key: 'aem-35bar',
+    name: 'AEM 3.5 Bar Stainless',
+    shortName: 'AEM 3.5',
+    description: 'Popular aftermarket stainless MAP preset using AEM 30-2130-50 data.',
+    sourceMinMv: 500,
+    sourceMaxMv: 4500,
+    kpaMin: 0,
+    kpaMax: 343.385,
+  },
+  {
+    key: 'bosch-pst4',
+    name: 'Bosch Motorsport PST 4',
+    shortName: 'BOSCH 4',
+    description: 'Motorsport 4 bar MAP preset using the Bosch PST 4 transfer data.',
+    sourceMinMv: 386,
+    sourceMaxMv: 4500,
+    kpaMin: 40,
+    kpaMax: 400,
+  },
+];
 
 function getViewportScale(fitWidth, fitHeight) {
   if (typeof window === 'undefined') return 1;
@@ -59,6 +114,64 @@ function getViewportScale(fitWidth, fitHeight) {
 // ---------------------------------------------------------------------------
 const SETTINGS_KEY = 'wmi_settings';
 
+function clampSensorSignalMv(value) {
+  return Math.max(0, Math.min(SENSOR_INPUT_MAX_MV, value));
+}
+
+function getSensorProfileDefinition(profileKey) {
+  return SENSOR_PROFILE_PRESETS.find((profile) => profile.key === profileKey) ?? null;
+}
+
+function getSensorProfileName(profileKey) {
+  if (profileKey === CUSTOM_SENSOR_PROFILE_KEY) return 'Custom ECU / Haltech Analog';
+  return getSensorProfileDefinition(profileKey)?.name ?? 'Custom ECU / Haltech Analog';
+}
+
+function formatTrimmedNumber(value, digits = 1) {
+  return Number(value)
+    .toFixed(digits)
+    .replace(/\.0+$/, '')
+    .replace(/(\.\d*[1-9])0+$/, '$1');
+}
+
+function normalizeSettings(candidate) {
+  const signalMinMvRaw = Number(candidate.sensorSignalMinMv ?? DEFAULT_SENSOR_SIGNAL_MIN_MV);
+  const signalMaxMvRaw = Number(candidate.sensorSignalMaxMv ?? DEFAULT_SENSOR_SIGNAL_MAX_MV);
+  const signalMinMv = Math.min(clampSensorSignalMv(signalMinMvRaw), SENSOR_INPUT_MAX_MV - 1);
+  const signalMaxMv = Math.max(
+    Math.min(clampSensorSignalMv(signalMaxMvRaw), SENSOR_INPUT_MAX_MV),
+    signalMinMv + 1,
+  );
+  const kpaMinRaw = Number(candidate.sensorKpaMin ?? DEFAULT_SENSOR_KPA_MIN);
+  const kpaMaxRaw = Number(candidate.sensorKpaMax ?? DEFAULT_SENSOR_KPA_MAX);
+  const kpaMin = Math.max(0, Number.isFinite(kpaMinRaw) ? kpaMinRaw : DEFAULT_SENSOR_KPA_MIN);
+  const kpaMax = Math.max(kpaMin + 1, Number.isFinite(kpaMaxRaw) ? kpaMaxRaw : DEFAULT_SENSOR_KPA_MAX);
+  const requestedSensorProfile = typeof candidate.sensorProfile === 'string'
+    ? (LEGACY_SENSOR_PROFILE_MIGRATIONS[candidate.sensorProfile] ?? candidate.sensorProfile)
+    : CUSTOM_SENSOR_PROFILE_KEY;
+  const presetProfile = getSensorProfileDefinition(requestedSensorProfile);
+
+  if (presetProfile) {
+    return {
+      ...candidate,
+      sensorProfile: presetProfile.key,
+      sensorSignalMinMv: presetProfile.sourceMinMv,
+      sensorSignalMaxMv: presetProfile.sourceMaxMv,
+      sensorKpaMin: presetProfile.kpaMin,
+      sensorKpaMax: presetProfile.kpaMax,
+    };
+  }
+
+  return {
+    ...candidate,
+    sensorProfile: CUSTOM_SENSOR_PROFILE_KEY,
+    sensorSignalMinMv: signalMinMv,
+    sensorSignalMaxMv: signalMaxMv,
+    sensorKpaMin: kpaMin,
+    sensorKpaMax: kpaMax,
+  };
+}
+
 const DEFAULT_SETTINGS = {
   units: 'psi_inhg',
   pressureRef: 'gauge',
@@ -69,14 +182,68 @@ const DEFAULT_SETTINGS = {
   startInjectionAt: 5,
   fullInjectionAt: 25,
   manualDuty: 0,
+  sensorProfile: CUSTOM_SENSOR_PROFILE_KEY,
+  sensorSignalMinMv: DEFAULT_SENSOR_SIGNAL_MIN_MV,
+  sensorSignalMaxMv: DEFAULT_SENSOR_SIGNAL_MAX_MV,
+  sensorKpaMin: DEFAULT_SENSOR_KPA_MIN,
+  sensorKpaMax: DEFAULT_SENSOR_KPA_MAX,
 };
+
+const SENSOR_MODULE_PROMPT_DELAY_MS = 3500;
+const SIMULATION_TICK_MS = 100;
+const DEFAULT_SENSOR_MODULE_LABEL = 'Sensor Module';
+const SENSOR_MODULE_BADGE_LABELS = {
+  esp32: 'ESP',
+  'esp32-c3': 'C3',
+  'esp32-s3': 'S3',
+};
+
+function resolveSensorModuleLabel(sensorModuleKey, sensorModuleLabel) {
+  if (sensorModuleLabel) return sensorModuleLabel;
+  if (sensorModuleKey === 'esp32-c3') return 'ESP32-C3 Sensor Module';
+  if (sensorModuleKey === 'esp32-s3') return 'ESP32-S3 Sensor Module';
+  if (sensorModuleKey === 'esp32') return 'ESP32 Sensor Module';
+  return DEFAULT_SENSOR_MODULE_LABEL;
+}
+
+function calculateSimulationDuty({
+  pressurePsi,
+  systemActive,
+  triggerMode,
+  minBoost,
+  maxBoost,
+  startInjectionAt,
+  fullInjectionAt,
+  manualDuty,
+  curve,
+}) {
+  if (!systemActive) return 0;
+
+  if (triggerMode === 'manual') {
+    return manualDuty;
+  }
+
+  if (triggerMode === 'full_scale') {
+    const rangeValue = Math.max(0.1, maxBoost - minBoost);
+    let progress = Math.max(0, Math.min(1, (pressurePsi - minBoost) / rangeValue));
+    if (curve === 'exponential') progress *= progress;
+    return progress * 100;
+  }
+
+  if (pressurePsi <= startInjectionAt) return 0;
+
+  const thresholdRange = Math.max(0.1, fullInjectionAt - startInjectionAt);
+  let progress = Math.max(0, Math.min(1, (pressurePsi - startInjectionAt) / thresholdRange));
+  if (curve === 'exponential') progress *= progress;
+  return progress * 100;
+}
 
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    if (raw) return normalizeSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
   } catch { /* ignore parse errors */ }
-  return DEFAULT_SETTINGS;
+  return normalizeSettings(DEFAULT_SETTINGS);
 }
 
 function useSerialBridge({ onTelemetry, onStatus }) {
@@ -104,7 +271,7 @@ function useSerialBridge({ onTelemetry, onStatus }) {
           onTelemetry(msg);
         }
         if (msg.type === 'status' && onStatus) {
-          onStatus(Boolean(msg.serial_connected));
+          onStatus(msg);
         }
       } catch {
         /* ignore malformed frames */
@@ -114,7 +281,11 @@ function useSerialBridge({ onTelemetry, onStatus }) {
     ws.onclose = () => {
       setConnected(false);
       wsRef.current = null;
-      onStatus?.(false);
+      onStatus?.({
+        serial_connected: false,
+        sensor_module_key: null,
+        sensor_module_label: null,
+      });
       reconnectTimer.current = setTimeout(_connect, WS_RECONNECT_MS);
     };
 
@@ -154,9 +325,11 @@ const App = ({
   const isCompactDisplay = forceCompact || displayProfile === 'generic-ili9486-hat';
   const dashboardFitWidth = isCompactDisplay ? COMPACT_DASHBOARD_FIT_WIDTH : DEFAULT_DASHBOARD_FIT_WIDTH;
   const dashboardFitHeight = isCompactDisplay ? COMPACT_DASHBOARD_FIT_HEIGHT : DEFAULT_DASHBOARD_FIT_HEIGHT;
+  const initialSettingsRef = useRef(loadSettings());
+  const initialSettings = initialSettingsRef.current;
 
   // Navigation State
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(TAB_ORDER.includes(initialTab) ? initialTab : 'dash');
   const [viewportScale, setViewportScale] = useState(() => getViewportScale(dashboardFitWidth, dashboardFitHeight));
   const updateViewportScale = useCallback(() => {
     setViewportScale(getViewportScale(dashboardFitWidth, dashboardFitHeight));
@@ -164,18 +337,23 @@ const App = ({
 
   // Settings State (Internal state is ALWAYS PSI Gauge: 0 = Atmosphere)
   // Initial values are loaded from localStorage so they survive reboots.
-  const [units, setUnits] = useState(() => loadSettings().units); // 'psi', 'psi_inhg', 'bar', 'kpa'
-  const [pressureRef, setPressureRef] = useState(() => loadSettings().pressureRef); // 'gauge', 'abs'
+  const [units, setUnits] = useState(initialSettings.units); // 'psi', 'psi_inhg', 'bar', 'kpa'
+  const [pressureRef, setPressureRef] = useState(initialSettings.pressureRef); // 'gauge', 'abs'
 
   // Default to ~30inHg vacuum (-14.7 PSIg) and 20 PSI max
-  const [minBoost, setMinBoost] = useState(() => loadSettings().minBoost);
-  const [maxBoost, setMaxBoost] = useState(() => loadSettings().maxBoost);
+  const [minBoost, setMinBoost] = useState(initialSettings.minBoost);
+  const [maxBoost, setMaxBoost] = useState(initialSettings.maxBoost);
 
-  const [triggerMode, setTriggerMode] = useState(() => loadSettings().triggerMode);
-  const [curve, setCurve] = useState(() => loadSettings().curve); // 'linear' or 'exponential'
-  const [startInjectionAt, setStartInjectionAt] = useState(() => loadSettings().startInjectionAt);
-  const [fullInjectionAt, setFullInjectionAt] = useState(() => loadSettings().fullInjectionAt);
-  const [manualDuty, setManualDuty] = useState(() => loadSettings().manualDuty);
+  const [triggerMode, setTriggerMode] = useState(initialSettings.triggerMode);
+  const [curve, setCurve] = useState(initialSettings.curve); // 'linear' or 'exponential'
+  const [startInjectionAt, setStartInjectionAt] = useState(initialSettings.startInjectionAt);
+  const [fullInjectionAt, setFullInjectionAt] = useState(initialSettings.fullInjectionAt);
+  const [manualDuty, setManualDuty] = useState(initialSettings.manualDuty);
+  const [sensorProfile, setSensorProfile] = useState(initialSettings.sensorProfile);
+  const [sensorSignalMinMv, setSensorSignalMinMv] = useState(initialSettings.sensorSignalMinMv);
+  const [sensorSignalMaxMv, setSensorSignalMaxMv] = useState(initialSettings.sensorSignalMaxMv);
+  const [sensorKpaMin, setSensorKpaMin] = useState(initialSettings.sensorKpaMin);
+  const [sensorKpaMax, setSensorKpaMax] = useState(initialSettings.sensorKpaMax);
 
   // Sensor & System State
   const [rawBoost, setRawBoost] = useState(0); // Internal PSI Gauge
@@ -189,6 +367,14 @@ const App = ({
 
   // Hardware bridge state
   const [serialConnected, setSerialConnected] = useState(false);
+  const [sensorModuleKey, setSensorModuleKey] = useState(null);
+  const [sensorModuleLabel, setSensorModuleLabel] = useState(DEFAULT_SENSOR_MODULE_LABEL);
+  const [simulationMode, setSimulationMode] = useState(false);
+  const [hasBootDecision, setHasBootDecision] = useState(false);
+  const [sensorPromptArmed, setSensorPromptArmed] = useState(false);
+  const rawBoostRef = useRef(rawBoost);
+  const simulationPhaseRef = useRef(0);
+  const simulationPrimeUntilRef = useRef(0);
 
   // --- UNIT CONVERSION LOGIC ---
   const formatBoost = (psiGauge) => formatBoostUtil(psiGauge, units, pressureRef);
@@ -254,9 +440,56 @@ const App = ({
     }
   };
 
+  const handleSensorProfileSelect = useCallback((profileKey) => {
+    if (profileKey === CUSTOM_SENSOR_PROFILE_KEY) {
+      setSensorProfile(CUSTOM_SENSOR_PROFILE_KEY);
+      return;
+    }
+
+    const definition = getSensorProfileDefinition(profileKey);
+    if (!definition) return;
+
+    setSensorProfile(profileKey);
+    setSensorSignalMinMv(definition.sourceMinMv);
+    setSensorSignalMaxMv(definition.sourceMaxMv);
+    setSensorKpaMin(definition.kpaMin);
+    setSensorKpaMax(definition.kpaMax);
+  }, []);
+
+  const handleSensorSignalChange = useCallback((nextVolts, isMinField) => {
+    const parsedValue = Number(nextVolts);
+    if (!Number.isFinite(parsedValue)) return;
+
+    const nextMv = clampSensorSignalMv(parsedValue * 1000);
+    setSensorProfile(CUSTOM_SENSOR_PROFILE_KEY);
+
+    if (isMinField) {
+      setSensorSignalMinMv(Math.min(nextMv, sensorSignalMaxMv - 1));
+      return;
+    }
+
+    setSensorSignalMaxMv(Math.max(nextMv, sensorSignalMinMv + 1));
+  }, [sensorSignalMaxMv, sensorSignalMinMv]);
+
+  const handleSensorKpaChange = useCallback((nextValue, isMinField) => {
+    const parsedValue = Number(nextValue);
+    if (!Number.isFinite(parsedValue)) return;
+
+    const nextKpa = Math.max(0, parsedValue);
+    setSensorProfile(CUSTOM_SENSOR_PROFILE_KEY);
+
+    if (isMinField) {
+      setSensorKpaMin(Math.min(nextKpa, sensorKpaMax - 1));
+      return;
+    }
+
+    setSensorKpaMax(Math.max(nextKpa, sensorKpaMin + 1));
+  }, [sensorKpaMax, sensorKpaMin]);
+
   // ---------------------------------------------------------------------------
   // WebSocket / Hardware Bridge
-  // Telemetry from ESP32 overrides simulation when bridge is connected.
+  // Telemetry from the sensor module overrides simulation when hardware is
+  // connected.
   // ---------------------------------------------------------------------------
   const handleTelemetry = useCallback((msg) => {
     // msg: { type, pressure_psi, pump_duty, tank_low }
@@ -268,13 +501,23 @@ const App = ({
     }
     if (typeof msg.pump_duty === 'number') setDutyCycle(msg.pump_duty);
     if (typeof msg.tank_low === 'boolean') setTankIsLow(msg.tank_low);
+    if (msg.sensor_module_key || msg.sensor_module_label) {
+      setSensorModuleKey(msg.sensor_module_key ?? null);
+      setSensorModuleLabel(resolveSensorModuleLabel(msg.sensor_module_key, msg.sensor_module_label));
+    }
     if (typeof msg.pump_active === 'boolean') {
       setStatus(msg.pump_active ? 'Injecting' : 'Monitoring');
     }
   }, []);
 
-  const handleBridgeStatus = useCallback((isSerialConnected) => {
+  const handleBridgeStatus = useCallback((bridgeStatus) => {
+    const isSerialConnected = Boolean(bridgeStatus?.serial_connected);
     setSerialConnected(isSerialConnected);
+    setSensorModuleKey(bridgeStatus?.sensor_module_key ?? null);
+    setSensorModuleLabel(resolveSensorModuleLabel(
+      bridgeStatus?.sensor_module_key,
+      bridgeStatus?.sensor_module_label,
+    ));
   }, []);
 
   const { connected: bridgeConnected, send: wsSend } = useSerialBridge({
@@ -282,6 +525,8 @@ const App = ({
     onStatus: handleBridgeStatus,
   });
   const hwConnected = bridgeConnected && serialConnected;
+  const simulationActive = simulationMode && !hwConnected;
+  const sensorModuleDisplayLabel = resolveSensorModuleLabel(sensorModuleKey, sensorModuleLabel);
 
   // Send settings to ESP32 whenever they change (only when hardware is connected)
   useEffect(() => {
@@ -296,8 +541,29 @@ const App = ({
       curve,
       min_boost: minBoost,
       max_boost: maxBoost,
+      sensor_profile: sensorProfile,
+      sensor_signal_min_mv: sensorSignalMinMv,
+      sensor_signal_max_mv: sensorSignalMaxMv,
+      sensor_kpa_min: sensorKpaMin,
+      sensor_kpa_max: sensorKpaMax,
     });
-  }, [hwConnected, wsSend, systemActive, triggerMode, startInjectionAt, fullInjectionAt, manualDuty, curve, minBoost, maxBoost]);
+  }, [
+    hwConnected,
+    wsSend,
+    systemActive,
+    triggerMode,
+    startInjectionAt,
+    fullInjectionAt,
+    manualDuty,
+    curve,
+    minBoost,
+    maxBoost,
+    sensorProfile,
+    sensorSignalMinMv,
+    sensorSignalMaxMv,
+    sensorKpaMin,
+    sensorKpaMax,
+  ]);
 
   // Persist user settings to localStorage so they survive reboots.
   // systemActive is intentionally excluded — system always starts disarmed.
@@ -306,14 +572,126 @@ const App = ({
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({
         units, pressureRef, minBoost, maxBoost,
         triggerMode, curve, startInjectionAt, fullInjectionAt, manualDuty,
+        sensorProfile, sensorSignalMinMv, sensorSignalMaxMv, sensorKpaMin, sensorKpaMax,
       }));
     } catch { /* ignore quota / security errors */ }
-  }, [units, pressureRef, minBoost, maxBoost, triggerMode, curve, startInjectionAt, fullInjectionAt, manualDuty]);
+  }, [
+    units,
+    pressureRef,
+    minBoost,
+    maxBoost,
+    triggerMode,
+    curve,
+    startInjectionAt,
+    fullInjectionAt,
+    manualDuty,
+    sensorProfile,
+    sensorSignalMinMv,
+    sensorSignalMaxMv,
+    sensorKpaMin,
+    sensorKpaMax,
+  ]);
+
+  useEffect(() => {
+    rawBoostRef.current = rawBoost;
+  }, [rawBoost]);
+
+  useEffect(() => {
+    if (!hwConnected) return;
+    setHasBootDecision(true);
+    if (simulationMode) {
+      setSimulationMode(false);
+      simulationPrimeUntilRef.current = 0;
+    }
+  }, [hwConnected, simulationMode]);
+
+  useEffect(() => {
+    if (hasBootDecision || hwConnected || simulationMode) return undefined;
+    const timer = window.setTimeout(() => {
+      setSensorPromptArmed(true);
+    }, SENSOR_MODULE_PROMPT_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [hasBootDecision, hwConnected, simulationMode]);
+
+  useEffect(() => {
+    if (!simulationActive) return;
+    rawBoostRef.current = DEFAULT_MIN_BOOST_PSI;
+    simulationPhaseRef.current = 0;
+    simulationPrimeUntilRef.current = 0;
+    setRawBoost(DEFAULT_MIN_BOOST_PSI);
+    setPeakBoost(DEFAULT_MIN_BOOST_PSI);
+    setBoostHistory(Array(50).fill(DEFAULT_MIN_BOOST_PSI));
+    setDutyCycle(0);
+    setTankIsLow(false);
+    setStatus('Simulation Ready');
+  }, [simulationActive]);
+
+  useEffect(() => {
+    if (!simulationActive) return undefined;
+
+    const timer = window.setInterval(() => {
+      simulationPhaseRef.current += 0.34;
+      const primeActive = simulationPrimeUntilRef.current > Date.now();
+      const noise = Math.sin(simulationPhaseRef.current) * 0.55;
+      const targetPressure = systemActive
+        ? Math.min(maxBoost, fullInjectionAt + 3 + noise)
+        : DEFAULT_MIN_BOOST_PSI;
+      const nextPressure = rawBoostRef.current + (((targetPressure + noise) - rawBoostRef.current) * (systemActive ? 0.16 : 0.24));
+      const clampedPressure = Math.max(DEFAULT_MIN_BOOST_PSI, Math.min(maxBoost + 5, nextPressure));
+      const calculatedDuty = primeActive
+        ? 100
+        : calculateSimulationDuty({
+            pressurePsi: clampedPressure,
+            systemActive,
+            triggerMode,
+            minBoost,
+            maxBoost,
+            startInjectionAt,
+            fullInjectionAt,
+            manualDuty,
+            curve,
+          });
+
+      rawBoostRef.current = clampedPressure;
+      setRawBoost(clampedPressure);
+      setPeakBoost((prev) => (systemActive ? Math.max(prev, clampedPressure) : DEFAULT_MIN_BOOST_PSI));
+      setBoostHistory((prev) => [...prev.slice(1), clampedPressure]);
+      setDutyCycle(Math.round(calculatedDuty));
+      setTankIsLow(false);
+      setStatus(primeActive ? 'Priming Simulation' : calculatedDuty > 0 ? 'Simulating Flow' : systemActive ? 'Simulation Ready' : 'Standby');
+    }, SIMULATION_TICK_MS);
+
+    return () => window.clearInterval(timer);
+  }, [simulationActive, systemActive, triggerMode, minBoost, maxBoost, startInjectionAt, fullInjectionAt, manualDuty, curve]);
+
+  const resetSensorModuleWaitingState = useCallback(() => {
+    simulationPrimeUntilRef.current = 0;
+    rawBoostRef.current = DEFAULT_MIN_BOOST_PSI;
+    setRawBoost(DEFAULT_MIN_BOOST_PSI);
+    setPeakBoost(DEFAULT_MIN_BOOST_PSI);
+    setBoostHistory(Array(50).fill(DEFAULT_MIN_BOOST_PSI));
+    setDutyCycle(0);
+    setTankIsLow(false);
+    setStatus('Waiting for sensor module');
+  }, []);
+
+  const handleWaitForSensorModule = useCallback(() => {
+    setHasBootDecision(true);
+    resetSensorModuleWaitingState();
+  }, [resetSensorModuleWaitingState]);
+
+  const handleLoadSimulation = useCallback(() => {
+    setHasBootDecision(true);
+    setSimulationMode(true);
+  }, []);
 
 
   const handlePrime = () => {
     setIsPriming(true);
     if (hwConnected) wsSend({ type: 'prime' });
+    if (simulationActive) {
+      simulationPrimeUntilRef.current = Date.now() + 2000;
+    }
     setTimeout(() => setIsPriming(false), 2000);
   };
 
@@ -334,6 +712,7 @@ const App = ({
       : Math.max(0, Math.min(100, 100 - ((startInjectionAt - minBoost) / range) * 100));
   const boostPercent = Math.max(0, Math.min(100, ((rawBoost - minBoost) / range) * 100));
   const boostNeedleAngle = -135 + (boostPercent * 2.7);
+  const showSensorModuleOverlay = sensorPromptArmed && !hasBootDecision && !hwConnected && !simulationActive;
   const compactPad = isCompactDisplay ? 'p-1.5 gap-1.5' : 'p-2 gap-2';
   const compactGaugeTheme = isCompactDisplay
     ? {
@@ -364,26 +743,59 @@ const App = ({
   const pumpGaugeLayerClass = isCompactDisplay
     ? 'left-[-22.5rem] top-[-1rem] opacity-12'
     : 'left-[-21.85rem] top-[-0.75rem] opacity-18';
-  const connectionIndicator = hwConnected
+  const compactHeaderControlsClass = isCompactDisplay
+    ? 'grid grid-cols-3 gap-1.5'
+    : 'flex items-center gap-3';
+  const connectionIndicator = simulationActive
     ? {
-        label: 'HW',
-        title: 'Hardware connected',
-        tone: 'bg-lime-500/10 border-lime-500/30 text-lime-400',
-        Icon: Wifi,
+        label: 'SIM',
+        title: 'Simulation active',
+        tone: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
+        Icon: Gauge,
       }
-    : bridgeConnected
+    : hwConnected
       ? {
-          label: 'LINK',
-          title: 'Bridge online, waiting for controller',
-          tone: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+          label: SENSOR_MODULE_BADGE_LABELS[sensorModuleKey] ?? 'HW',
+          title: `${sensorModuleDisplayLabel} connected`,
+          tone: 'bg-lime-500/10 border-lime-500/30 text-lime-400',
           Icon: Wifi,
         }
-      : {
-          label: 'OFF',
-          title: 'Bridge disconnected',
-          tone: 'bg-red-500/10 border-red-500/30 text-red-500',
-          Icon: WifiOff,
-        };
+      : bridgeConnected
+        ? {
+            label: 'WAIT',
+            title: 'Bridge online, waiting for sensor module',
+            tone: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+            Icon: Wifi,
+          }
+        : {
+            label: 'OFF',
+            title: 'Sensor bridge disconnected',
+            tone: 'bg-red-500/10 border-red-500/30 text-red-500',
+            Icon: WifiOff,
+          };
+  const sensorModuleSummary = simulationActive
+    ? 'Simulation'
+    : hwConnected
+      ? sensorModuleDisplayLabel
+      : bridgeConnected
+        ? 'Waiting'
+        : 'Offline';
+  const sensorModuleSummaryTone = simulationActive
+    ? 'text-cyan-300'
+    : hwConnected
+      ? 'text-lime-400'
+      : bridgeConnected
+        ? 'text-amber-400'
+        : 'text-red-400';
+  const activeTabIndex = Math.max(0, TAB_ORDER.indexOf(activeTab));
+  const sensorCalibrationEditable = sensorProfile === CUSTOM_SENSOR_PROFILE_KEY;
+  const selectedSensorProfile = getSensorProfileDefinition(sensorProfile);
+  const sensorProfileName = getSensorProfileName(sensorProfile);
+  const sensorProfileDescription = selectedSensorProfile?.description ?? 'Manual 0-5V mapping for a Haltech or other ECU analog-output channel.';
+  const sensorSignalMinVolts = (sensorSignalMinMv / 1000).toFixed(2);
+  const sensorSignalMaxVolts = (sensorSignalMaxMv / 1000).toFixed(2);
+  const sensorGaugeMinPsi = (sensorKpaMin - ATM_KPA) / PSI_TO_KPA;
+  const sensorGaugeMaxPsi = (sensorKpaMax - ATM_KPA) / PSI_TO_KPA;
 
   useEffect(() => {
     updateViewportScale();
@@ -461,15 +873,54 @@ const App = ({
           <div
             data-testid="dashboard-shell"
             data-compact={isCompactDisplay ? 'true' : 'false'}
-            className={`h-full w-full font-sans flex flex-col select-none overflow-hidden relative ${compactPad}`}
+            className={`h-full w-full font-sans flex flex-col select-none overflow-hidden relative touch-manipulation ${compactPad}`}
           >
 
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-500/10 rounded-full blur-[60px] pointer-events-none" />
             <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-[60px] pointer-events-none" />
 
+            {showSensorModuleOverlay && (
+              <div
+                data-testid="sensor-module-overlay"
+                className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/82 px-4 backdrop-blur-sm"
+              >
+                <div className={`w-full max-w-[23rem] rounded-2xl border border-slate-700 bg-slate-900/95 shadow-[0_20px_60px_rgba(2,6,23,0.75)] ${isCompactDisplay ? 'p-4' : 'p-5'}`}>
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400">
+                      <AlertTriangle size={20} />
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-black uppercase tracking-[0.28em] text-amber-400">Sensor Module</span>
+                      <h2 className="mt-1 text-lg font-black leading-none text-white">Module Not Found</h2>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold leading-5 text-slate-200">
+                    Sensor module not found, continue waiting or load simulation?
+                  </p>
+                  <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                    The Pi finished booting without a live USB sensor module.
+                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleLoadSimulation}
+                      className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-sm font-black uppercase tracking-[0.18em] text-cyan-300 transition-all active:scale-95"
+                    >
+                      Simulation
+                    </button>
+                    <button
+                      onClick={handleWaitForSensorModule}
+                      className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-black uppercase tracking-[0.18em] text-slate-100 transition-all active:scale-95"
+                    >
+                      Wait
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
       <div
         className="flex-1 flex transition-transform duration-200 ease-out h-full"
-        style={{ transform: activeTab === 'dash' ? 'translateX(0%)' : 'translateX(-100%)' }}
+        style={{ transform: `translateX(-${activeTabIndex * 100}%)` }}
       >
 
         {/* ================================================================
@@ -504,12 +955,15 @@ const App = ({
               </div>
             </div>
 
-            <div className={`flex items-center flex-shrink-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
+            <div
+              data-testid="dashboard-actions"
+              className={`${compactHeaderControlsClass} flex-shrink-0`}
+            >
               {/* Hardware connection indicator */}
               <div
                 data-testid="hardware-status"
                 title={connectionIndicator.title}
-                className={`flex items-center rounded-lg border font-bold uppercase tracking-wider ${isCompactDisplay ? 'gap-1 px-1.5 py-0.5 text-[10px]' : 'gap-1.5 px-2 py-1 text-xs'} ${connectionIndicator.tone}`}
+                className={`flex items-center rounded-lg border font-bold uppercase tracking-wider ${isCompactDisplay ? 'col-span-3 min-h-[2.35rem] justify-center gap-1.5 px-2 py-1 text-[10px]' : 'gap-1.5 px-2 py-1 text-xs'} ${connectionIndicator.tone}`}
               >
                 <connectionIndicator.Icon size={isCompactDisplay ? 12 : 15} />
                 <span className="inline">{connectionIndicator.label}</span>
@@ -519,7 +973,7 @@ const App = ({
                 onClick={handlePrime}
                 disabled={isPriming || !systemActive}
                 aria-label="Prime system"
-                className={`flex items-center rounded-lg border transition-all ${isCompactDisplay ? 'gap-1 px-2 py-1.5 text-[11px]' : 'gap-1.5 px-3 py-2'} ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
+                className={`flex items-center rounded-lg border transition-all ${isCompactDisplay ? 'min-h-[2.35rem] min-w-0 touch-manipulation justify-center gap-1 px-2 py-1.5 text-[11px]' : 'gap-1.5 px-3 py-2'} ${isPriming ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-slate-800 border-slate-700 active:scale-95 disabled:opacity-30'}`}
               >
                 <RefreshCw size={isCompactDisplay ? 14 : 18} className={isPriming ? 'animate-spin' : ''} />
                 <span className={`${isCompactDisplay ? 'text-[11px]' : 'text-sm'} font-bold uppercase inline`}>Purge</span>
@@ -528,7 +982,7 @@ const App = ({
               <button
                 onClick={() => setSystemActive(!systemActive)}
                 aria-label={systemActive ? 'Kill system' : 'Arm system'}
-                className={`flex items-center rounded-lg font-bold uppercase tracking-wider transition-all shadow-md ${isCompactDisplay ? 'gap-1 px-2.5 py-1.5 text-sm' : 'gap-1.5 px-4 py-2 text-base'} ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
+                className={`flex items-center rounded-lg font-bold uppercase tracking-wider transition-all shadow-md justify-center ${isCompactDisplay ? 'min-h-[2.35rem] min-w-0 touch-manipulation gap-1 px-2 py-1.5 text-sm' : 'gap-1.5 px-4 py-2 text-base'} ${systemActive ? 'bg-red-600 shadow-red-900/20' : 'bg-lime-600 shadow-lime-900/20'}`}
               >
                 <Power size={isCompactDisplay ? 16 : 21} />
                 {systemActive ? 'Kill' : 'Arm'}
@@ -537,7 +991,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('settings')}
                 aria-label="Open settings"
-                className={`${isCompactDisplay ? 'p-1.5' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] px-2 py-1.5 touch-manipulation flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
               >
                 <ChevronRight size={isCompactDisplay ? 24 : 30} className="text-slate-400" />
               </button>
@@ -711,32 +1165,52 @@ const App = ({
             SETTINGS PAGE
             ================================================================ */}
         <div className={`settings-page min-w-full flex flex-col ${isCompactDisplay ? 'compact-settings gap-1' : 'gap-2'}`}>
-            <div className={`flex justify-between items-center bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-1.5' : 'p-3'}`}>
-              <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
+          <div
+            data-testid="settings-header"
+            className={`bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-1.5 space-y-1.5' : 'p-3 flex justify-between items-center'}`}
+          >
+            <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
               <button
                 onClick={() => setActiveTab('dash')}
                 aria-label="Return to dashboard"
-                className={`${isCompactDisplay ? 'p-1' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] touch-manipulation flex items-center justify-center' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
               >
                 <ChevronLeft size={isCompactDisplay ? 24 : 30} />
               </button>
               <div className="flex flex-col min-w-0">
                 <h2 className={`${isCompactDisplay ? 'text-base' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>System Configuration</h2>
-                <span className={`${isCompactDisplay ? 'text-[9px] mt-0' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
-                  HW REV: <span className="text-lime-400">{HW_REVISION}</span>
+                <span className={`${isCompactDisplay ? 'mt-0 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[9px] leading-tight' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
+                  <span>HW REV: <span className="text-lime-400">{HW_REVISION}</span></span>
+                  <span className={`${isCompactDisplay ? 'hidden' : 'mx-1.5'} text-slate-600`}>·</span>
+                  <span>MOD: <span className={sensorModuleSummaryTone}>{sensorModuleSummary}</span></span>
                 </span>
               </div>
             </div>
-            <button
-              onClick={() => setActiveTab('dash')}
-              aria-label="Save settings and return to dashboard"
-              className={`flex items-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'px-2.5 py-1 text-[11px]' : 'px-4 py-2 text-sm'}`}
+            <div
+              data-testid="settings-header-actions"
+              className={`flex items-center ${isCompactDisplay ? 'gap-1 w-full' : 'gap-2'}`}
             >
-              <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
-            </button>
+              <button
+                onClick={() => setActiveTab('sensor')}
+                aria-label="Open MAP sensor mapping"
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] touch-manipulation flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
+              >
+                <ChevronRight size={isCompactDisplay ? 22 : 28} className="text-slate-400" />
+              </button>
+              <button
+                onClick={() => setActiveTab('dash')}
+                aria-label="Save settings and return to dashboard"
+                className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] touch-manipulation flex-1 px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
+              >
+                <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
+              </button>
+            </div>
           </div>
 
-          <div className={`grid grid-cols-2 flex-1 overflow-y-auto custom-scrollbar ${isCompactDisplay ? 'gap-1 pr-0' : 'gap-2 pr-1'}`}>
+          <div
+            data-testid="sensor-page-grid"
+            className={`grid flex-1 overflow-y-auto custom-scrollbar ${isCompactDisplay ? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'}`}
+          >
             {/* Column 1: Display & Units */}
             <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2 gap-1.5' : 'p-3 gap-3'}`}>
               <div>
@@ -798,6 +1272,9 @@ const App = ({
                       </button>
                       <input
                         type="number"
+                        inputMode="decimal"
+                        enterKeyHint="done"
+                        aria-label="Minimum gauge limit"
                         value={toInputVal(minBoost)}
                         onChange={(e) => {
                           let val = fromInputVal(e.target.value, true);
@@ -832,6 +1309,9 @@ const App = ({
                       </button>
                       <input
                         type="number"
+                        inputMode="decimal"
+                        enterKeyHint="done"
+                        aria-label="Maximum gauge limit"
                         value={toInputVal(maxBoost)}
                         onChange={(e) => {
                           let val = fromInputVal(e.target.value, false);
@@ -849,7 +1329,7 @@ const App = ({
                 {maxBoost > 30 && (
                   <div className="mt-2 p-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-1.5 text-amber-500 animate-in fade-in zoom-in-95 duration-300">
                     <AlertTriangle size={12} className="flex-shrink-0" />
-                    <span className="text-[8px] font-bold uppercase leading-tight">External MAP Sensor must be connected</span>
+                    <span className="text-[8px] font-bold uppercase leading-tight">For high-boost ranges, open the MAP sensor mapping page on the next screen</span>
                   </div>
                 )}
               </div>
@@ -952,12 +1432,223 @@ const App = ({
             </div>
           </div>
         </div>
+
+        {/* ================================================================
+            MAP SENSOR MAPPING PAGE
+            ================================================================ */}
+        <div className={`settings-page sensor-page min-w-full flex flex-col ${isCompactDisplay ? 'compact-settings gap-1' : 'gap-2'}`}>
+          <div
+            data-testid="sensor-header"
+            className={`bg-slate-900/80 rounded-xl border border-slate-800 shadow-md ${isCompactDisplay ? 'p-1.5 space-y-1.5' : 'p-3 flex justify-between items-center'}`}
+          >
+            <div className={`flex items-center min-w-0 ${isCompactDisplay ? 'gap-1.5' : 'gap-3'}`}>
+              <button
+                onClick={() => setActiveTab('settings')}
+                aria-label="Return to settings"
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] touch-manipulation flex items-center justify-center' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
+              >
+                <ChevronLeft size={isCompactDisplay ? 24 : 30} />
+              </button>
+              <div className="flex flex-col min-w-0">
+                <h2 className={`${isCompactDisplay ? 'text-base' : 'text-xl'} font-black uppercase tracking-tight leading-none`}>MAP Sensor Mapping</h2>
+                <span className={`${isCompactDisplay ? 'mt-0 block max-w-full text-[9px] leading-tight whitespace-normal' : 'text-xs mt-1'} text-slate-400 font-bold uppercase tracking-widest`}>
+                  Four verified presets plus a custom ECU / Haltech 0-5V analog map
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('dash')}
+              aria-label="Save MAP sensor mapping and return to dashboard"
+              className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] w-full touch-manipulation px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
+            >
+              <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
+            </button>
+          </div>
+
+          <div
+            data-testid="sensor-setup-grid"
+            className={`grid flex-1 overflow-y-auto custom-scrollbar ${isCompactDisplay ? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'}`}
+          >
+            <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2 gap-1.5' : 'p-3 gap-3'}`}>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">MAP Sensor Presets</label>
+                <div
+                  data-testid="sensor-preset-grid"
+                  className={`grid ${isCompactDisplay ? 'grid-cols-1' : 'grid-cols-2'} gap-1`}
+                >
+                  {SENSOR_PROFILE_PRESETS.map((profile) => (
+                    <button
+                      key={profile.key}
+                      type="button"
+                      onClick={() => handleSensorProfileSelect(profile.key)}
+                      className={`rounded-xl border text-left transition-all ${sensorProfile === profile.key ? 'border-lime-400 bg-lime-500/12 text-white shadow-md shadow-lime-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'flex min-h-[3.25rem] min-w-0 touch-manipulation flex-col justify-between px-2 py-1.5' : 'px-3 py-2'}`}
+                    >
+                      <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-lime-400">{profile.shortName}</span>
+                      <span className={`${isCompactDisplay ? 'mt-0.5 block text-[10px] font-bold uppercase leading-tight text-slate-200 whitespace-normal break-words' : 'mt-0.5 block text-[10px] font-bold uppercase text-slate-200'}`}>{profile.name}</span>
+                      <span className={`${isCompactDisplay ? 'mt-1 block text-[8px] font-bold uppercase leading-tight tracking-widest text-slate-500 whitespace-normal' : 'mt-1 block text-[8px] font-bold uppercase tracking-widest text-slate-500'}`}>
+                        {formatTrimmedNumber(profile.kpaMin, 0)}-{formatTrimmedNumber(profile.kpaMax, 0)} kPa abs
+                      </span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleSensorProfileSelect(CUSTOM_SENSOR_PROFILE_KEY)}
+                    className={`${isCompactDisplay ? 'col-span-1 flex min-h-[3.25rem] min-w-0 touch-manipulation flex-col justify-between' : 'col-span-2'} rounded-xl border text-left transition-all ${sensorCalibrationEditable ? 'border-cyan-400 bg-cyan-500/12 text-white shadow-md shadow-cyan-500/10' : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-500'} ${isCompactDisplay ? 'px-2 py-1.5' : 'px-3 py-2'}`}
+                  >
+                    <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Custom ECU / Haltech</span>
+                    <span className={`${isCompactDisplay ? 'mt-0.5 block text-[10px] font-bold uppercase leading-tight text-slate-200 whitespace-normal break-words' : 'mt-0.5 block text-[10px] font-bold uppercase text-slate-200'}`}>Manual 0-5V mapping</span>
+                    <span className={`${isCompactDisplay ? 'mt-1 block text-[8px] font-bold uppercase leading-tight tracking-widest text-slate-500 whitespace-normal' : 'mt-1 block text-[8px] font-bold uppercase tracking-widest text-slate-500'}`}>
+                      Enter the exact ECU or datasheet endpoints
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="mt-0.5 flex-shrink-0 text-amber-400" />
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">5V Signal Limit</p>
+                    <p className="mt-1 text-[9px] font-bold leading-4 text-amber-100">
+                      Connect sensors or ECU analog outputs directly only if the signal stays at or below +5.0V. Higher voltages can damage the WMI system.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-700 bg-black/30 p-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">Direct-Connect Input</p>
+                <p className="mt-1 text-[9px] font-bold leading-4 text-slate-400">
+                  Four presets are loaded here: GM 1 Bar, GM 3 Bar, AEM 3.5 Bar Stainless, and Bosch Motorsport PST 4. You can also feed in a 0-5V Haltech or other ECU analog output by matching its calibration table below.
+                </p>
+              </div>
+            </div>
+
+            <div className={`bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col h-fit ${isCompactDisplay ? 'p-2 gap-1.5' : 'p-3 gap-3'}`}>
+              <div className="rounded-xl border border-slate-700 bg-black/30 p-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">Selected Profile</p>
+                <p
+                  data-testid="sensor-profile-name"
+                  className={`${isCompactDisplay ? 'mt-1 text-[11px] leading-tight whitespace-normal break-words' : 'mt-1 text-sm'} font-black uppercase tracking-tight text-white`}
+                >
+                  {sensorProfileName}
+                </p>
+                <p
+                  data-testid="sensor-profile-description"
+                  className={`${isCompactDisplay ? 'mt-1 text-[8px] leading-tight whitespace-normal' : 'mt-1 text-[9px] leading-4'} font-bold text-slate-400`}
+                >
+                  {sensorProfileDescription}
+                </p>
+                <div
+                  data-testid="sensor-profile-summary-grid"
+                  className={`mt-2 grid ${isCompactDisplay ? 'grid-cols-1' : 'grid-cols-2'} gap-1`}
+                >
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/80 px-2 py-1.5">
+                    <span className="block text-[8px] font-bold uppercase tracking-widest text-slate-500">Signal Span</span>
+                    <span className="mt-0.5 block text-[10px] font-black text-cyan-300">{sensorSignalMinVolts}V to {sensorSignalMaxVolts}V</span>
+                  </div>
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/80 px-2 py-1.5">
+                    <span className="block text-[8px] font-bold uppercase tracking-widest text-slate-500">Pressure Span</span>
+                    <span className="mt-0.5 block text-[10px] font-black text-lime-400">{formatTrimmedNumber(sensorKpaMin, 0)} to {formatTrimmedNumber(sensorKpaMax, 0)} kPa abs</span>
+                  </div>
+                  <div
+                    data-testid="sensor-boost-window-card"
+                    className={`${isCompactDisplay ? 'col-span-1' : 'col-span-2'} rounded-lg border border-slate-800 bg-slate-900/80 px-2 py-1.5`}
+                  >
+                    <span className="block text-[8px] font-bold uppercase tracking-widest text-slate-500">Approx Boost Window</span>
+                    <span className="mt-0.5 block text-[10px] font-black text-slate-100">
+                      {formatTrimmedNumber(sensorGaugeMinPsi, 1)} to {formatTrimmedNumber(sensorGaugeMaxPsi, 1)} PSI gauge
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Calibration</label>
+                <div
+                  data-testid="sensor-calibration-grid"
+                  className={`grid ${isCompactDisplay ? 'grid-cols-1 gap-1' : 'grid-cols-2 gap-1.5'}`}
+                >
+                  <div>
+                    <span className="text-[8px] text-slate-500 block font-bold mb-0.5">Signal Min (V)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      inputMode="decimal"
+                      aria-label="Signal minimum voltage"
+                      enterKeyHint="done"
+                      value={sensorSignalMinVolts}
+                      disabled={!sensorCalibrationEditable}
+                      onChange={(e) => handleSensorSignalChange(e.target.value, true)}
+                      className={`w-full rounded-lg border border-slate-700 bg-slate-800 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1.5 text-[15px]' : 'px-2 py-1.5'}`}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[8px] text-slate-500 block font-bold mb-0.5">Signal Max (V)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      inputMode="decimal"
+                      aria-label="Signal maximum voltage"
+                      enterKeyHint="done"
+                      value={sensorSignalMaxVolts}
+                      disabled={!sensorCalibrationEditable}
+                      onChange={(e) => handleSensorSignalChange(e.target.value, false)}
+                      className={`w-full rounded-lg border border-slate-700 bg-slate-800 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1.5 text-[15px]' : 'px-2 py-1.5'}`}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[8px] text-slate-500 block font-bold mb-0.5">Pressure Min (kPa abs)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="600"
+                      step="1"
+                      inputMode="numeric"
+                      aria-label="Pressure minimum absolute"
+                      enterKeyHint="done"
+                      value={formatTrimmedNumber(sensorKpaMin, 1)}
+                      disabled={!sensorCalibrationEditable}
+                      onChange={(e) => handleSensorKpaChange(e.target.value, true)}
+                      className={`w-full rounded-lg border border-slate-700 bg-slate-800 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1.5 text-[15px]' : 'px-2 py-1.5'}`}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[8px] text-slate-500 block font-bold mb-0.5">Pressure Max (kPa abs)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="600"
+                      step="1"
+                      inputMode="numeric"
+                      aria-label="Pressure maximum absolute"
+                      enterKeyHint="done"
+                      value={formatTrimmedNumber(sensorKpaMax, 1)}
+                      disabled={!sensorCalibrationEditable}
+                      onChange={(e) => handleSensorKpaChange(e.target.value, false)}
+                      className={`w-full rounded-lg border border-slate-700 bg-slate-800 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1.5 text-[15px]' : 'px-2 py-1.5'}`}
+                    />
+                  </div>
+                </div>
+
+                <p className="mt-2 text-[8px] font-bold uppercase leading-tight text-slate-500">
+                  Custom mode is for exact sensor datasheets or ECU analog outputs. For a Haltech analog channel, enter the same low/high voltage and absolute-pressure endpoints used in the Haltech calibration table.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Nav Dots */}
       <div className={`flex justify-center ${isCompactDisplay ? 'gap-1 pb-0.5' : 'gap-1.5 pb-1'}`}>
         <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'dash' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
         <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'settings' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
+        <div className={`h-1 rounded-full transition-all duration-300 ${activeTab === 'sensor' ? 'w-6 bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]' : 'w-1.5 bg-slate-700'}`} />
       </div>
 
           </div>

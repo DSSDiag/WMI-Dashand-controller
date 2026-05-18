@@ -118,6 +118,7 @@ DASHBOARD_BUILD_DIR="$REPO_DIR/dashboard/dist"
 NGINX_DASHBOARD_ROOT="/var/www/wmi-dashboard"
 BRIDGE_MODULE="bridge.serial_bridge"
 KIOSK_LAUNCHER="$REPO_DIR/bridge/kiosk-launch.sh"
+LCD_SHOW_DIR="$REPO_DIR/LCD-show"
 
 need_cmd() {
     command -v "$1" >/dev/null 2>&1
@@ -136,6 +137,278 @@ ensure_nginx_installed() {
     echo "nginx was not found after package installation. Installing nginx now..."
     sudo apt-get update -qq
     sudo apt-get install -y --no-install-recommends nginx
+}
+
+install_dashboard_dependencies() {
+    local dashboard_dir="$1"
+
+    if [ ! -d "$dashboard_dir" ]; then
+        echo "Dashboard directory is missing: $dashboard_dir" >&2
+        return 1
+    fi
+
+    if ! command -v npm >/dev/null 2>&1; then
+        echo "npm is required to install dashboard dependencies. Please install Node.js first." >&2
+        return 1
+    fi
+
+    if [ -f "$dashboard_dir/package-lock.json" ]; then
+        if (
+            cd "$dashboard_dir"
+            npm ci --silent
+        ); then
+            return 0
+        fi
+
+        echo "npm ci failed for $dashboard_dir. Falling back to npm install..." >&2
+    fi
+
+    (
+        cd "$dashboard_dir"
+        npm install --silent
+    )
+}
+
+resolve_chromium_bin() {
+    local candidate
+
+    for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/chromium; do
+        if [ -x "$candidate" ]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+
+    echo "Chromium executable not found after package installation." >&2
+    echo "Checked: /usr/lib/chromium/chromium, /usr/bin/chromium-browser, /usr/bin/chromium" >&2
+    return 1
+}
+
+build_dashboard_url() {
+    local base_url="${1:-http://localhost}"
+    local display_profile="${2:-}"
+    local separator='?'
+
+    if [ -z "$display_profile" ]; then
+        printf '%s\n' "$base_url"
+        return 0
+    fi
+
+    if [[ "$base_url" == *[\?\&]profile=* ]]; then
+        printf '%s\n' "$base_url"
+        return 0
+    fi
+
+    if [[ "$base_url" == *\?* ]]; then
+        separator='&'
+    fi
+
+    printf '%s%sprofile=%s\n' "$base_url" "$separator" "$display_profile"
+}
+
+resolve_path_or_empty() {
+    local target="$1"
+
+    if command -v realpath >/dev/null 2>&1; then
+        realpath -m "$target"
+        return 0
+    fi
+
+    if command -v readlink >/dev/null 2>&1; then
+        readlink -f "$target" 2>/dev/null || true
+        return 0
+    fi
+
+    printf '%s\n' ""
+}
+
+deploy_dashboard_build() {
+    local build_dir="$1"
+    local target_root="$2"
+    local staged_root
+    local resolved_target
+    staged_root="$(mktemp -d)"
+
+    if [ ! -f "$build_dir/index.html" ]; then
+        echo "Dashboard build output is missing: $build_dir/index.html" >&2
+        rm -rf "$staged_root"
+        return 1
+    fi
+
+    case "$target_root" in
+        /var/www/wmi-dashboard) ;;
+        *)
+            echo "Refusing to deploy dashboard into unexpected target: $target_root" >&2
+            rm -rf "$staged_root"
+            return 1
+            ;;
+    esac
+
+    if [ -L "$target_root" ]; then
+        echo "Refusing to deploy dashboard through symlinked target: $target_root" >&2
+        rm -rf "$staged_root"
+        return 1
+    fi
+
+    if [ -e "$target_root" ] && [ ! -d "$target_root" ]; then
+        echo "Refusing to deploy dashboard into non-directory target: $target_root" >&2
+        rm -rf "$staged_root"
+        return 1
+    fi
+
+    cp -a "$build_dir"/. "$staged_root"/
+    sudo mkdir -p "$target_root"
+    resolved_target="$(resolve_path_or_empty "$target_root")"
+    if [ -n "$resolved_target" ] && [ "$resolved_target" != "/var/www/wmi-dashboard" ]; then
+        echo "Refusing to deploy dashboard into redirected target: $resolved_target" >&2
+        rm -rf "$staged_root"
+        return 1
+    fi
+    sudo find "$target_root" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+    sudo cp -a "$staged_root"/. "$target_root"/
+    rm -rf "$staged_root"
+}
+
+validate_kiosk_launcher_target() {
+    local target="$1"
+
+    case "$target" in
+        "$REPO_DIR"/bridge/kiosk-launch.sh) ;;
+        *)
+            echo "Refusing to overwrite unexpected kiosk launcher target: $target" >&2
+            return 1
+            ;;
+    esac
+
+    if [ -L "$target" ]; then
+        echo "Refusing to overwrite symlinked kiosk launcher target: $target" >&2
+        return 1
+    fi
+
+    if [ -e "$target" ] && [ ! -f "$target" ]; then
+        echo "Refusing to overwrite non-file kiosk launcher target: $target" >&2
+        return 1
+    fi
+}
+
+validate_lcd_show_dir() {
+    local target="$1"
+
+    case "$target" in
+        "$REPO_DIR"/LCD-show) ;;
+        *)
+            echo "Refusing to use unexpected LCD-show path: $target" >&2
+            return 1
+            ;;
+    esac
+
+    if [ -L "$target" ]; then
+        echo "Refusing to use symlinked LCD-show path: $target" >&2
+        return 1
+    fi
+
+    if [ -e "$target" ] && [ ! -d "$target" ]; then
+        echo "Refusing to use non-directory LCD-show path: $target" >&2
+        return 1
+    fi
+}
+
+ensure_lcd_show_checkout() {
+    validate_lcd_show_dir "$LCD_SHOW_DIR"
+
+    if [ -d "$LCD_SHOW_DIR/.git" ]; then
+        return 0
+    fi
+
+    if [ -d "$LCD_SHOW_DIR" ]; then
+        echo "Refusing to reuse existing non-git LCD-show directory: $LCD_SHOW_DIR" >&2
+        return 1
+    fi
+
+    git clone https://github.com/goodtft/LCD-show.git "$LCD_SHOW_DIR"
+}
+
+write_kiosk_launcher() {
+    local chromium_bin="$1"
+    local dashboard_url="${2:-http://localhost}"
+    local dashboard_ready_url="$dashboard_url"
+    local launcher_tmp
+    launcher_tmp="$(mktemp)"
+    validate_kiosk_launcher_target "$KIOSK_LAUNCHER"
+
+    cat > "$launcher_tmp" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+export DISPLAY=:0
+export XAUTHORITY="$RUN_HOME/.Xauthority"
+
+for _ in \$(seq 1 45); do
+    if [ -S /tmp/.X11-unix/X0 ] && [ -f "\$XAUTHORITY" ] && xset q >/dev/null 2>&1; then
+        break
+    fi
+    sleep 2
+done
+
+if ! xset q >/dev/null 2>&1; then
+    echo "X session on :0 never became ready" >&2
+    exit 1
+fi
+
+if [ ! -x "$chromium_bin" ]; then
+    echo "Chromium executable is missing or not executable: $chromium_bin" >&2
+    exit 1
+fi
+
+for _ in \$(seq 1 60); do
+    if curl -fsS "$dashboard_ready_url" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+xset s off
+xset -dpms
+xset s noblank
+
+XRANDR_OUTPUT=\$(xrandr --query | awk '/ connected/{print \$1; exit}')
+XRANDR_MODE=\$(xrandr --query | awk '/\*/{print \$1; exit}')
+if [ -n "\${XRANDR_OUTPUT:-}" ]; then
+    if [ -n "\${XRANDR_MODE:-}" ]; then
+        xrandr --output "\$XRANDR_OUTPUT" --mode "\$XRANDR_MODE" --primary >/dev/null 2>&1 || true
+    else
+        xrandr --output "\$XRANDR_OUTPUT" --primary >/dev/null 2>&1 || true
+    fi
+fi
+
+mkdir -p "$RUN_HOME/.config/chromium"
+rm -f "$RUN_HOME/.config/chromium/SingletonLock" \\
+      "$RUN_HOME/.config/chromium/SingletonSocket" \\
+      "$RUN_HOME/.config/chromium/SingletonCookie"
+
+exec "$chromium_bin" \\
+    --noerrdialogs \\
+    --disable-infobars \\
+    --kiosk \\
+    --start-fullscreen \\
+    --window-position=0,0 \\
+    --no-first-run \\
+    --disable-translate \\
+    --disable-features=TranslateUI \\
+    --overscroll-history-navigation=0 \\
+    --touch-events=enabled \\
+    --force-device-scale-factor=1 \\
+    --disable-gpu \\
+    --check-for-update-interval=31536000 \\
+    --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \\
+    "$dashboard_url"
+EOF
+
+    chmod +x "$launcher_tmp"
+    if [ -f "$KIOSK_LAUNCHER" ]; then
+        cp "$KIOSK_LAUNCHER" "$KIOSK_LAUNCHER.wmi-backup.$(date +%Y%m%d-%H%M%S)"
+    fi
+    mv "$launcher_tmp" "$KIOSK_LAUNCHER"
 }
 
 prepare_bookworm_lcd_show_symlink() {
@@ -196,6 +469,10 @@ set -eu
 xset s off
 xset -dpms
 xset s noblank
+
+if command -v unclutter >/dev/null 2>&1; then
+    unclutter -idle 0.2 -root &
+fi
 
 openbox-session &
 exec "$KIOSK_LAUNCHER"
@@ -303,70 +580,7 @@ PY
 configure_kiosk_launcher() {
     local chromium_bin="$1"
     local dashboard_url="${2:-http://localhost}"
-
-    cat > "$KIOSK_LAUNCHER" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-
-export DISPLAY=:0
-export XAUTHORITY="$RUN_HOME/.Xauthority"
-
-for _ in \$(seq 1 45); do
-    if [ -S /tmp/.X11-unix/X0 ] && [ -f "\$XAUTHORITY" ] && xset q >/dev/null 2>&1; then
-        break
-    fi
-    sleep 2
-done
-
-if ! xset q >/dev/null 2>&1; then
-    echo "X session on :0 never became ready" >&2
-    exit 1
-fi
-
-for _ in \$(seq 1 60); do
-    if curl -fsS http://localhost >/dev/null 2>&1; then
-        break
-    fi
-    sleep 1
-done
-
-xset s off
-xset -dpms
-xset s noblank
-
-XRANDR_OUTPUT=\$(xrandr --query | awk '/ connected/{print \$1; exit}')
-XRANDR_MODE=\$(xrandr --query | awk '/\*/{print \$1; exit}')
-if [ -n "\${XRANDR_OUTPUT:-}" ]; then
-    if [ -n "\${XRANDR_MODE:-}" ]; then
-        xrandr --output "\$XRANDR_OUTPUT" --mode "\$XRANDR_MODE" --primary >/dev/null 2>&1 || true
-    else
-        xrandr --output "\$XRANDR_OUTPUT" --primary >/dev/null 2>&1 || true
-    fi
-fi
-
-mkdir -p "$RUN_HOME/.config/chromium"
-rm -f "$RUN_HOME/.config/chromium/SingletonLock" \\
-      "$RUN_HOME/.config/chromium/SingletonSocket" \\
-      "$RUN_HOME/.config/chromium/SingletonCookie"
-
-exec "$chromium_bin" \\
-    --noerrdialogs \\
-    --disable-infobars \\
-    --kiosk \\
-    --start-fullscreen \\
-    --window-position=0,0 \\
-    --no-first-run \\
-    --disable-translate \\
-    --disable-features=TranslateUI \\
-    --overscroll-history-navigation=0 \\
-    --touch-events=enabled \\
-    --force-device-scale-factor=1 \\
-    --disable-gpu \\
-    --check-for-update-interval=31536000 \\
-    --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \\
-    "$dashboard_url"
-EOF
-    chmod +x "$KIOSK_LAUNCHER"
+    write_kiosk_launcher "$chromium_bin" "$dashboard_url"
 }
 
 set_boot_config_value() {
@@ -544,14 +758,14 @@ if ! need_cmd node; then
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
 fi
-cd "$REPO_DIR/dashboard" && npm install --silent && npm run build
+cd "$REPO_DIR/dashboard"
+install_dashboard_dependencies "$REPO_DIR/dashboard"
+npm run build
 cd "$REPO_DIR"
 
 echo "[5/9] Configuring nginx..."
 ensure_nginx_installed
-sudo rm -rf "$NGINX_DASHBOARD_ROOT"
-sudo mkdir -p "$NGINX_DASHBOARD_ROOT"
-sudo cp -a "$DASHBOARD_BUILD_DIR"/. "$NGINX_DASHBOARD_ROOT"/
+deploy_dashboard_build "$DASHBOARD_BUILD_DIR" "$NGINX_DASHBOARD_ROOT"
 sudo chown -R root:www-data "$NGINX_DASHBOARD_ROOT"
 sudo find "$NGINX_DASHBOARD_ROOT" -type d -exec chmod 755 {} \;
 sudo find "$NGINX_DASHBOARD_ROOT" -type f -exec chmod 644 {} \;
@@ -638,28 +852,21 @@ After=network.target
 
 [Service]
 WorkingDirectory=$REPO_DIR
+ExecStartPre=-/usr/bin/udevadm settle --timeout=10
 ExecStart=$VENV_DIR/bin/python3 -m $BRIDGE_MODULE
 Restart=on-failure
 RestartSec=3
 User=$RUN_USER
+SupplementaryGroups=dialout
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
 BRIDGEEOF
 
-CHROMIUM_BIN=""
-for candidate in /usr/lib/chromium/chromium /usr/bin/chromium-browser /usr/bin/chromium; do
-    if [ -x "$candidate" ]; then
-        CHROMIUM_BIN="$candidate"
-        break
-    fi
-done
-CHROMIUM_BIN="${CHROMIUM_BIN:-/usr/lib/chromium/chromium}"
-DASHBOARD_URL="${WMI_DASHBOARD_URL:-http://localhost}"
-if [ "$DISPLAY_PROFILE" == "generic-ili9486-hat" ] && [ -z "${WMI_DASHBOARD_URL:-}" ]; then
-    DASHBOARD_URL="http://localhost/?profile=generic-ili9486-hat"
-fi
+CHROMIUM_BIN="$(resolve_chromium_bin)"
+KIOSK_DISPLAY_PROFILE="${WMI_DISPLAY_PROFILE:-$DISPLAY_PROFILE}"
+DASHBOARD_URL="$(build_dashboard_url "${WMI_DASHBOARD_URL:-http://localhost}" "$KIOSK_DISPLAY_PROFILE")"
 configure_kiosk_launcher "$CHROMIUM_BIN" "$DASHBOARD_URL"
 
 sudo tee /etc/systemd/system/wmi-kiosk.service > /dev/null << KIOSKEOF
@@ -669,6 +876,10 @@ Wants=graphical.target display-manager.service network-online.target
 After=graphical.target display-manager.service network-online.target nginx.service wmi-bridge.service
 
 [Service]
+WorkingDirectory=$REPO_DIR
+Environment=HOME=$RUN_HOME
+Environment=XAUTHORITY=$RUN_HOME/.Xauthority
+ExecStartPre=/usr/bin/test -x $KIOSK_LAUNCHER
 ExecStart=$KIOSK_LAUNCHER
 Restart=on-failure
 RestartSec=5
@@ -720,14 +931,12 @@ case "$DISPLAY_PROFILE" in
         ;;
     "52pi-k0403")
         cd "$REPO_DIR"
-        if [ ! -d "LCD-show" ]; then
-            git clone https://github.com/goodtft/LCD-show.git
-        fi
-        chmod -R 755 LCD-show
+        ensure_lcd_show_checkout
+        chmod -R 755 "$LCD_SHOW_DIR"
         prepare_bookworm_lcd_show_symlink
         sudo systemctl set-default graphical.target
         echo "Installing 52Pi 3.5 inch GPIO/SPI display driver. This may reboot automatically."
-        cd LCD-show/
+        cd "$LCD_SHOW_DIR"
         if [ "$PI_VERSION" == "pi5" ]; then
             echo "Warning: Pi 5 driver support in LCD-show may vary."
         fi
@@ -735,10 +944,8 @@ case "$DISPLAY_PROFILE" in
         ;;
     "generic-ili9486-hat")
         cd "$REPO_DIR"
-        if [ ! -d "LCD-show" ]; then
-            git clone https://github.com/goodtft/LCD-show.git
-        fi
-        chmod -R 755 LCD-show
+        ensure_lcd_show_checkout
+        chmod -R 755 "$LCD_SHOW_DIR"
         prepare_bookworm_lcd_show_symlink
         configure_tty1_startx_kiosk
         sudo systemctl disable wmi-kiosk wmi-unclutter || true
@@ -748,7 +955,7 @@ case "$DISPLAY_PROFILE" in
         echo " LCD-show driver installation will now run and reboot"
         echo " the system automatically."
         echo "═══════════════════════════════════════════════════"
-        cd LCD-show/
+        cd "$LCD_SHOW_DIR"
         if [ "$PI_VERSION" == "pi5" ]; then
             echo "Warning: Pi 5 driver support in LCD-show may vary."
         fi

@@ -34,9 +34,43 @@ The ESP32 reads the MAP sensor, calculates pump duty cycle, controls the pump, a
 3. Select the correct board, for example **ESP32S3 Dev Module** or **ESP32C3 Dev Module**.
 4. Select the ESP32 serial port.
 5. Set **USB CDC On Boot** to **Enabled** when using native USB serial.
-6. Adjust `esp32/wmi_controller/config.h` if your pinout or MAP calibration differs.
+6. Adjust `esp32/wmi_controller/config.h` if your pinout differs. Everyday MAP calibration can now be selected later from the Pi Sensor Setup screen.
 7. Upload the sketch.
 8. Open Serial Monitor at `115200` baud and confirm the controller emits newline-terminated JSON frames.
+### Pi-side firmware updates after installation
+
+Once the Pi is installed in the car, you do not need a desktop IDE to update the sensor module. Use the Pi over SSH:
+
+```bash
+cd ~/WMI-Dashand-controller
+./sensor-module-firmware.sh flash --board esp32-c3 --remember-board
+```
+
+That command will:
+
+- install `Arduino CLI` on the Pi if it is missing
+- install the stable Espressif `esp32` Arduino core
+- install the `ArduinoJson` dependency
+- stop `wmi-bridge.service` so the USB serial port is free
+- compile the sketch for the chosen board
+- upload the firmware to the connected sensor module
+- start `wmi-bridge.service` again
+
+After the first successful run, later updates can usually be done with:
+
+```bash
+./sensor-module-firmware.sh flash
+```
+
+Supported board keys:
+
+- `esp32`
+- `esp32-c3`
+- `esp32-s3`
+
+Important:
+- The boxed sensor module should only accept `0-5V` MAP sensor or ECU analog-output signals.
+- Do not connect any signal above `+5.0V`, or the WMI system can be damaged.
 
 ---
 
@@ -141,6 +175,14 @@ The installer does the following:
 - Installs `wmi-kiosk.service` for the dashboard browser.
 - Installs `wmi-unclutter.service` to hide the cursor.
 - Adds the current user to the `dialout` group for serial access.
+
+Fresh `setup.sh` installs also apply the branded Mild Modz Plymouth boot splash with the dashboard logo and a progress bar.
+
+If you need to add that boot screen to an existing Pi later, run:
+
+```bash
+./apply-boot-splash.sh
+```
 
 ---
 

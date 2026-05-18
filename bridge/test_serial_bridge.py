@@ -4,7 +4,7 @@ from bridge.logic import parse_esp32_frame, ATM_KPA, KPA_ABS_TO_PSI_GAUGE, build
 
 def test_parse_esp32_frame_happy_path():
     """Test with valid telemetry data."""
-    line = '{"t":"d", "p":120.5, "d":75, "l":0}'
+    line = '{"t":"d", "p":120.5, "d":75, "l":0, "b":"esp32-c3", "m":"ESP32-C3 Sensor Module"}'
     result = parse_esp32_frame(line)
 
     assert result is not None
@@ -16,6 +16,8 @@ def test_parse_esp32_frame_happy_path():
     assert result["pump_duty"] == 75
     assert result["tank_low"] is False
     assert result["pump_active"] is True
+    assert result["sensor_module_key"] == "esp32-c3"
+    assert result["sensor_module_label"] == "ESP32-C3 Sensor Module"
 
 def test_parse_esp32_frame_invalid_type():
     """Test with non-data frame types."""
@@ -54,6 +56,8 @@ def test_parse_esp32_frame_default_values():
     assert result["pump_duty"] == 0
     assert result["tank_low"] is False
     assert result["pump_active"] is False
+    assert "sensor_module_key" not in result
+    assert "sensor_module_label" not in result
 
 def test_parse_esp32_frame_tank_low():
     """Test tank_low flag parsing."""
@@ -90,6 +94,10 @@ def test_build_settings_frame_defaults():
     assert decoded["md"] == 0
     assert decoded["c"] == 0
     assert decoded["a"] == 0
+    assert decoded["vmn"] == 165.0
+    assert decoded["vmx"] == 2970.0
+    assert decoded["kmn"] == 10.0
+    assert decoded["kmx"] == 105.0
 
     # Ensure it ends with a newline
     assert result.endswith(b"\n")
@@ -102,7 +110,11 @@ def test_build_settings_frame_custom_values():
         "full_psi": 30,
         "manual_duty": 50,
         "curve": "exponential",
-        "system_active": True
+        "system_active": True,
+        "sensor_signal_min_mv": 500,
+        "sensor_signal_max_mv": 4500,
+        "sensor_kpa_min": 10,
+        "sensor_kpa_max": 315,
     }
     result = build_settings_frame(settings)
     decoded = json.loads(result.decode().strip())
@@ -116,6 +128,10 @@ def test_build_settings_frame_custom_values():
     assert decoded["md"] == 50
     assert decoded["c"] == 1
     assert decoded["a"] == 1
+    assert decoded["vmn"] == 330.0
+    assert decoded["vmx"] == 2970.0
+    assert decoded["kmn"] == 10.0
+    assert decoded["kmx"] == 315.0
 
     # Ensure it ends with a newline
     assert result.endswith(b"\n")
@@ -138,6 +154,17 @@ def test_find_esp32_port_match_usb():
         mock_comports.return_value = [port1]
 
         assert find_esp32_port() == '/dev/ttyUSB0'
+
+def test_find_esp32_port_match_espressif_vid():
+    with patch('serial.tools.list_ports.comports') as mock_comports:
+        port1 = MagicMock()
+        port1.device = '/dev/ttyACM1'
+        port1.description = 'debug port'
+        port1.vid = 0x303A
+
+        mock_comports.return_value = [port1]
+
+        assert find_esp32_port() == '/dev/ttyACM1'
 
 def test_find_esp32_port_match_acm():
     with patch('serial.tools.list_ports.comports') as mock_comports:
