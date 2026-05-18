@@ -183,6 +183,28 @@ resolve_chromium_bin() {
     return 1
 }
 
+build_dashboard_url() {
+    local base_url="${1:-http://localhost}"
+    local display_profile="${2:-}"
+    local separator='?'
+
+    if [ -z "$display_profile" ]; then
+        printf '%s\n' "$base_url"
+        return 0
+    fi
+
+    if [[ "$base_url" == *[\?\&]profile=* ]]; then
+        printf '%s\n' "$base_url"
+        return 0
+    fi
+
+    if [[ "$base_url" == *\?* ]]; then
+        separator='&'
+    fi
+
+    printf '%s%sprofile=%s\n' "$base_url" "$separator" "$display_profile"
+}
+
 resolve_path_or_empty() {
     local target="$1"
 
@@ -805,10 +827,8 @@ WantedBy=multi-user.target
 BRIDGEEOF
 
 CHROMIUM_BIN="$(resolve_chromium_bin)"
-DASHBOARD_URL="${WMI_DASHBOARD_URL:-http://localhost}"
-if [ "$DISPLAY_PROFILE" == "generic-ili9486-hat" ] && [ -z "${WMI_DASHBOARD_URL:-}" ]; then
-    DASHBOARD_URL="http://localhost/?profile=generic-ili9486-hat"
-fi
+KIOSK_DISPLAY_PROFILE="${WMI_DISPLAY_PROFILE:-$DISPLAY_PROFILE}"
+DASHBOARD_URL="$(build_dashboard_url "${WMI_DASHBOARD_URL:-http://localhost}" "$KIOSK_DISPLAY_PROFILE")"
 configure_kiosk_launcher "$CHROMIUM_BIN" "$DASHBOARD_URL"
 
 sudo tee /etc/systemd/system/wmi-kiosk.service > /dev/null << KIOSKEOF

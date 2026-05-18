@@ -73,6 +73,10 @@ foreach ($script in $scripts) {
         throw "$script does not define a Chromium resolver helper"
     }
 
+    if ($content -notmatch 'build_dashboard_url\(\)') {
+        throw "$script does not define a dashboard URL builder helper"
+    }
+
     if ($content -notmatch 'install_dashboard_dependencies\(\)') {
         throw "$script does not define a dashboard dependency installer helper"
     }
@@ -148,12 +152,26 @@ if ($setupScript -match 'cat > "\$RUN_HOME/\.config/openbox/autostart"') {
     throw 'setup.sh still overwrites openbox autostart directly'
 }
 
-if ($setupScript -notmatch 'http://localhost/\?profile=generic-ili9486-hat') {
-    throw 'setup.sh does not scope the compact kiosk layout to the generic ILI9486 HAT profile'
+if (
+    $setupScript -notmatch 'KIOSK_DISPLAY_PROFILE="\$\{WMI_DISPLAY_PROFILE:-\$DISPLAY_PROFILE\}"' -or
+    $setupScript -notmatch 'DASHBOARD_URL="\$\(build_dashboard_url "\$\{WMI_DASHBOARD_URL:-http://localhost\}" "\$KIOSK_DISPLAY_PROFILE"\)"'
+) {
+    throw 'setup.sh does not build the kiosk dashboard URL from the selected or overridden display profile'
 }
 
-if ($preconfiguredScript -notmatch 'WMI_DASHBOARD_URL') {
-    throw 'setup-precomf.sh does not expose the dashboard URL override for preconfigured installs'
+if (
+    $setupScript -notmatch '\[\[ "\$base_url" == \*\[\\\?\\&\]profile=\* \]\]' -or
+    $setupScript -notmatch 'printf ''%s%sprofile=%s\\n'' "\$base_url" "\$separator" "\$display_profile"'
+) {
+    throw 'setup.sh does not append the display profile to the kiosk URL safely'
+}
+
+if (
+    $preconfiguredScript -notmatch 'DASHBOARD_URL="\$\(build_dashboard_url "\$\{WMI_DASHBOARD_URL:-http://localhost\}" "\$\{WMI_DISPLAY_PROFILE:-\}"\)"' -or
+    $preconfiguredScript -notmatch 'WMI_DASHBOARD_URL' -or
+    $preconfiguredScript -notmatch 'WMI_DISPLAY_PROFILE'
+) {
+    throw 'setup-precomf.sh does not expose profile-aware dashboard URL overrides for preconfigured installs'
 }
 
 if ($setupScript -notmatch '\$REPO_DIR"/bridge/kiosk-launch\.sh') {

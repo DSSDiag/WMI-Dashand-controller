@@ -115,6 +115,28 @@ resolve_chromium_bin() {
     return 1
 }
 
+build_dashboard_url() {
+    local base_url="${1:-http://localhost}"
+    local display_profile="${2:-}"
+    local separator='?'
+
+    if [ -z "$display_profile" ]; then
+        printf '%s\n' "$base_url"
+        return 0
+    fi
+
+    if [[ "$base_url" == *[\?\&]profile=* ]]; then
+        printf '%s\n' "$base_url"
+        return 0
+    fi
+
+    if [[ "$base_url" == *\?* ]]; then
+        separator='&'
+    fi
+
+    printf '%s%sprofile=%s\n' "$base_url" "$separator" "$display_profile"
+}
+
 resolve_path_or_empty() {
     local target="$1"
 
@@ -376,7 +398,7 @@ WantedBy=multi-user.target
 BRIDGEEOF
 
 CHROMIUM_BIN="$(resolve_chromium_bin)"
-DASHBOARD_URL="${WMI_DASHBOARD_URL:-http://localhost}"
+DASHBOARD_URL="$(build_dashboard_url "${WMI_DASHBOARD_URL:-http://localhost}" "${WMI_DISPLAY_PROFILE:-}")"
 
 write_kiosk_launcher
 
