@@ -36,7 +36,32 @@ class MockWebSocket {
   }
 }
 
-function setViewport(width, height) {
+class MockVisualViewport {
+  constructor() {
+    this.listeners = new Map();
+    this.addEventListener = vi.fn((eventName, callback) => {
+      const callbacks = this.listeners.get(eventName) ?? new Set();
+      callbacks.add(callback);
+      this.listeners.set(eventName, callbacks);
+    });
+    this.removeEventListener = vi.fn((eventName, callback) => {
+      const callbacks = this.listeners.get(eventName);
+      callbacks?.delete(callback);
+      if (callbacks?.size === 0) {
+        this.listeners.delete(eventName);
+      }
+    });
+  }
+
+  emit(eventName) {
+    const callbacks = this.listeners.get(eventName) ?? [];
+    for (const callback of callbacks) {
+      callback(new Event(eventName));
+    }
+  }
+}
+
+function setViewport(width, height, { dispatchEventName = 'resize' } = {}) {
   Object.defineProperty(window, 'innerWidth', {
     configurable: true,
     writable: true,
@@ -47,7 +72,16 @@ function setViewport(width, height) {
     writable: true,
     value: height,
   });
-  window.dispatchEvent(new Event('resize'));
+  if (dispatchEventName) {
+    window.dispatchEvent(new Event(dispatchEventName));
+  }
+}
+
+function getDashboardScale() {
+  const transform = screen.getByTestId('dashboard-shell').parentElement?.style.transform ?? '';
+  const match = transform.match(/scale\(([^)]+)\)/);
+
+  return match ? Number.parseFloat(match[1]) : NaN;
 }
 
 describe('App dashboard', () => {
@@ -57,11 +91,13 @@ describe('App dashboard', () => {
     MockWebSocket.instances = [];
     window.WebSocket = MockWebSocket;
     globalThis.WebSocket = MockWebSocket;
+    window.visualViewport = new MockVisualViewport();
     setViewport(800, 480);
   });
 
   afterEach(() => {
     cleanup();
+    delete window.visualViewport;
     vi.clearAllTimers();
     vi.useRealTimers();
   });
@@ -226,6 +262,42 @@ describe('App dashboard', () => {
     expect(screen.getByRole('spinbutton', { name: /maximum gauge limit/i })).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByRole('spinbutton', { name: /minimum gauge limit/i })).toHaveAttribute('enterkeyhint', 'done');
     expect(screen.getByRole('spinbutton', { name: /maximum gauge limit/i })).toHaveAttribute('enterkeyhint', 'done');
+  }, 15000);
+
+  it('rescales the compact layout on orientation and visual viewport changes', () => {
+    render(<App displayProfile="generic-ili9486-hat" />);
+
+    expect(getDashboardScale()).toBe(1);
+
+    act(() => {
+      setViewport(320, 470, { dispatchEventName: null });
+      window.dispatchEvent(new Event('orientationchange'));
+    });
+
+    expect(getDashboardScale()).toBeCloseTo(320 / 520, 3);
+
+    act(() => {
+      setViewport(480, 320, { dispatchEventName: null });
+      window.visualViewport.emit('resize');
+    });
+
+    expect(getDashboardScale()).toBeCloseTo(320 / 356, 3);
+  }, 15000);
+
+  it('removes visual viewport listeners when the dashboard unmounts', () => {
+    const viewport = window.visualViewport;
+    const { unmount } = render(<App displayProfile="generic-ili9486-hat" />);
+
+    expect(viewport.addEventListener).toHaveBeenCalledWith('resize', expect.any(Function));
+    expect(viewport.addEventListener).toHaveBeenCalledWith('scroll', expect.any(Function));
+
+    const resizeHandler = viewport.addEventListener.mock.calls.find(([eventName]) => eventName === 'resize')?.[1];
+    const scrollHandler = viewport.addEventListener.mock.calls.find(([eventName]) => eventName === 'scroll')?.[1];
+
+    unmount();
+
+    expect(viewport.removeEventListener).toHaveBeenCalledWith('resize', resizeHandler);
+    expect(viewport.removeEventListener).toHaveBeenCalledWith('scroll', scrollHandler);
   }, 15000);
 
   it('adds a sensor setup screen with direct-connect guidance for 5V signals', () => {

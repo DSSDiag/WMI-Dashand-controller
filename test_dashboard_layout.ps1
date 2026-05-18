@@ -62,6 +62,16 @@ if ($tests -notmatch 'loads preset calibration values and re-enables editing in 
 }
 
 if (
+    $tests -notmatch 'class MockVisualViewport' -or
+    $tests -notmatch 'rescales the compact layout on orientation and visual viewport changes' -or
+    $tests -notmatch "window\.dispatchEvent\(new Event\('orientationchange'\)\)" -or
+    $tests -notmatch "window\.visualViewport\.emit\('resize'\)" -or
+    $tests -notmatch 'removes visual viewport listeners when the dashboard unmounts'
+) {
+    throw 'App.test.jsx does not guard viewport/orientation scaling and visualViewport cleanup'
+}
+
+if (
     $app -notmatch "HW REV:" -or
     $app -notmatch "flex flex-wrap items-center gap-x-1 gap-y-0.5 text-\[9px\] leading-tight" -or
     $app -notmatch "Select a preset or map a custom 0-5V sensor / ECU output" -or
