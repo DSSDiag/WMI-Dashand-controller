@@ -228,19 +228,19 @@ describe('App dashboard', () => {
     expect(screen.getByTestId('hardware-status').className).toContain('col-span-3');
     expect(screen.getByRole('button', { name: /prime system/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByRole('button', { name: /prime system/i }).className).toContain('touch-manipulation');
-    expect(screen.getByRole('button', { name: /kill system/i }).className).toContain('min-h-[2.35rem]');
-    expect(screen.getByRole('button', { name: /kill system/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /arm system/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /arm system/i }).className).toContain('touch-manipulation');
 
     fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
 
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('settings-header').className).toContain('space-y-1.5');
-    expect(screen.getByText(/hw rev:/i).className).toContain('flex-wrap');
+    expect(screen.getByText(/hw rev:/i).parentElement?.className).toContain('flex-wrap');
     expect(screen.getByTestId('settings-header-actions').className).toContain('w-full');
-    expect(screen.getByRole('button', { name: /return to dashboard/i }).className).toContain('min-h-[2.35rem]');
-    expect(screen.getByRole('button', { name: /return to dashboard/i }).className).toContain('touch-manipulation');
-    expect(screen.getByRole('button', { name: /open sensor setup/i }).className).toContain('min-h-[2.35rem]');
-    expect(screen.getByRole('button', { name: /open sensor setup/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /^return to dashboard$/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /^return to dashboard$/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /open map sensor mapping/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /open map sensor mapping/i }).className).toContain('touch-manipulation');
     expect(screen.getByRole('button', { name: /save settings and return to dashboard/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByRole('button', { name: /save settings and return to dashboard/i }).className).toContain('touch-manipulation');
     expect(screen.getByRole('button', { name: /save settings and return to dashboard/i }).className).toContain('flex-1');
@@ -256,8 +256,8 @@ describe('App dashboard', () => {
     expect(screen.getByTestId('dashboard-actions').className).toContain('grid-cols-3');
     expect(screen.getByRole('button', { name: /prime system/i }).className).toContain('min-h-[2.35rem]');
     expect(screen.getByRole('button', { name: /prime system/i }).className).toContain('touch-manipulation');
-    expect(screen.getByRole('button', { name: /kill system/i }).className).toContain('min-h-[2.35rem]');
-    expect(screen.getByRole('button', { name: /kill system/i }).className).toContain('touch-manipulation');
+    expect(screen.getByRole('button', { name: /arm system/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /arm system/i }).className).toContain('touch-manipulation');
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('settings-header').className).toContain('space-y-1.5');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
