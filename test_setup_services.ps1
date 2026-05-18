@@ -95,9 +95,10 @@ foreach ($script in $scripts) {
         $content -notmatch '\[ -f "\$dashboard_dir/package-lock\.json" \]' -or
         $content -notmatch 'cd "\$dashboard_dir"' -or
         $content -notmatch 'npm ci --silent' -or
-        $content -notmatch 'npm install --silent'
+        $content -notmatch 'npm install --silent' -or
+        $content -notmatch 'npm ci failed for \$dashboard_dir\. Falling back to npm install'
     ) {
-        throw "$script does not prefer npm ci with a fallback npm install path from the dashboard directory"
+        throw "$script does not implement a real npm ci fallback npm install path from the dashboard directory"
     }
 
     if ($content -notmatch 'CHROMIUM_BIN="\$\(resolve_chromium_bin\)"') {

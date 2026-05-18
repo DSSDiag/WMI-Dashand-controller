@@ -84,11 +84,14 @@ install_dashboard_dependencies() {
     fi
 
     if [ -f "$dashboard_dir/package-lock.json" ]; then
-        (
+        if (
             cd "$dashboard_dir"
             npm ci --silent
-        )
-        return 0
+        ); then
+            return 0
+        fi
+
+        echo "npm ci failed for $dashboard_dir. Falling back to npm install..." >&2
     fi
 
     (
