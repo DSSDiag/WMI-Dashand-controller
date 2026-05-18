@@ -81,18 +81,18 @@ if (
 }
 
 if (
-    $app -notmatch 'aria-label="Return to dashboard"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center' -or
-    $app -notmatch 'aria-label="Open sensor setup"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center' -or
-    $app -notmatch 'aria-label="Return to settings"[\s\S]*min-h-\[2\.35rem\] min-w-\[2\.35rem\] flex items-center justify-center'
+    $app -notmatch 'aria-label="Return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*flex items-center justify-center' -or
+    $app -notmatch 'aria-label="Open sensor setup"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*flex items-center justify-center' -or
+    $app -notmatch 'aria-label="Return to settings"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*flex items-center justify-center'
 ) {
-    throw 'App.jsx does not keep compact header navigation buttons at an explicit touch-friendly minimum size'
+    throw 'App.jsx does not keep compact header navigation buttons at an explicit touch-friendly size with direct touch handling'
 }
 
 if (
-    $app -notmatch 'aria-label="Save settings and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*whitespace-nowrap' -or
-    $app -notmatch 'aria-label="Save sensor setup and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*whitespace-nowrap'
+    $app -notmatch 'aria-label="Save settings and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*whitespace-nowrap' -or
+    $app -notmatch 'aria-label="Save sensor setup and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*whitespace-nowrap'
 ) {
-    throw 'App.jsx does not keep compact save-and-exit buttons at an explicit touch-friendly minimum size'
+    throw 'App.jsx does not keep compact save-and-exit buttons at an explicit touch-friendly size with direct touch handling'
 }
 
 if ($app -notmatch 'data-testid="sensor-page-grid"' -or $app -notmatch "isCompactDisplay \? 'grid-cols-1 gap-1 pr-0' : 'grid-cols-2 gap-2 pr-1'") {
@@ -165,6 +165,16 @@ if (
     $tests -notmatch "name: /pressure maximum absolute/i[\s\S]*className\)\.toContain\('min-h-\[2\.35rem\]'\)"
 ) {
     throw 'App.test.jsx does not guard compact sensor calibration touch target sizing'
+}
+
+if (
+    $tests -notmatch "name: /return to dashboard/i[\s\S]*className\)\.toContain\('touch-manipulation'\)" -or
+    $tests -notmatch "name: /open sensor setup/i[\s\S]*className\)\.toContain\('touch-manipulation'\)" -or
+    $tests -notmatch "name: /save settings and return to dashboard/i[\s\S]*className\)\.toContain\('touch-manipulation'\)" -or
+    $tests -notmatch "name: /return to settings/i[\s\S]*className\)\.toContain\('touch-manipulation'\)" -or
+    $tests -notmatch "name: /save sensor setup and return to dashboard/i[\s\S]*className\)\.toContain\('touch-manipulation'\)"
+) {
+    throw 'App.test.jsx does not guard touch-manipulation on compact navigation and save actions'
 }
 
 Write-Host 'dashboard layout checks passed'

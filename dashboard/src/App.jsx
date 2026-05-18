@@ -974,7 +974,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('settings')}
                 aria-label="Open settings"
-                className={`${isCompactDisplay ? 'min-h-[2.35rem] px-2 py-1.5 flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] px-2 py-1.5 touch-manipulation flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
               >
                 <ChevronRight size={isCompactDisplay ? 24 : 30} className="text-slate-400" />
               </button>
@@ -1156,7 +1156,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('dash')}
                 aria-label="Return to dashboard"
-                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] flex items-center justify-center' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] touch-manipulation flex items-center justify-center' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
               >
                 <ChevronLeft size={isCompactDisplay ? 24 : 30} />
               </button>
@@ -1176,14 +1176,14 @@ const App = ({
               <button
                 onClick={() => setActiveTab('sensor')}
                 aria-label="Open sensor setup"
-                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] touch-manipulation flex items-center justify-center' : 'p-2'} rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors`}
               >
                 <ChevronRight size={isCompactDisplay ? 22 : 28} className="text-slate-400" />
               </button>
               <button
                 onClick={() => setActiveTab('dash')}
                 aria-label="Save settings and return to dashboard"
-                className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] flex-1 px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
+                className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] touch-manipulation flex-1 px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
               >
                 <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
               </button>
@@ -1428,7 +1428,7 @@ const App = ({
               <button
                 onClick={() => setActiveTab('settings')}
                 aria-label="Return to settings"
-                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] flex items-center justify-center' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
+                className={`${isCompactDisplay ? 'min-h-[2.35rem] min-w-[2.35rem] touch-manipulation flex items-center justify-center' : 'p-2'} bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors`}
               >
                 <ChevronLeft size={isCompactDisplay ? 24 : 30} />
               </button>
@@ -1442,7 +1442,7 @@ const App = ({
             <button
               onClick={() => setActiveTab('dash')}
               aria-label="Save sensor setup and return to dashboard"
-              className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] w-full px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
+              className={`flex items-center justify-center gap-1.5 bg-lime-600 rounded-lg font-bold shadow-md shadow-lime-900/20 active:scale-95 ${isCompactDisplay ? 'min-h-[2.35rem] w-full touch-manipulation px-2.5 py-1 text-[11px] whitespace-nowrap' : 'px-4 py-2 text-sm'}`}
             >
               <Save size={isCompactDisplay ? 16 : 21} /> <span className="inline">SAVE & EXIT</span>
             </button>

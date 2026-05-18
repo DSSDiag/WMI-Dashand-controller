@@ -238,8 +238,11 @@ describe('App dashboard', () => {
     expect(screen.getByText(/hw rev:/i).className).toContain('flex-wrap');
     expect(screen.getByTestId('settings-header-actions').className).toContain('w-full');
     expect(screen.getByRole('button', { name: /return to dashboard/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /return to dashboard/i }).className).toContain('touch-manipulation');
     expect(screen.getByRole('button', { name: /open sensor setup/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /open sensor setup/i }).className).toContain('touch-manipulation');
     expect(screen.getByRole('button', { name: /save settings and return to dashboard/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /save settings and return to dashboard/i }).className).toContain('touch-manipulation');
     expect(screen.getByRole('button', { name: /save settings and return to dashboard/i }).className).toContain('flex-1');
     expect(screen.getByTestId('trigger-inputs').className).toContain('min-h-[54px]');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
@@ -313,7 +316,9 @@ describe('App dashboard', () => {
     expect(screen.getByTestId('sensor-header').className).toContain('space-y-1.5');
     expect(screen.getByText(/select a preset or map a custom 0-5v sensor \/ ecu output/i).className).toContain('whitespace-normal');
     expect(screen.getByRole('button', { name: /return to settings/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /return to settings/i }).className).toContain('touch-manipulation');
     expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('touch-manipulation');
     expect(screen.getByRole('button', { name: /save sensor setup and return to dashboard/i }).className).toContain('w-full');
     expect(screen.getByTestId('sensor-setup-grid').className).toContain('grid-cols-1');
     expect(screen.getByTestId('sensor-preset-grid').className).toContain('grid-cols-1');
