@@ -182,4 +182,33 @@ if ($preconfiguredScript -notmatch '\$REPO_DIR"/bridge/kiosk-launch\.sh') {
     throw 'setup-precomf.sh does not scope kiosk launcher writes to the repo bridge launcher'
 }
 
+if ($setupScript -notmatch 'LCD_SHOW_DIR="\$REPO_DIR/LCD-show"') {
+    throw 'setup.sh does not scope LCD-show operations to the repo checkout path'
+}
+
+if ($setupScript -notmatch 'validate_lcd_show_dir\(\)') {
+    throw 'setup.sh does not define an LCD-show path validator'
+}
+
+if ($setupScript -notmatch 'validate_lcd_show_dir "\$LCD_SHOW_DIR"') {
+    throw 'setup.sh does not validate the LCD-show path before clone or reuse'
+}
+
+if ($setupScript -notmatch '\[ -L "\$target" \]') {
+    throw 'setup.sh does not refuse symlinked LCD-show paths'
+}
+
+if ($setupScript -notmatch '\[ -e "\$target" \] && \[ ! -d "\$target" \]') {
+    throw 'setup.sh does not refuse non-directory LCD-show paths'
+}
+
+if (
+    $setupScript -notmatch '\[ -d "\$LCD_SHOW_DIR/\.git" \]' -or
+    $setupScript -notmatch '\[ -d "\$LCD_SHOW_DIR" \]' -or
+    $setupScript -notmatch 'Refusing to reuse existing non-git LCD-show directory' -or
+    $setupScript -notmatch 'git clone https://github\.com/goodtft/LCD-show\.git "\$LCD_SHOW_DIR"'
+) {
+    throw 'setup.sh does not harden LCD-show checkout reuse and clone behavior'
+}
+
 Write-Host 'setup service checks passed'

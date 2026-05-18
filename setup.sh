@@ -118,6 +118,7 @@ DASHBOARD_BUILD_DIR="$REPO_DIR/dashboard/dist"
 NGINX_DASHBOARD_ROOT="/var/www/wmi-dashboard"
 BRIDGE_MODULE="bridge.serial_bridge"
 KIOSK_LAUNCHER="$REPO_DIR/bridge/kiosk-launch.sh"
+LCD_SHOW_DIR="$REPO_DIR/LCD-show"
 
 need_cmd() {
     command -v "$1" >/dev/null 2>&1
@@ -288,6 +289,43 @@ validate_kiosk_launcher_target() {
         echo "Refusing to overwrite non-file kiosk launcher target: $target" >&2
         return 1
     fi
+}
+
+validate_lcd_show_dir() {
+    local target="$1"
+
+    case "$target" in
+        "$REPO_DIR"/LCD-show) ;;
+        *)
+            echo "Refusing to use unexpected LCD-show path: $target" >&2
+            return 1
+            ;;
+    esac
+
+    if [ -L "$target" ]; then
+        echo "Refusing to use symlinked LCD-show path: $target" >&2
+        return 1
+    fi
+
+    if [ -e "$target" ] && [ ! -d "$target" ]; then
+        echo "Refusing to use non-directory LCD-show path: $target" >&2
+        return 1
+    fi
+}
+
+ensure_lcd_show_checkout() {
+    validate_lcd_show_dir "$LCD_SHOW_DIR"
+
+    if [ -d "$LCD_SHOW_DIR/.git" ]; then
+        return 0
+    fi
+
+    if [ -d "$LCD_SHOW_DIR" ]; then
+        echo "Refusing to reuse existing non-git LCD-show directory: $LCD_SHOW_DIR" >&2
+        return 1
+    fi
+
+    git clone https://github.com/goodtft/LCD-show.git "$LCD_SHOW_DIR"
 }
 
 write_kiosk_launcher() {
@@ -893,14 +931,12 @@ case "$DISPLAY_PROFILE" in
         ;;
     "52pi-k0403")
         cd "$REPO_DIR"
-        if [ ! -d "LCD-show" ]; then
-            git clone https://github.com/goodtft/LCD-show.git
-        fi
-        chmod -R 755 LCD-show
+        ensure_lcd_show_checkout
+        chmod -R 755 "$LCD_SHOW_DIR"
         prepare_bookworm_lcd_show_symlink
         sudo systemctl set-default graphical.target
         echo "Installing 52Pi 3.5 inch GPIO/SPI display driver. This may reboot automatically."
-        cd LCD-show/
+        cd "$LCD_SHOW_DIR"
         if [ "$PI_VERSION" == "pi5" ]; then
             echo "Warning: Pi 5 driver support in LCD-show may vary."
         fi
@@ -908,10 +944,8 @@ case "$DISPLAY_PROFILE" in
         ;;
     "generic-ili9486-hat")
         cd "$REPO_DIR"
-        if [ ! -d "LCD-show" ]; then
-            git clone https://github.com/goodtft/LCD-show.git
-        fi
-        chmod -R 755 LCD-show
+        ensure_lcd_show_checkout
+        chmod -R 755 "$LCD_SHOW_DIR"
         prepare_bookworm_lcd_show_symlink
         configure_tty1_startx_kiosk
         sudo systemctl disable wmi-kiosk wmi-unclutter || true
@@ -921,7 +955,7 @@ case "$DISPLAY_PROFILE" in
         echo " LCD-show driver installation will now run and reboot"
         echo " the system automatically."
         echo "═══════════════════════════════════════════════════"
-        cd LCD-show/
+        cd "$LCD_SHOW_DIR"
         if [ "$PI_VERSION" == "pi5" ]; then
             echo "Warning: Pi 5 driver support in LCD-show may vary."
         fi
