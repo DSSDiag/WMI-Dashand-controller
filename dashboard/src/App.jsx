@@ -1565,7 +1565,7 @@ const App = ({
                       value={sensorSignalMinVolts}
                       disabled={!sensorCalibrationEditable}
                       onChange={(e) => handleSensorSignalChange(e.target.value, true)}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows"
+                      className={`w-full rounded-lg border border-slate-700 bg-slate-800 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1.5 text-[15px]' : 'px-2 py-1.5'}`}
                     />
                   </div>
                   <div>
@@ -1581,7 +1581,7 @@ const App = ({
                       value={sensorSignalMaxVolts}
                       disabled={!sensorCalibrationEditable}
                       onChange={(e) => handleSensorSignalChange(e.target.value, false)}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows"
+                      className={`w-full rounded-lg border border-slate-700 bg-slate-800 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1.5 text-[15px]' : 'px-2 py-1.5'}`}
                     />
                   </div>
                   <div>
@@ -1597,7 +1597,7 @@ const App = ({
                       value={formatTrimmedNumber(sensorKpaMin, 1)}
                       disabled={!sensorCalibrationEditable}
                       onChange={(e) => handleSensorKpaChange(e.target.value, true)}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows"
+                      className={`w-full rounded-lg border border-slate-700 bg-slate-800 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1.5 text-[15px]' : 'px-2 py-1.5'}`}
                     />
                   </div>
                   <div>
@@ -1613,7 +1613,7 @@ const App = ({
                       value={formatTrimmedNumber(sensorKpaMax, 1)}
                       disabled={!sensorCalibrationEditable}
                       onChange={(e) => handleSensorKpaChange(e.target.value, false)}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows"
+                      className={`w-full rounded-lg border border-slate-700 bg-slate-800 text-center text-white font-bold outline-none disabled:cursor-not-allowed disabled:opacity-55 hide-arrows ${isCompactDisplay ? 'min-h-[2.35rem] px-2.5 py-1.5 text-[15px]' : 'px-2 py-1.5'}`}
                     />
                   </div>
                 </div>

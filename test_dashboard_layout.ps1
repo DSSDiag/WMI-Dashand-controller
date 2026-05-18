@@ -149,4 +149,22 @@ if (
     throw 'App.jsx does not expose touch-friendly gauge limit inputs with a done action hint'
 }
 
+if (
+    $app -notmatch 'aria-label="Signal minimum voltage"[\s\S]*min-h-\[2\.35rem\] px-2\.5 py-1\.5 text-\[15px\]' -or
+    $app -notmatch 'aria-label="Signal maximum voltage"[\s\S]*min-h-\[2\.35rem\] px-2\.5 py-1\.5 text-\[15px\]' -or
+    $app -notmatch 'aria-label="Pressure minimum absolute"[\s\S]*min-h-\[2\.35rem\] px-2\.5 py-1\.5 text-\[15px\]' -or
+    $app -notmatch 'aria-label="Pressure maximum absolute"[\s\S]*min-h-\[2\.35rem\] px-2\.5 py-1\.5 text-\[15px\]'
+) {
+    throw 'App.jsx does not keep compact sensor calibration inputs at an explicit touch-friendly size'
+}
+
+if (
+    $tests -notmatch "name: /signal minimum voltage/i[\s\S]*className\)\.toContain\('min-h-\[2\.35rem\]'\)" -or
+    $tests -notmatch "name: /signal maximum voltage/i[\s\S]*className\)\.toContain\('min-h-\[2\.35rem\]'\)" -or
+    $tests -notmatch "name: /pressure minimum absolute/i[\s\S]*className\)\.toContain\('min-h-\[2\.35rem\]'\)" -or
+    $tests -notmatch "name: /pressure maximum absolute/i[\s\S]*className\)\.toContain\('min-h-\[2\.35rem\]'\)"
+) {
+    throw 'App.test.jsx does not guard compact sensor calibration touch target sizing'
+}
+
 Write-Host 'dashboard layout checks passed'

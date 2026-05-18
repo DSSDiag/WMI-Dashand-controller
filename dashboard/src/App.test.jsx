@@ -330,6 +330,10 @@ describe('App dashboard', () => {
     expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i })).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i })).toHaveAttribute('inputmode', 'numeric');
     expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i })).toHaveAttribute('inputmode', 'numeric');
+    expect(screen.getByRole('spinbutton', { name: /signal minimum voltage/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('spinbutton', { name: /signal maximum voltage/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('spinbutton', { name: /pressure minimum absolute/i }).className).toContain('min-h-[2.35rem]');
+    expect(screen.getByRole('spinbutton', { name: /pressure maximum absolute/i }).className).toContain('min-h-[2.35rem]');
   }, 15000);
 
   it('loads preset calibration values and re-enables editing in custom mode', () => {
