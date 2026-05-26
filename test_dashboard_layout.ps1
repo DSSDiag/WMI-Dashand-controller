@@ -23,8 +23,33 @@ if ($app -notmatch 'data-testid="dashboard-shell"' -or $app -notmatch "data-comp
     throw 'App.jsx does not expose explicit compact layout state for tests'
 }
 
-if ($main -notmatch "params\.get\('profile'\) === 'generic-ili9486-hat'") {
-    throw 'main.jsx does not parse the generic ILI9486 HAT profile from the kiosk URL'
+if (
+    $main -notmatch "normalizeDisplayProfile\(params\.get\('profile'\)\)" -or
+    $main -notmatch "import \{ normalizeDisplayProfile \} from './utils'"
+) {
+    throw 'main.jsx does not normalize the setup.sh display profile from the kiosk URL'
+}
+
+if (
+    $app -notmatch "isCompactDisplayProfile\(displayProfile\)" -or
+    $app -notmatch "import \{[\s\S]*isCompactDisplayProfile[\s\S]*\} from './utils';"
+) {
+    throw 'App.jsx does not derive compact layouts from the shared supported 3.5-inch display profile helper'
+}
+
+if (
+    $tests -notmatch "52pi-k0403" -or
+    $tests -notmatch "waveshare-35g" -or
+    $tests -notmatch "generic-ili9486-hat"
+) {
+    throw 'App.test.jsx does not cover every compact 3.5-inch display profile'
+}
+
+if (
+    $main -notmatch "preview === 'compact-480x320'" -or
+    $main -notmatch "displayProfile: 'generic-ili9486-hat'"
+) {
+    throw 'main.jsx does not preserve the explicit compact preview profile'
 }
 
 if ($css -notmatch 'overscroll-behavior:\s*none;') {
@@ -53,8 +78,8 @@ if ($css -notmatch '\.settings-page input\[type=range\]\s*\{\s*touch-action:\s*p
     throw 'index.css does not preserve horizontal range dragging on touch screens'
 }
 
-if ($tests -notmatch 'displayProfile="generic-ili9486-hat"') {
-    throw 'App.test.jsx does not cover the generic HAT compact layout path'
+if ($tests -notmatch 'treats every supported 3.5-inch setup profile as a compact layout') {
+    throw 'App.test.jsx does not guard the shared compact layout behavior across setup.sh 3.5-inch profiles'
 }
 
 if ($tests -notmatch 'loads preset calibration values and re-enables editing in custom mode') {
@@ -74,7 +99,7 @@ if (
 if (
     $app -notmatch "HW REV:" -or
     $app -notmatch "flex flex-wrap items-center gap-x-1 gap-y-0.5 text-\[9px\] leading-tight" -or
-    $app -notmatch "Select a preset or map a custom 0-5V sensor / ECU output" -or
+    $app -notmatch "Four verified presets plus a custom ECU / Haltech 0-5V analog map" -or
     $app -notmatch "whitespace-normal"
 ) {
     throw 'App.jsx does not let compact setup headers wrap cleanly on the 480x320 profile'
@@ -82,7 +107,7 @@ if (
 
 if (
     $app -notmatch 'aria-label="Return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*flex items-center justify-center' -or
-    $app -notmatch 'aria-label="Open sensor setup"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*flex items-center justify-center' -or
+    $app -notmatch 'aria-label="Open MAP sensor mapping"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*flex items-center justify-center' -or
     $app -notmatch 'aria-label="Return to settings"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*flex items-center justify-center'
 ) {
     throw 'App.jsx does not keep compact header navigation buttons at an explicit touch-friendly size with direct touch handling'
@@ -90,7 +115,7 @@ if (
 
 if (
     $app -notmatch 'aria-label="Save settings and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*whitespace-nowrap' -or
-    $app -notmatch 'aria-label="Save sensor setup and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*whitespace-nowrap'
+    $app -notmatch 'aria-label="Save MAP sensor mapping and return to dashboard"[\s\S]*min-h-\[2\.35rem\][\s\S]*touch-manipulation[\s\S]*whitespace-nowrap'
 ) {
     throw 'App.jsx does not keep compact save-and-exit buttons at an explicit touch-friendly size with direct touch handling'
 }
@@ -108,7 +133,7 @@ if ($app -notmatch 'data-testid="sensor-preset-grid"' -or $app -notmatch "isComp
 }
 
 if (
-    $app -notmatch "Manual signal mapping" -or
+    $app -notmatch "Manual 0-5V mapping" -or
     $app -notmatch "flex min-h-\[3\.25rem\] min-w-0 touch-manipulation flex-col justify-between" -or
     $tests -notmatch "className\)\.toContain\('flex-col'\)"
 ) {
@@ -116,8 +141,8 @@ if (
 }
 
 if (
-    $tests -notmatch "name: /2 bar map/i" -or
-    $tests -notmatch "name: /custom \\\/ ecu/i" -or
+    $tests -notmatch "name: /gm \\\/ delphi 3 bar/i" -or
+    $tests -notmatch "name: /custom ecu \\\/ haltech/i" -or
     $tests -notmatch "className\)\.toContain\('touch-manipulation'\)"
 ) {
     throw 'App.test.jsx does not guard touch-manipulation on compact sensor preset cards'
@@ -168,11 +193,12 @@ if (
 }
 
 if (
-    $tests -notmatch "name: /return to dashboard/i[\s\S]*className\)\.toContain\('touch-manipulation'\)" -or
-    $tests -notmatch "name: /open sensor setup/i[\s\S]*className\)\.toContain\('touch-manipulation'\)" -or
-    $tests -notmatch "name: /save settings and return to dashboard/i[\s\S]*className\)\.toContain\('touch-manipulation'\)" -or
-    $tests -notmatch "name: /return to settings/i[\s\S]*className\)\.toContain\('touch-manipulation'\)" -or
-    $tests -notmatch "name: /save sensor setup and return to dashboard/i[\s\S]*className\)\.toContain\('touch-manipulation'\)"
+    $tests -notmatch "return to dashboard" -or
+    $tests -notmatch "open map sensor mapping" -or
+    $tests -notmatch "save settings and return to dashboard" -or
+    $tests -notmatch "return to settings" -or
+    $tests -notmatch "save map sensor mapping and return to dashboard" -or
+    $tests -notmatch "touch-manipulation"
 ) {
     throw 'App.test.jsx does not guard touch-manipulation on compact navigation and save actions'
 }

@@ -139,6 +139,17 @@ ensure_nginx_installed() {
     sudo apt-get install -y --no-install-recommends nginx
 }
 
+install_system_packages() {
+    if sudo apt-get install -y --no-install-recommends "${BASE_PACKAGES[@]}"; then
+        return 0
+    fi
+
+    echo "Failed to install one or more required system packages." >&2
+    echo "The kiosk stack cannot be completed safely after a package install failure." >&2
+    echo "Check network and apt health, then rerun ./setup.sh." >&2
+    return 1
+}
+
 install_dashboard_dependencies() {
     local dashboard_dir="$1"
 
@@ -727,7 +738,15 @@ if [ "$DISPLAY_PROFILE" == "generic-ili9486-hat" ]; then
     BASE_PACKAGES+=(openbox xserver-xorg xinit dbus-x11)
 fi
 
-sudo apt-get install -y --no-install-recommends "${BASE_PACKAGES[@]}" || true
+install_system_packages
+
+if [ "$OS_TYPE" == "lite" ] || [ "$DISPLAY_PROFILE" == "dsi5" ]; then
+    if ! ensure_pkg lightdm; then
+        echo "lightdm is missing after package installation." >&2
+        echo "The Lite/DSI kiosk path requires lightdm before setup can continue." >&2
+        exit 1
+    fi
+fi
 
 echo "[2/9] Setting up Python virtual environment for bridge..."
 VENV_DIR="$REPO_DIR/bridge/.venv"
@@ -843,6 +862,7 @@ AUTOLOGINEOF
 
     configure_openbox_autostart
     sudo chown -R "$RUN_USER:$RUN_USER" "$RUN_HOME/.config"
+    sudo systemctl enable lightdm || sudo systemctl enable display-manager || true
 fi
 
 sudo tee /etc/systemd/system/wmi-bridge.service > /dev/null << BRIDGEEOF

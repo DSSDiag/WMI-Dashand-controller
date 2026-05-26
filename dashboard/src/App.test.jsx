@@ -218,7 +218,7 @@ describe('App dashboard', () => {
 
     cleanup();
 
-    render(<App displayProfile="generic-ili9486-hat" />);
+    render(<App displayProfile="waveshare-35g" />);
 
     expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'true');
     expect(screen.getByTestId('dashboard-header').className).toContain('p-2');
@@ -246,6 +246,17 @@ describe('App dashboard', () => {
     expect(screen.getByRole('button', { name: /save settings and return to dashboard/i }).className).toContain('flex-1');
     expect(screen.getByTestId('trigger-inputs').className).toContain('min-h-[54px]');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
+    expect(screen.getByTestId('gauge-limit-max').className).toContain('grid-cols-2');
+  }, 15000);
+
+  it('treats every supported 3.5-inch setup profile as a compact layout', () => {
+    for (const profile of ['52pi-k0403', 'generic-ili9486-hat', 'waveshare-35g']) {
+      const { unmount } = render(<App displayProfile={profile} />);
+
+      expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-compact', 'true');
+
+      unmount();
+    }
   }, 15000);
 
   it('can force the compact preview layout without a tiny browser window', () => {
@@ -261,6 +272,7 @@ describe('App dashboard', () => {
     expect(screen.getByText(/system configuration/i).closest('.settings-page')?.className).toContain('compact-settings');
     expect(screen.getByTestId('settings-header').className).toContain('space-y-1.5');
     expect(screen.getByTestId('gauge-limit-min').className).toContain('grid-cols-2');
+    expect(screen.getByTestId('gauge-limit-max').className).toContain('grid-cols-2');
     expect(screen.getByRole('spinbutton', { name: /minimum gauge limit/i })).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByRole('spinbutton', { name: /maximum gauge limit/i })).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByRole('spinbutton', { name: /minimum gauge limit/i })).toHaveAttribute('enterkeyhint', 'done');
@@ -270,7 +282,7 @@ describe('App dashboard', () => {
   it('rescales the compact layout on orientation and visual viewport changes', () => {
     render(<App displayProfile="generic-ili9486-hat" />);
 
-    expect(getDashboardScale()).toBe(1);
+    expect(getDashboardScale()).toBeCloseTo(480 / 356, 3);
 
     act(() => {
       setViewport(320, 470, { dispatchEventName: null });
@@ -285,6 +297,22 @@ describe('App dashboard', () => {
     });
 
     expect(getDashboardScale()).toBeCloseTo(320 / 356, 3);
+  }, 15000);
+
+  it('upscales the DSI kiosk layout to better fill the 800x480 screen', () => {
+    setViewport(800, 480, { dispatchEventName: null });
+
+    render(<App displayProfile="dsi5" />);
+
+    expect(getDashboardScale()).toBeCloseTo(1.5, 3);
+  }, 15000);
+
+  it('keeps embedded previews capped at 1x scale', () => {
+    setViewport(800, 480, { dispatchEventName: null });
+
+    render(<App embeddedPreview />);
+
+    expect(getDashboardScale()).toBe(1);
   }, 15000);
 
   it('removes visual viewport listeners when the dashboard unmounts', () => {

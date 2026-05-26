@@ -4,7 +4,14 @@
 // running on hardware.
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { formatBoost as formatBoostUtil, ATM_PSI, PSI_TO_BAR, PSI_TO_KPA, PSI_TO_INHG } from './utils';
+import {
+  formatBoost as formatBoostUtil,
+  ATM_PSI,
+  PSI_TO_BAR,
+  PSI_TO_KPA,
+  PSI_TO_INHG,
+  isCompactDisplayProfile,
+} from './utils';
 import {
   Droplet,
   AlertTriangle,
@@ -40,6 +47,8 @@ const DEFAULT_MIN_BOOST_PSI = -14.73;
 const ATM_KPA = ATM_PSI * PSI_TO_KPA;
 const DASHBOARD_WIDTH = 480;
 const DASHBOARD_HEIGHT = 320;
+const DSI_DASHBOARD_WIDTH = 533;
+const DSI_DASHBOARD_HEIGHT = 320;
 const DEFAULT_DASHBOARD_FIT_WIDTH = 500;
 const DEFAULT_DASHBOARD_FIT_HEIGHT = 340;
 const COMPACT_DASHBOARD_FIT_WIDTH = 520;
@@ -98,13 +107,13 @@ const SENSOR_PROFILE_PRESETS = [
   },
 ];
 
-function getViewportScale(fitWidth, fitHeight) {
+function getViewportScale(fitWidth, fitHeight, allowScaleUp = false) {
   if (typeof window === 'undefined') return 1;
-  return Math.min(
-    1,
+  const scale = Math.min(
     window.innerWidth / fitWidth,
     window.innerHeight / fitHeight,
   );
+  return allowScaleUp ? scale : Math.min(1, scale);
 }
 
 // ---------------------------------------------------------------------------
@@ -322,18 +331,26 @@ const App = ({
   embeddedPreview = false,
   displayProfile = 'default',
 }) => {
-  const isCompactDisplay = forceCompact || displayProfile === 'generic-ili9486-hat';
-  const dashboardFitWidth = isCompactDisplay ? COMPACT_DASHBOARD_FIT_WIDTH : DEFAULT_DASHBOARD_FIT_WIDTH;
-  const dashboardFitHeight = isCompactDisplay ? COMPACT_DASHBOARD_FIT_HEIGHT : DEFAULT_DASHBOARD_FIT_HEIGHT;
+  const isCompactDisplay = forceCompact || isCompactDisplayProfile(displayProfile);
+  const isDsiDisplay = displayProfile === 'dsi5';
+  const dashboardWidth = isDsiDisplay ? DSI_DASHBOARD_WIDTH : DASHBOARD_WIDTH;
+  const dashboardHeight = isDsiDisplay ? DSI_DASHBOARD_HEIGHT : DASHBOARD_HEIGHT;
+  const dashboardFitWidth = isCompactDisplay
+    ? COMPACT_DASHBOARD_FIT_WIDTH
+    : (isDsiDisplay ? DSI_DASHBOARD_WIDTH : DEFAULT_DASHBOARD_FIT_WIDTH);
+  const dashboardFitHeight = isCompactDisplay
+    ? COMPACT_DASHBOARD_FIT_HEIGHT
+    : (isDsiDisplay ? DSI_DASHBOARD_HEIGHT : DEFAULT_DASHBOARD_FIT_HEIGHT);
+  const allowViewportUpscale = !embeddedPreview;
   const initialSettingsRef = useRef(loadSettings());
   const initialSettings = initialSettingsRef.current;
 
   // Navigation State
   const [activeTab, setActiveTab] = useState(TAB_ORDER.includes(initialTab) ? initialTab : 'dash');
-  const [viewportScale, setViewportScale] = useState(() => getViewportScale(dashboardFitWidth, dashboardFitHeight));
+  const [viewportScale, setViewportScale] = useState(() => getViewportScale(dashboardFitWidth, dashboardFitHeight, allowViewportUpscale));
   const updateViewportScale = useCallback(() => {
-    setViewportScale(getViewportScale(dashboardFitWidth, dashboardFitHeight));
-  }, [dashboardFitHeight, dashboardFitWidth]);
+    setViewportScale(getViewportScale(dashboardFitWidth, dashboardFitHeight, allowViewportUpscale));
+  }, [allowViewportUpscale, dashboardFitHeight, dashboardFitWidth]);
 
   // Settings State (Internal state is ALWAYS PSI Gauge: 0 = Atmosphere)
   // Initial values are loaded from localStorage so they survive reboots.
@@ -865,8 +882,8 @@ const App = ({
         <div
           className="relative origin-center"
           style={{
-            width: `${DASHBOARD_WIDTH}px`,
-            height: `${DASHBOARD_HEIGHT}px`,
+            width: `${dashboardWidth}px`,
+            height: `${dashboardHeight}px`,
             transform: `scale(${viewportScale})`,
           }}
         >
@@ -1075,7 +1092,7 @@ const App = ({
                 {renderBoostGaugeLayer(pumpGaugeLayerClass, 'pump')}
                 <div className="flex flex-col relative z-10">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pump Flow</span>
-                  <span className={`${isCompactDisplay ? 'text-5xl' : 'text-6xl'} font-black tracking-tighter tabular-nums leading-none transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
+                  <span className={`${isCompactDisplay ? 'text-2xl' : 'text-3xl'} font-black tracking-tighter tabular-nums leading-none transition-colors duration-300 ${Math.round(dutyCycle) >= 100 ? 'text-red-500 drop-shadow-md' : 'text-white'}`}>
                     {Math.round(dutyCycle)}%
                   </span>
                   {triggerMode === 'manual' && (
@@ -1256,17 +1273,17 @@ const App = ({
                     <span className="text-[8px] text-slate-500 block font-bold mb-0.5">MIN ({getInputUnitLabel(true)})</span>
                     <div
                       data-testid="gauge-limit-min"
-                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[1.9rem_1.95rem]' : 'flex h-8'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
+                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[1.9rem_1.95rem]' : 'grid grid-cols-2 grid-rows-[2rem_2.2rem]'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
                     >
                       <button
                         onClick={() => handleAdjust(true, 'down')}
-                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-b' : 'px-2 py-1 border-r'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
+                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-b' : 'min-h-0 px-2 py-1 border-b'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
                       >
                         <Minus size={14} />
                       </button>
                       <button
                         onClick={() => handleAdjust(true, 'up')}
-                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-l border-b' : 'px-4 py-2 border-l'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
+                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-l border-b' : 'min-h-0 px-4 py-1 border-l border-b'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
                       >
                         <Plus size={isCompactDisplay ? 14 : 18} />
                       </button>
@@ -1283,7 +1300,7 @@ const App = ({
                           if (startInjectionAt < val) setStartInjectionAt(val);
                           if (fullInjectionAt < val) setFullInjectionAt(val + 1);
                         }}
-                        className={`${isCompactDisplay ? 'col-span-2 h-[1.95rem] border-t' : 'w-full px-2 py-2'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
+                        className={`${isCompactDisplay ? 'col-span-2 h-[1.95rem] border-t' : 'col-span-2 h-[2.2rem] border-t px-2 py-2 text-sm'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
                       />
                     </div>
                   </div>
@@ -1293,17 +1310,17 @@ const App = ({
                     <span className="text-[8px] text-slate-500 block font-bold mb-0.5">MAX ({getInputUnitLabel(false)})</span>
                     <div
                       data-testid="gauge-limit-max"
-                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[1.9rem_1.95rem]' : 'flex h-8'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
+                      className={`${isCompactDisplay ? 'grid grid-cols-2 grid-rows-[1.9rem_1.95rem]' : 'grid grid-cols-2 grid-rows-[2rem_2.2rem]'} bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-lime-500 transition-colors`}
                     >
                       <button
                         onClick={() => handleAdjust(false, 'down')}
-                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-b' : 'px-2 py-1 border-r'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
+                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-b' : 'min-h-0 px-2 py-1 border-b'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
                       >
                         <Minus size={14} />
                       </button>
                       <button
                         onClick={() => handleAdjust(false, 'up')}
-                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-l border-b' : 'px-2 py-1 border-l'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
+                        className={`${isCompactDisplay ? 'min-h-0 px-2 py-1 border-l border-b' : 'min-h-0 px-2 py-1 border-l border-b'} bg-slate-900/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors active:scale-95 flex items-center justify-center border-slate-700`}
                       >
                         <Plus size={14} />
                       </button>
@@ -1320,7 +1337,7 @@ const App = ({
                           if (fullInjectionAt > val) setFullInjectionAt(val);
                           if (startInjectionAt > val) setStartInjectionAt(val - 1);
                         }}
-                        className={`${isCompactDisplay ? 'col-span-2 h-[1.95rem] border-t text-sm' : 'w-full px-1 py-1 text-xs'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
+                        className={`${isCompactDisplay ? 'col-span-2 h-[1.95rem] border-t text-sm' : 'col-span-2 h-[2.2rem] border-t px-2 py-2 text-sm'} bg-transparent text-center text-white font-bold outline-none hide-arrows border-slate-700`}
                       />
                     </div>
                   </div>

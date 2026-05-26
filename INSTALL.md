@@ -88,12 +88,41 @@ Raspberry Pi OS Bookworm 64-bit with Desktop
 
 Bookworm Lite can also be used. If Lite is selected in the installer, the script installs LightDM/Openbox/X11 so the kiosk can run.
 
+Important: some Lite/CLI-focused images do not have `git` installed by default. Before cloning this repo over SSH, run:
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
 Set these in Imager before writing:
 
 - Hostname, for example `wmidash`
 - SSH enabled
 - Username and password
 - Wi-Fi credentials if not using Ethernet
+
+### Optional Windows one-shot SD prep helper
+
+If you are preparing a Pi 3 + Bookworm Lite + 5-inch DSI card from Windows, this repo also includes:
+
+```powershell
+.\prepare-pi3-dsi-bookworm-sd.cmd
+```
+
+That helper script downloads the official Raspberry Pi OS Bookworm Lite image, verifies the SHA256, bundles the current working tree into a payload archive, and stages a first-boot script that automatically runs `setup.sh` for the `Pi 3 / Lite / 5 inch DSI` path.
+
+Requirements:
+
+- Raspberry Pi Imager installed on Windows
+- an SD card reader attached to the Windows machine
+- Internet access on the Pi during first boot so `apt`, `npm`, and setup dependencies can finish
+
+If you only want to prepare the cached image, payload archive, and first-boot script without writing an SD card yet, run:
+
+```powershell
+.\prepare-pi3-dsi-bookworm-sd.ps1 -StageOnly
+```
 
 ### Display connection
 
@@ -130,6 +159,13 @@ WMI_DISPLAY_WIDTH=1024 WMI_DISPLAY_HEIGHT=600 ./setup.sh
 ## 3. Install the Pi dashboard
 
 SSH into the Pi, then run:
+
+If `git --version` reports that `git` is missing, install it first:
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
 
 ```bash
 git clone https://github.com/DSSDiag/WMI-Dashand-controller.git
@@ -170,7 +206,7 @@ The installer does the following:
 - Serves the dashboard through nginx on port `80`.
 - Configures graphical autologin where needed.
 - Starts Chromium in full-screen kiosk mode at `http://localhost`.
-- For the generic blue-board `ILI9486/XPT2046` HAT profile, the kiosk URL is tagged with `?profile=generic-ili9486-hat` so the compact `480x320` layout only applies to that screen path.
+- For the supported 3.5 inch SPI display profiles, the kiosk URL is tagged with the selected `?profile=...` value so the compact `480x320` layout and touch-optimized controls apply consistently on `52pi-k0403`, `generic-ili9486-hat`, and `waveshare-35g`.
 - Installs `wmi-bridge.service` for ESP32 serial communication.
 - Installs `wmi-kiosk.service` for the dashboard browser.
 - Installs `wmi-unclutter.service` to hide the cursor.
@@ -207,13 +243,15 @@ For the generic blue-board 3.5 inch HAT, the installer:
 - Auto-logs in on `tty1`
 - Starts X with `startx`
 - Launches Chromium from `.xinitrc` on the SPI panel through `fbcp`
-- Opens the dashboard with the generic HAT profile enabled so the small-screen layout stays isolated to this panel
+- Opens the dashboard with the selected 3.5 inch display profile enabled so the small-screen layout matches that panel path
 
 If your display is already configured and you use `setup-precomf.sh`, you can opt into the same compact layout with:
 
 ```bash
 WMI_DASHBOARD_URL='http://localhost/?profile=generic-ili9486-hat' ./setup-precomf.sh
 ```
+
+Replace `generic-ili9486-hat` with `52pi-k0403` or `waveshare-35g` when those match your panel.
 
 ---
 
@@ -261,6 +299,23 @@ sudo journalctl -u wmi-bridge -f
 ```bash
 ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
 ```
+
+### Run the quick post-boot health check
+
+From the repo root on the Pi:
+
+```bash
+chmod +x verify-postboot.sh
+./verify-postboot.sh
+```
+
+That helper checks:
+
+- whether `xrandr` sees a connected display
+- whether `libinput` sees input devices
+- whether `http://localhost` responds
+- whether `nginx`, `wmi-bridge`, and `wmi-kiosk` are active
+- whether the ESP32 serial device is present under `/dev/ttyACM*` or `/dev/ttyUSB*`
 
 ---
 

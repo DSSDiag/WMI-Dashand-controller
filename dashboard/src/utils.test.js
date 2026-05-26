@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { formatBoost } from './utils';
+import { formatBoost, isCompactDisplayProfile, normalizeDisplayProfile } from './utils';
+
+describe('display profile helpers', () => {
+  it('normalizes unsupported profiles back to the default layout', () => {
+    expect(normalizeDisplayProfile('generic-ili9486-hat')).toBe('generic-ili9486-hat');
+    expect(normalizeDisplayProfile('waveshare-35g')).toBe('waveshare-35g');
+    expect(normalizeDisplayProfile('unknown-display')).toBe('default');
+    expect(normalizeDisplayProfile(null)).toBe('default');
+  });
+
+  it('marks all supported 3.5-inch display profiles as compact layouts', () => {
+    expect(isCompactDisplayProfile('52pi-k0403')).toBe(true);
+    expect(isCompactDisplayProfile('generic-ili9486-hat')).toBe(true);
+    expect(isCompactDisplayProfile('waveshare-35g')).toBe(true);
+    expect(isCompactDisplayProfile('dsi5')).toBe(false);
+    expect(isCompactDisplayProfile('default')).toBe(false);
+  });
+});
 
 describe('formatBoost', () => {
   it('formats PSI correctly (gauge)', () => {

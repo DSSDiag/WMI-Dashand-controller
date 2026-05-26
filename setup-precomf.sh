@@ -378,6 +378,17 @@ sudo systemctl enable --now nginx
 
 echo "[6/7] Installing bridge and kiosk services..."
 
+sudo update-alternatives --set x-session-manager /usr/bin/openbox-session || true
+sudo mkdir -p /etc/lightdm/lightdm.conf.d
+sudo tee /etc/lightdm/lightdm.conf.d/01-wmi-autologin.conf >/dev/null <<AUTOLOGINEOF
+[Seat:*]
+autologin-user=$RUN_USER
+autologin-user-timeout=0
+user-session=openbox
+xserver-command=X -s 0 -dpms
+AUTOLOGINEOF
+sudo systemctl enable lightdm || sudo systemctl enable display-manager || true
+
 sudo tee /etc/systemd/system/wmi-bridge.service >/dev/null <<BRIDGEEOF
 [Unit]
 Description=WMI Serial Bridge (ESP32 ↔ Dashboard)
