@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { normalizeDisplayProfile } from './utils'
 
 function getPreviewConfig() {
   if (typeof window === 'undefined') {
@@ -18,9 +19,7 @@ function getPreviewConfig() {
   const preview = params.get('preview')
   const requestedTab = params.get('tab')
   const tab = requestedTab === 'settings' || requestedTab === 'sensor' ? requestedTab : 'dash'
-  const displayProfile = params.get('profile') === 'generic-ili9486-hat'
-    ? 'generic-ili9486-hat'
-    : 'default'
+  const displayProfile = normalizeDisplayProfile(params.get('profile'))
 
   if (preview === 'compact-480x320') {
     return {

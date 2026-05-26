@@ -49,6 +49,10 @@ foreach ($script in $scripts) {
         throw "$script does not validate kiosk launcher target before overwrite"
     }
 
+    if ($content -notmatch 'systemctl enable lightdm' -and $content -notmatch 'systemctl enable display-manager') {
+        throw "$script does not explicitly enable the display manager for kiosk boot"
+    }
+
     if ($content -notmatch 'WorkingDirectory=\$REPO_DIR\s+Environment=HOME=\$RUN_HOME\s+Environment=XAUTHORITY=\$RUN_HOME/\.Xauthority\s+ExecStartPre=/usr/bin/test -x \$KIOSK_LAUNCHER\s+ExecStart=\$KIOSK_LAUNCHER') {
         throw "$script does not harden wmi-kiosk.service with repo-scoped execution context and launcher verification"
     }
@@ -81,6 +85,10 @@ foreach ($script in $scripts) {
         throw "$script does not define a dashboard dependency installer helper"
     }
 
+    if ($script -eq 'setup.sh' -and $content -notmatch 'install_system_packages\(\)') {
+        throw 'setup.sh does not define a system package installer helper'
+    }
+
     if (
         $content -notmatch '\[ ! -d "\$dashboard_dir" \]' -or
         $content -notmatch 'Dashboard directory is missing: \$dashboard_dir'
@@ -107,6 +115,20 @@ foreach ($script in $scripts) {
 
     if ($content -notmatch 'CHROMIUM_BIN="\$\(resolve_chromium_bin\)"') {
         throw "$script does not fail fast when Chromium is missing"
+    }
+
+    if ($script -eq 'setup.sh') {
+        if ($content -match 'sudo apt-get install -y --no-install-recommends "\$\{BASE_PACKAGES\[@\]\}" \|\| true') {
+            throw 'setup.sh still ignores system package installation failures'
+        }
+
+        if (
+            $content -notmatch 'install_system_packages' -or
+            $content -notmatch 'lightdm is missing after package installation' -or
+            $content -notmatch 'The Lite/DSI kiosk path requires lightdm before setup can continue'
+        ) {
+            throw 'setup.sh does not fail fast when the Lite/DSI display-manager packages are missing'
+        }
     }
 
     if (
@@ -172,6 +194,13 @@ if (
     $preconfiguredScript -notmatch 'WMI_DISPLAY_PROFILE'
 ) {
     throw 'setup-precomf.sh does not expose profile-aware dashboard URL overrides for preconfigured installs'
+}
+
+if (
+    $preconfiguredScript -notmatch 'autologin-user=\$RUN_USER' -or
+    $preconfiguredScript -notmatch 'user-session=openbox'
+) {
+    throw 'setup-precomf.sh does not configure LightDM auto-login for the kiosk session'
 }
 
 if ($setupScript -notmatch '\$REPO_DIR"/bridge/kiosk-launch\.sh') {

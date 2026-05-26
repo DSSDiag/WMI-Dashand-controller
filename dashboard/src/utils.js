@@ -2,6 +2,26 @@ export const PSI_TO_BAR = 0.0689476;
 export const PSI_TO_KPA = 6.89476;
 export const PSI_TO_INHG = 2.03602;
 export const ATM_PSI = 14.7;
+export const COMPACT_DISPLAY_PROFILES = new Set([
+  '52pi-k0403',
+  'generic-ili9486-hat',
+  'waveshare-35g',
+]);
+export const SUPPORTED_DISPLAY_PROFILES = new Set([
+  'dsi5',
+  '52pi-k0403',
+  'generic-ili9486-hat',
+  'waveshare-35g',
+  'preconfigured',
+]);
+
+export const normalizeDisplayProfile = (profile) => (
+  typeof profile === 'string' && SUPPORTED_DISPLAY_PROFILES.has(profile)
+    ? profile
+    : 'default'
+);
+
+export const isCompactDisplayProfile = (profile) => COMPACT_DISPLAY_PROFILES.has(profile);
 
 export const formatBoost = (psiGauge, units, pressureRef) => {
   const isAbs = pressureRef === 'abs' && units !== 'psi_inhg';

@@ -11,10 +11,10 @@ The Pi runs the dashboard and local web stack. The ESP32 handles live sensor inp
 | Branch | Use it for |
 |---|---|
 | `main` | Stable/default install path. Best starting point for fresh installs. |
-| `codex/system-upgrade-pass` | Latest in-progress Pi, dashboard, and tooling work. Includes Pi-side sensor-module flashing with `sensor-module-firmware.sh`. |
+| `codex/system-update-pass` | Latest in-progress Pi, dashboard, and tooling work. Includes Pi-side sensor-module flashing with `sensor-module-firmware.sh`. |
 | `codex/sensor-module-awareness` | Staging branch for sensor-module detection, calibration, and boot-time awareness work. |
 
-If you are not testing a specific feature, start from `main`. If you want the newest Pi-side ESP update tooling and latest bench-test changes, use `codex/system-upgrade-pass`.
+If you are not testing a specific feature, start from `main`. If you want the newest Pi-side ESP update tooling and latest bench-test changes, use `codex/system-update-pass`.
 
 ---
 
@@ -69,6 +69,13 @@ Important safety rule:
 
 Fresh install on the stable branch:
 
+Make sure `git` is installed on the Pi first. On Raspberry Pi OS Lite or other CLI-only images, install it with:
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
 ```bash
 git clone https://github.com/DSSDiag/WMI-Dashand-controller.git
 cd WMI-Dashand-controller
@@ -81,7 +88,7 @@ chmod +x setup.sh
 If you are testing newer work, replace `main` with the branch you want, for example:
 
 ```bash
-git checkout codex/system-upgrade-pass
+git checkout codex/system-update-pass
 ```
 
 If the display is already configured and working, you can usually use:
@@ -91,16 +98,47 @@ chmod +x setup-precomf.sh
 ./setup-precomf.sh
 ```
 
-For the generic `ILI9486/XPT2046` HAT, the compact layout is enabled with:
+For the supported 3.5 inch SPI display profiles, the compact touch layout is enabled with:
 
 ```bash
 WMI_DASHBOARD_URL='http://localhost/?profile=generic-ili9486-hat' ./setup-precomf.sh
+```
+
+You can substitute the matching profile for your panel:
+
+- `generic-ili9486-hat`
+- `52pi-k0403`
+- `waveshare-35g`
+
+Windows helper for a Pi 3 + Bookworm Lite + 5-inch DSI install:
+
+```powershell
+.\prepare-pi3-dsi-bookworm-sd.cmd
+```
+
+That helper script:
+
+- uses the current working tree as the payload, so your latest local changes go onto the SD card
+- downloads the official Raspberry Pi OS Bookworm Lite image and verifies its SHA256
+- stages a first-boot script that runs `setup.sh` automatically for `Pi 3 / Lite / 5 inch DSI`
+- expects Raspberry Pi Imager on Windows and Internet access on the Pi during first boot
+
+To stage the image, payload archive, and first-boot script without touching an SD card:
+
+```powershell
+.\prepare-pi3-dsi-bookworm-sd.ps1 -StageOnly
 ```
 
 After install:
 
 ```bash
 sudo reboot
+```
+
+After the Pi comes back up, you can run the quick health check:
+
+```bash
+./verify-postboot.sh
 ```
 
 For full Pi setup detail, display-specific notes, and troubleshooting, see [INSTALL.md](INSTALL.md).
@@ -164,7 +202,7 @@ This works on every branch.
 
 ### Option B: Flash From The Pi Over SSH
 
-On branches that include `sensor-module-firmware.sh` such as `codex/system-upgrade-pass`, the Pi can compile and flash the sensor module itself.
+On branches that include `sensor-module-firmware.sh` such as `codex/system-update-pass`, the Pi can compile and flash the sensor module itself.
 
 For an `ESP32-C3 SuperMini`, first run:
 
